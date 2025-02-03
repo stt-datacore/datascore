@@ -7,6 +7,8 @@ import { BaseSkills, ComputedSkill, CrewMember, EquipmentSlot, QuipmentScores, R
 import { Mission } from '../../website/src/model/missions';
 import { BattleStations, Schematics } from '../../website/src/model/ship';
 
+const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
+
 function getPermutations<T, U>(array: T[], size: number, count?: bigint, count_only?: boolean, start_idx?: bigint, check?: (set: T[]) => U[] | false) {
     var current_iter = 0n;
     const mmin = start_idx ?? 0n;
@@ -43,9 +45,6 @@ function getPermutations<T, U>(array: T[], size: number, count?: bigint, count_o
     p([], 0);
     return result;
 }
-
-
-const STATIC_PATH = `${__dirname}/../../static/structured/`;
 
 let crewlist = JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8'), (key, value) => {
 	if (key === 'date_added') {
