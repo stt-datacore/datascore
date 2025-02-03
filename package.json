@@ -14,6 +14,7 @@
     "eventstats": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/eventstats.js"
   },
   "dependencies": {
+    "color-convert": "^2.0.1",
     "exceljs": "^4.4.0",
     "lodash-es": "^4.17.21",
     "lodash.combinations": "^18.11.1",
