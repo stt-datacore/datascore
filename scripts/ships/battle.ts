@@ -1,8 +1,9 @@
 import { CrewMember } from "../../../website/src/model/crew";
 import { BattleMode, Ship } from "../../../website/src/model/ship";
 import { AttackInstant, ComesFrom, ShipWorkerItem } from "../../../website/src/model/worker";
+import { getShipDivision, getCrewDivisions, getBosses, MaxDefense, MaxOffense } from "../../../website/src/utils/shiputils";
 import { iterateBattle } from "../../../website/src/workers/battleworkerutils";
-import { characterizeCrew, shipCompatibility, getShipDivision, getCrewDivisions, getBosses, MaxDefense, MaxOffense, BattleRunBase, getMaxTime } from "./scoring";
+import { characterizeCrew, shipCompatibility, BattleRunBase, getMaxTime } from "./scoring";
 
 export interface UpTimeRecord {
     action: string;

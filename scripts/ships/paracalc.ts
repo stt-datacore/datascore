@@ -3,8 +3,8 @@ import { isMainThread, workerData, parentPort } from 'node:worker_threads';
 import { CrewMember } from "../../../website/src/model/crew";
 import { Ship } from "../../../website/src/model/ship";
 import { nextOpponent, runBattles, getCleanShipCopy, RunRes } from "./battle";
-import { BattleRunBase, getShipDivision } from "./scoring";
-
+import { BattleRunBase } from "./scoring";
+import { getShipDivision } from '../../../website/src/utils/shiputils';
 
 export interface ShipCalcConfig {
     ships: Ship[];

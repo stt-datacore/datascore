@@ -1,5 +1,6 @@
 import fs from 'fs';
-import { AllBosses, BattleRunBase, BattleRunCache } from './scoring';
+import { BattleRunBase, BattleRunCache } from './scoring';
+import { AllBosses } from '../../../website/src/utils/shiputils';
 import { CrewMember } from '../../../website/src/model/crew';
 import { Ship } from '../../../website/src/model/ship';
 

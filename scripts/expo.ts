@@ -3,8 +3,8 @@ import { Worker, isMainThread, workerData, parentPort } from 'node:worker_thread
 import fs from 'fs';
 import { CrewMember, CrossFuseTarget } from "../../website/src/model/crew";
 import { Ship, Schematics } from "../../website/src/model/ship";
-import { highestLevel, mergeShips } from "../../website/src/utils/shiputils";
-import { BattleRun, shipnum, getMaxTime, getBosses, shipCompatibility, MaxDefense, MaxOffense } from './ships/scoring';
+import { getBosses, highestLevel, MaxDefense, MaxOffense, mergeShips } from "../../website/src/utils/shiputils";
+import { BattleRun, shipnum, getMaxTime, shipCompatibility } from './ships/scoring';
 import { processBattleRun } from './ships/battle';
 import { iterateBattle } from '../../website/src/workers/battleworkerutils';
 import { ComesFrom } from '../../website/src/model/worker';
