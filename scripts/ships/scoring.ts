@@ -578,7 +578,7 @@ export function normalizeScores(scores: Score[]) {
         scores.sort((a, b) => b[key] - a[key]);
         max = scores[0][key];
         for (let score of scores) {
-            score[key] = Math.round((score[key] / max) * 1000) / 100;
+            score[key] = Number(((score[key] / max) * 100).toFixed(4));
         }
     }
 
@@ -618,10 +618,10 @@ export function normalizeScores(scores: Score[]) {
         [score.arena_data, score.fbb_data].forEach((data, idx) => {
             data.forEach((unit) => {
                 if (idx === 0) {
-                    unit.final = Math.round((unit.final / arena_max[unit.group]) * 1000) / 100;
+                    unit.final = Number(((unit.final / arena_max[unit.group]) * 100).toFixed(4));
                 }
                 else {
-                    unit.final = Math.round((unit.final / fbb_max[unit.group]) * 1000) / 100;
+                    unit.final = Number(((unit.final / fbb_max[unit.group]) * 100).toFixed(4));
                 }
 
             });

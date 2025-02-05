@@ -639,7 +639,7 @@ export function score() {
         gauntlet_n *= 1.59;
         pcs_n *= 0.15;
         quip_n *= 0.85;
-        ship_n *= 1.25;
+        ship_n *= 0.125;
         shuttle_n *= 1;
         sk_rare_n *= 2;
         trait_n *= 0.25;
@@ -694,10 +694,11 @@ export function score() {
         let score_max = filtered[0].score;
         let len_max = filtered.length;
         let rank = 1;
+        let div = 2;
         for (let rec of filtered) {
             let newscore1 = Number(((rec.score / score_max) * 100).toFixed(4));
             let newscore2 = Number(((1 - (rank / len_max)) * 100).toFixed(4));
-            rec.score = (newscore1 + newscore1 + newscore2) / 3;
+            rec.score = ((newscore1 * div) + (newscore2 * 1)) / (div + 1);
             rank++;
         }
         normalize(filtered);
