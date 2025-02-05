@@ -27,15 +27,6 @@ interface MainCast {
     low: string[];
 }
 
-function eventToDate(instanceId: number) {
-    let num = instanceId;
-    let anchor_id = 458;
-    let anchor_date = new Date('2025-01-23T12:00:00')
-    if (num < 381) num++;
-    anchor_date.setDate(anchor_date.getDate() - (7 * (anchor_id - num)));
-    return anchor_date;
-}
-
 function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs: BuffStatTable): QPowers {
     calcQLots(crew, quipment, buffs, true, undefined, 'all');
     // Aggregate:
@@ -49,7 +40,6 @@ function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs: BuffS
 
     return { qpower, bpower, gpower, avg: 0, symbol: crew.symbol };
 }
-
 
 function normalizeQPowers(qpowers: QPowers[]) {
     ["qpower", "bpower", "gpower"].forEach((power) => {
@@ -83,109 +73,6 @@ function elacrit(gauntlets: Gauntlet[], crew: CrewMember) {
     return ec;
 }
 
-// function compileEventCrew(crew: CrewMember[]) {
-//     const max_diff = 31;
-//     const STATIC_PATH = `${__dirname}/../website/static/structured/events`;
-//     let eventCrew = [] as string[];
-//     let megas = [] as string[];
-
-//     let lastDate = undefined as Date | undefined;
-//     let firstnum = 0;
-
-//     fs.readdirSync(`${STATIC_PATH}`).sort((a, b) => {
-//         try {
-//             let [an, ] = a.split('.');
-//             let [bn, ] = b.split('.');
-//             return Number(an) - Number(bn);
-//         }
-//         catch {
-//             return a.localeCompare(b);
-//         }
-//     }).forEach((file, idx) => {
-//         let [fnum, ext] = file.split('.');
-//         let num = Number(fnum);
-//         if (idx === 0) firstnum = num;
-//         const ed = eventToDate(num);
-//         const etime = ed.getTime();
-//         const event = JSON.parse(fs.readFileSync(`${STATIC_PATH}/${file}`, 'utf8')) as GameEvent;
-//         let ddtime = null as null | Date;
-
-//         const checkdate = (c) => {
-//             if (c?.date_added) {
-//                 if (typeof c.date_added === 'string') {
-//                     c.date_added = new Date(c.date_added);
-//                 }
-//                 const gtime = ddtime?.getTime() ?? etime;
-//                 const ctime = c.date_added.getTime();
-//                 if (Math.abs(gtime - ctime) > (max_diff * 24 * 60 * 60 * 1000)) return false;
-//             }
-//             return true;
-//         }
-
-//         let evcrew = event.threshold_rewards.filter((r) => r.points !== 25000).map((tr, tidx) => tr.rewards.filter(trr => {
-//             if (trr.type === 1) {
-//                 if (crew) {
-//                     let c = crew.find(f => f.symbol === trr.symbol);
-
-//                     if (c) {
-//                         return checkdate(c);
-//                     }
-//                 }
-//                 return true;
-//             }
-//             return false;
-//         }).map(trr => trr.symbol)).flat().filter(f => f !== undefined);
-
-//         evcrew = evcrew.concat(event.ranked_brackets.map(tr => tr.rewards.filter(trr => {
-//             if (trr.type === 1) {
-//                 if (crew) {
-//                     let c = crew.find(f => f.symbol === trr.symbol);
-//                     return checkdate(c);
-//                 }
-//                 return true;
-//             }
-//             return false;
-//         }).map(trr => trr.symbol)).flat().filter(f => f !== undefined));
-
-//         megas = megas.concat(event.threshold_rewards.filter(r => r.points === 25000).map(tr => tr.rewards.filter(trr => {
-//             return (trr.type === 1);
-//         }).map(trr => trr.symbol)).flat().filter(f => f !== undefined));
-
-//         eventCrew = eventCrew.concat(evcrew);
-
-//         if (event.discovered) {
-//             let d = new Date(event.discovered);
-//             if (!lastDate || d.getTime() > lastDate.getTime()) {
-//                 lastDate = d;
-//             }
-//         }
-//     });
-
-//     if (firstnum === 0) {
-//         return null;
-//     }
-
-//     eventCrew = [ ... new Set(eventCrew)];
-//     megas = [ ... new Set(megas)];
-
-//     let cutOff = eventToDate(firstnum);
-
-//     return { eventCrew, cutOff, megas, lastDate };
-// }
-
-function manyMuch(crew: CrewMember, type: "G" | "B" | "V") {
-    let many = 0;
-    let much = 0;
-    Object.entries(crew.ranks).forEach(([key, value]) => {
-        if (typeof value !== 'number') return;
-        if (!key.startsWith(`${type}_`)) return;
-        many++;
-        much += value;
-    });
-
-    return many + (many/much);
-}
-
 function velocity(crew: CrewMember, roster: CrewMember[]) {
     roster = [...roster].filter(f => f.skill_order.join(",") === crew.skill_order.join(","));
     let highint = [] as number[];
@@ -214,24 +101,6 @@ function velocity(crew: CrewMember, roster: CrewMember[]) {
 
     return highint.reduce((p, n) => p + n, 0);
 }
-
-const SpecialCols = {
-    original: 34,
-    dsc: 20,
-    ent: 66,
-    voy: 74,
-    q: 31,
-    evsuit: 38,
-    ageofsail: 37,
-    exclusive_gauntlet: 32,
-    low: 54,
-    tas: 54,
-    vst: 54,
-    crew_max_rarity_3: 16,
-    crew_max_rarity_2: 15,
-    crew_max_rarity_1: 14,
-    niners: 29,
-};
 
 function castCount(crew: CrewMember, roster: CrewMember[], maincast: MainCast) {
     let variants = getVariantTraits(crew);
@@ -275,7 +144,6 @@ function tertRare(crew: CrewMember, roster: CrewMember[]) {
     });
     return ro.length / roster.length;
 }
-
 
 function traitScoring(roster: CrewMember[]) {
 	roster = [ ...roster ];
@@ -331,6 +199,7 @@ export function score() {
         }
         return Object.values(ghash);
     })();
+
     const collections = JSON.parse(fs.readFileSync(STATIC_PATH + 'collections.json', 'utf-8')) as Collection[];
     const TRAIT_NAMES = JSON.parse(fs.readFileSync(STATIC_PATH + 'translation_en.json', 'utf-8')).trait_names as TraitNames;
     const buffcap = JSON.parse(fs.readFileSync(STATIC_PATH + 'all_buffs.json', 'utf-8'));
@@ -357,7 +226,7 @@ export function score() {
         return results;
     }
 
-    function makeResults(mode: 'core' | 'proficiency' | 'all', mm?: boolean) {
+    function makeResults(mode: 'core' | 'proficiency' | 'all') {
         let results = [] as RarityScore[];
         let bb: 'B' | 'V' | 'G' = 'V';
         switch (mode) {
@@ -377,33 +246,24 @@ export function score() {
             results.push({
                 symbol: c.symbol,
                 rarity: c.max_rarity,
-                score: mm ? manyMuch(c, bb) : skillSum(skills, mode),
+                score: skillSum(skills, mode),
             });
         }
         return normalize(results);
     }
 
     let results = makeResults('all')
-    let voymuch = makeResults('all', true);
     let voyage = results;
     if (DEBUG) console.log("Voyage")
     if (DEBUG) console.log(voyage.slice(0, 20));
-    if (DEBUG) console.log("Voyage Many/Much")
-    if (DEBUG) console.log(voymuch.slice(0, 20));
     results = makeResults('proficiency')
-    let gauntmuch = makeResults('proficiency', true)
     let gauntlet = results;
     if (DEBUG) console.log("Gauntlet")
     if (DEBUG) console.log(gauntlet.slice(0, 20));
-    if (DEBUG) console.log("Gauntlet Many/Much")
-    if (DEBUG) console.log(gauntmuch.slice(0, 20));
     results = makeResults('core')
-    let shuttlemuch = makeResults('core', true)
     let shuttle = results;
     if (DEBUG) console.log("Shuttle")
     if (DEBUG) console.log(shuttle.slice(0, 20));
-    if (DEBUG) console.log("Shuttle Many/Much")
-    if (DEBUG) console.log(shuttlemuch.slice(0, 20));
     results = [].slice();
 
     traitScoring(crew);
@@ -600,13 +460,7 @@ export function score() {
         let gauntlet_n = gauntlet.find(f => f.symbol === c.symbol)!.score;
         let voyage_n = voyage.find(f => f.symbol === c.symbol)!.score;
         let shuttle_n = shuttle.find(f => f.symbol === c.symbol)!.score;
-        // let gauntm = gauntmuch.find(f => f.symbol === c.symbol)!.score;
-        // let voym = voymuch.find(f => f.symbol === c.symbol)!.score;
-        // let shutm = shuttlemuch.find(f => f.symbol === c.symbol)!.score;
 
-        // voy = Math.max(voy, voym);
-        // gaunt = Math.max(gaunt, gauntm);
-        // shut = Math.max(shut, shutm);
         c.ranks.scores.gauntlet = gauntlet_n;
         c.ranks.scores.voyage = voyage_n;
         c.ranks.scores.shuttle = shuttle_n;
@@ -630,8 +484,6 @@ export function score() {
         c.ranks.scores.crit = crit_n;
 
         let ship_n = c.ranks.scores.ship.overall;
-
-        //let pot = 0; //(Math.max(voy, shut, gaunt, ship, colscore, trait, trare, skrare, cast, pcs)) * 0.5;
 
         amseat_n *= 0.5;
         maincast_n *= 0.15;
@@ -740,7 +592,6 @@ export function score() {
     if (DEBUG) console.log(tuvix.slice(0, 20));
 
     if (DEBUG) console.log("Final scoring:");
-
 
     if (DEBUG) {
         results.forEach((result, idx) => {
