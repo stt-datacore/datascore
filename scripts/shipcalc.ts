@@ -43,6 +43,8 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     const ship_schematics = JSON.parse(fs.readFileSync(STATIC_PATH + 'ship_schematics.json', 'utf-8')) as Schematics[];
     const crew = JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8')) as CrewMember[];
 
+    const VERBOSE = process.argv.includes("--verbose") || process.argv.includes("-v");
+
     let newcrew = [] as CrewMember[];
     let newships = [] as Ship[];
 
@@ -304,13 +306,16 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     runidx = 0;
 
     count = 1;
+
+    console.log("Testing ships in Arena battles...");
+
     for (let ship of arena_p2) {
         let crew = ship.battle_stations?.map(m => m.crew).filter(f => !!f);
         if (!crew?.length || crew?.length !== ship.battle_stations?.length) {
             console.log(`Missing crew!!!`, ship, count);
             exit(-1);
         }
-        console.log(`Playing arena on ${ship.name} against all compatible ships (${count++} / ${arena_p2.length})...`);
+        if (VERBOSE) console.log(`Scoring arena on ${ship.name} against all compatible ships (${count++} / ${arena_p2.length})...`);
         let division = getShipDivision(ship.rarity);
         for (let ship2 of arena_p2) {
             if (ship == ship2) continue;
@@ -351,8 +356,10 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     }
 
     count = 1;
+    console.log("Testing ships in Fleet Boss battles...");
+
     for (let ship of fbb_p2) {
-        console.log(`Running FBB on ${ship.name} (${count++} / ${fbb_p2.length})...`);
+        if (VERBOSE) console.log(`Scoring FBB on ${ship.name} (${count++} / ${fbb_p2.length})...`);
         let crew = ship.battle_stations!.map(m => m.crew!);
         let runres = runBattles(current_id, rate, ship, crew, allruns, runidx, hrpool, true, false, undefined, false, arena_variance, fbb_variance);
 
@@ -385,6 +392,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     arenaruns.splice(ac);
 
     allruns.length = 0;
+
     scoreConfig.bypass_crew = true;
     scoreConfig.trigger_compat = true;
     scoreConfig.seat_compat = true;
@@ -397,51 +405,24 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
 
     console.log("Factoring ship grades into final crew grades.");
 
-    // ship_3.forEach((shipScore) => {
-    //     const arenarefs = arenaruns_reference.filter(f => f.ship.symbol === shipScore.symbol);
-    //     const fbbrefs = fbbruns_reference.filter(f => f.ship.symbol === shipScore.symbol);
-    //     [offs_2, defs_2].forEach((scores) => {
-    //         scores.forEach((score) => {
-    //             const arenas = arenaruns.filter(f => f.crew?.symbol === score.symbol && f.ship.symbol === shipScore.symbol);
-    //             const fbbs = fbbruns.filter(f => f.crew?.symbol === score.symbol && f.ship.symbol === shipScore.symbol);
-
-    //             let fbb = score.fbb_data.sort((a, b) => b.group - a.group)[0];
-    //             let arena = score.arena_data.sort((a, b) => b.group - a.group)[0];
-
-    //             let ref1 = fbbrefs.find(f => f.boss?.id === fbb.group);
-    //             let my1 = fbbs.find(f => f.boss?.id === fbb.group);
-    //             if (ref1 && my1) {
-    //                 score.fbb_final += (((ref1.damage / ref1.duration) / (my1.damage / my1.duration)) / shipScore.fbb_final);
-    //             }
-
-    //             ref1 = arenarefs.find(f => f.division === arena.group);
-    //             my1 = arenas.find(f => f.division === arena.group);
-    //             if (ref1 && my1) {
-    //                 score.arena_final += (((ref1.damage / ref1.duration) / (my1.damage / my1.duration)) / shipScore.arena_final);
-    //             }
-    //         });
-    //     });
-    // });
-    // normalizeScores(offs_2);
     const shipidx = 2;
-
-    console.log("Name", "Overall", "Arena", "FBB");
-    console.log("".padEnd(40, ""), "Arena Ship/Crew");
-    console.log("".padEnd(40, ""), "FBB Ship/Crew");
-    console.log("-------------------------------------------------------------------");
 
     const tc = (s: string) => s.slice(0, 1).toUpperCase() + s.slice(1);
 
     const buffer = [] as string[];
 
+    const crewRanksOut = {} as {[key: string]: ShipScores }
+    const shipRanksOut = {} as {[key: string]: ShipScores }
+
     function printAndLog(...params: any[]) {
         let text = params.join(" ");
         buffer.push(text);
-        console.log(...params);
+        if (VERBOSE) console.log(...params);
     }
 
-    const crewRanksOut = {} as {[key: string]: ShipScores }
-    const shipRanksOut = {} as {[key: string]: ShipScores }
+    console.log("".padEnd(40, ""), "Arena Ship/Crew");
+    console.log("".padEnd(40, ""), "FBB Ship/Crew");
+    console.log("-------------------------------------------------------------------");
 
     [offs_2, defs_2, ship_3].forEach((scores, idx) => {
         printAndLog(" ");
@@ -522,7 +503,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         }
     });
 
-    console.log("Writing report and raw scores...");
+    console.log("Writing report and scores...");
 
     fs.writeFileSync("./battle_run_report.txt", buffer.join("\n"));
     fs.writeFileSync("./battle_run_report.json", JSON.stringify(offs_2.concat(defs_2).concat(ship_3)));
@@ -565,7 +546,6 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     fs.writeFileSync(STATIC_PATH + 'ship_schematics.json', JSON.stringify(shipFresh));
 
     const runEnd = new Date();
-
     const diff = (runEnd.getTime() - runStart.getTime()) / (1000 * 60);
 
     console.log("Run Time", `${diff.toFixed(2)} minutes.`);

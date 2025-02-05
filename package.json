@@ -36,7 +36,9 @@
     "@types/node": "^22.9.0",
     "@types/showdown": "^2.0.6",
     "@types/uuid": "^9.0.8",
+    "dependency-cruiser": "^16.9.0",
     "dotenv": "^16.4.5",
+    "madge": "^8.0.0",
     "typescript": "^5.4.5"
   }
 }
