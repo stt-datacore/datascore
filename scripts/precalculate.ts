@@ -6,6 +6,7 @@ import { EquipmentItem, EquipmentItemSource, IDemand } from '../../website/src/m
 import { BaseSkills, ComputedSkill, CrewMember, EquipmentSlot, QuipmentScores, Ranks, Skill, SkillQuipmentScores } from '../../website/src/model/crew';
 import { Mission } from '../../website/src/model/missions';
 import { BattleStations, Schematics } from '../../website/src/model/ship';
+import { calcFuses } from './calcfuse';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 
@@ -1177,5 +1178,6 @@ function processShips(): void {
 }
 
 main();
+calcFuses();
 updateExcelSheet();
 generateMissions();

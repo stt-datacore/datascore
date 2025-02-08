@@ -8,10 +8,9 @@ import { BattleRun, shipnum, getMaxTime, shipCompatibility } from './ships/scori
 import { processBattleRun } from './ships/battle';
 import { iterateBattle } from '../../website/src/workers/battleworkerutils';
 import { ComesFrom } from '../../website/src/model/worker';
-import { getVariantTraits } from '../../website/src/utils/crewutils';
 import { makeBuckets } from './ships/util';
 
-const STATIC_PATH = `${__dirname}/../../static/structured/`;
+const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 
 type TScore = {
     crew: string,
@@ -132,40 +131,6 @@ export function expo() {
     boom.slice(0, 10).forEach((b) => {
         console.log(b);
     })
-}
-
-export function fuseExperiment() {
-    const crew = JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8')) as CrewMember[];
-
-    let filtered = crew.filter(f => (f.cross_fuse_targets as CrossFuseTarget)?.symbol);
-    const seen = {} as any;
-    filtered.forEach((f) => {
-        let cf = f.cross_fuse_targets as CrossFuseTarget;
-        let vta = getVariantTraits(f);
-        let cfc = crew.find (f => f.symbol === cf.symbol);
-        if (cfc) {
-            let vtb = getVariantTraits(cfc);
-
-            let potential = crew.find(c => c.traits_hidden.some(tr => vta.includes(tr) && c.traits_hidden.some(tr => vtb.includes(tr))));
-            if (potential) {
-                if (seen[potential.symbol]) return;
-                seen[potential.symbol] = true;
-                console.log(`${f.name} + ${cfc.name} => ${potential.name}`);
-            }
-            else {
-                potential = crew.find(c => c.obtained.toLowerCase().includes("fus") && c.traits_hidden.some(tr => vta.includes(tr) || c.traits_hidden.some(tr => vtb.includes(tr))));
-                if (potential) {
-                    if (seen[potential.symbol]) return;
-                    seen[potential.symbol] = true;
-                    console.log(`${f.name} + ${cfc.name} => ${potential.name}`);
-                }
-            }
-        }
-    });
-
-    console.log(crew.filter(f => f.obtained.toLowerCase().includes('fus')).map(m => m.name));
-    // console.log(filtered.map(m => `${m.symbol} -> ${(m.cross_fuse_targets as any).symbol}`))
-
 }
 
 export type CritBoom = { crit: string, boom: string, bosses: number[] };
@@ -419,7 +384,7 @@ async function critBoomThing() {
         console.log("Writing best boom cache ...");
         //battles.splice(runidx);
 
-        fs.writeFileSync('./crit-booms.jsom', JSON.stringify(bestbooms));
+        fs.writeFileSync('./crit-booms.json', JSON.stringify(bestbooms));
 
         bestbooms.sort((a, b) => b.damage - a.damage);
 
