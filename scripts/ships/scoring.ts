@@ -75,6 +75,9 @@ export interface Score {
     fbb_final: number;
     overall_final: number;
     overall: number;
+    overall_rank?: number;
+    arena_rank?: number;
+    fbb_rank?: number;
 }
 
 export interface BattleRunBase {
@@ -552,7 +555,10 @@ export function scoreToShipScore(score: Score, kind: 'offense' | 'defense' | 'sh
         divisions: {
             fbb: {},
             arena: {}
-        }
+        },
+        overall_rank: score.overall_rank ?? 0,
+        arena_rank: score.arena_rank ?? 0,
+        fbb_rank: score.fbb_rank ?? 0
     }
 
     score.arena_data.forEach((obj, idx) => {

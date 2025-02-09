@@ -208,6 +208,12 @@ export function score() {
     const origCrew = JSON.parse(JSON.stringify(crew)) as CrewMember[];
     const pcols = potentialCols(crew, collections, TRAIT_NAMES);
 
+    const crewNames = (() => {
+        const cn = {} as {[key:string]: string};
+        crew.forEach(c => cn[c.symbol] = c.name);
+        return cn;
+    })();
+
     function normalize(results: RarityScore[], inverse?: boolean, min_balance?: boolean) {
         results = results.slice();
         results.sort((a, b) => b.score - a.score);
@@ -222,7 +228,7 @@ export function score() {
                 r.score = Number((((r.score - min) / max) * 100).toFixed(4));
             }
         }
-        results.sort((a, b) => b.score - a.score);
+        results.sort((a, b) => b.score - a.score || crewNames[a.symbol].localeCompare(crewNames[b.symbol]));
         return results;
     }
 
@@ -449,41 +455,78 @@ export function score() {
     results = [].slice();
 
     for (let c of origCrew) {
-        let maincast_n = mains.find(f => f.symbol === c.symbol)!.score;
-        let sk_rare_n = skillrare.find(f => f.symbol === c.symbol)!.score;
-        let tert_rare_n = tertrare.find(f => f.symbol === c.symbol)!.score;
-
-        c.ranks.scores.main_cast = maincast_n;
-        c.ranks.scores.skill_rarity = sk_rare_n;
-        c.ranks.scores.tertiary_rarity = tert_rare_n;
-
         let gauntlet_n = gauntlet.find(f => f.symbol === c.symbol)!.score;
         let voyage_n = voyage.find(f => f.symbol === c.symbol)!.score;
-        let shuttle_n = shuttle.find(f => f.symbol === c.symbol)!.score;
+        let i_shuttle_n = shuttle.findIndex(f => f.symbol === c.symbol);
+        let shuttle_n = shuttle[i_shuttle_n].score;
 
         c.ranks.scores.gauntlet = gauntlet_n;
         c.ranks.scores.voyage = voyage_n;
         c.ranks.scores.shuttle = shuttle_n;
+        c.ranks.shuttleRank = i_shuttle_n + 1;
 
-        let amseat_n = amseats.find(f => f.symbol === c.symbol)!.score;
-        let quip_n = quips.find(f => f.symbol === c.symbol)!.score;
+        let i_maincast_n = mains.findIndex(f => f.symbol === c.symbol);
+        let maincast_n = mains[i_maincast_n].score;
+
+        let i_sk_rare_n = skillrare.findIndex(f => f.symbol === c.symbol);
+        let sk_rare_n = skillrare[i_sk_rare_n].score;
+
+        let i_tert_rare_n = tertrare.findIndex(f => f.symbol === c.symbol);
+        let tert_rare_n = tertrare[i_tert_rare_n].score;
+
+        let i_amseat_n = amseats.findIndex(f => f.symbol === c.symbol);
+        let amseat_n = amseats[i_amseat_n].score;
+
+        let i_quip_n = quips.findIndex(f => f.symbol === c.symbol);
+        let quip_n = quips[i_quip_n].score;
+
+        let i_trait_n = traits.findIndex(f => f.symbol === c.symbol);
+        let trait_n = traits[i_trait_n].score;
+
+        let i_colscore_n = cols.findIndex(f => f.symbol === c.symbol);
+        let colscore_n = cols[i_colscore_n].score;
+
+        let i_pcs_n = pcolscores.findIndex(f => f.symbol === c.symbol);
+        let pcs_n = pcolscores[i_pcs_n].score;
+
+        let i_velocity_n = velocities.findIndex(f => f.symbol === c.symbol);
+        let velocity_n = velocities[i_velocity_n].score;
+
+        let i_crit_n = elacrits.findIndex(f => f.symbol === c.symbol);
+        let crit_n = elacrits[i_crit_n].score;
+
+        c.ranks.scores.main_cast = maincast_n;
+        c.ranks.main_cast_rank = i_maincast_n + 1;
+
+        c.ranks.scores.skill_rarity = sk_rare_n;
+        c.ranks.skill_rarity_rank = i_sk_rare_n + 1;
+
+        c.ranks.scores.tertiary_rarity = tert_rare_n;
+        c.ranks.tertiary_rarity_rank = i_tert_rare_n + 1;
 
         c.ranks.scores.quipment = quip_n;
-        c.ranks.scores.am_seating = amseat_n;
+        c.ranks.quipment_rank = i_quip_n + 1;
 
-        let trait_n = traits.find(f => f.symbol === c.symbol)!.score;
-        let colscore_n = cols.find(f => f.symbol === c.symbol)!.score;
-        let pcs_n = pcolscores.find(f => f.symbol === c.symbol)!.score;
-        let velocity_n = velocities.find(f => f.symbol === c.symbol)!.score;
-        let crit_n = elacrits.find(f => f.symbol === c.symbol)!.score;
+        c.ranks.scores.am_seating = amseat_n;
+        c.ranks.am_seating_rank = i_amseat_n + 1;
 
         c.ranks.scores.trait = trait_n;
+        c.ranks.traitRank = i_trait_n + 1;
+
         c.ranks.scores.collections = colscore_n;
+        c.ranks.collections_rank = i_colscore_n + 1;
+
         c.ranks.scores.potential_cols = pcs_n;
+        c.ranks.potential_cols_rank = i_pcs_n + 1;
+
         c.ranks.scores.velocity = velocity_n;
+        c.ranks.velocity_rank = i_velocity_n + 1;
+
         c.ranks.scores.crit = crit_n;
+        c.ranks.crit_rank = i_crit_n + 1;
 
         let ship_n = c.ranks.scores.ship.overall;
+        c.ranks.ship_rank = c.ranks.scores.ship.overall_rank;
 
         amseat_n *= 0.5;
         maincast_n *= 0.15;
@@ -556,16 +599,21 @@ export function score() {
         normalize(filtered);
     }
 
-    for (let r = 1; r <= 5; r++) {
-        let filtered = results.filter(f => f.rarity === r)!;
+    for (let r = 0; r <= 5; r++) {
+        let filtered = results.filter(f => !r || f.rarity === r);
         filtered.sort((a, b) => b.score - a.score);
         let rank = 1;
         for (let rec of filtered) {
             let c = origCrew.find(fc => fc.symbol === rec.symbol);
             if (c) {
-                c.ranks.scores.rarity_overall = rec.score;
-                c.ranks.scores.overall_grade = numberToGrade(rec.score / 100);
-                c.ranks.scores.overall_rank = rank++;
+                if (!r) {
+                    c.ranks.scores.overall_rank = rank++;
+                }
+                else {
+                    c.ranks.scores.rarity_overall = rec.score;
+                    c.ranks.scores.rarity_overall_rank = rank++;
+                    c.ranks.scores.overall_grade = numberToGrade(rec.score / 100);
+                }
             }
         }
     }

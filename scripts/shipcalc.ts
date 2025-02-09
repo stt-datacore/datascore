@@ -429,6 +429,15 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         printAndLog(`${idx == 0 ? 'Offense' : idx == 1 ? 'Defense' : 'Ship'}`);
         printAndLog(" ");
 
+        scores.sort((a, b) => b.fbb_final - a.fbb_final);
+        scores.forEach((score, i) => score.fbb_rank = i + 1);
+
+        scores.sort((a, b) => b.arena_final - a.arena_final);
+        scores.forEach((score, i) => score.arena_rank = i + 1);
+
+        scores.sort((a, b) => b.overall_final - a.overall_final);
+        scores.forEach((score, i) => score.overall_rank = i + 1);
+
         for (let score of scores) {
             if (idx === shipidx) {
                 shipRanksOut[score.symbol] = scoreToShipScore(score, 'ship');
@@ -437,6 +446,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                 crewRanksOut[score.symbol] = scoreToShipScore(score, idx ? 'defense' : 'offense');
             }
         }
+
         let working = scores.slice(0, 100);
         let arena_high = scores.find(f => f.arena_final === 10);
         if (arena_high) {
