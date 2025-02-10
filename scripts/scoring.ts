@@ -583,37 +583,44 @@ export function score() {
 
     });
 
-    for (let r = 1; r <= 5; r++) {
-        let filtered = results.filter(f => f.rarity === r)!;
+    results.sort((a, b) => b.score - a.score);
+
+    for (let r = 0; r <= 5; r++) {
+        let filtered = results.filter(f => !r || f.rarity === r)!;
         filtered.sort((a, b) => b.score - a.score);
         let score_max = filtered[0].score;
         let len_max = filtered.length;
         let rank = 1;
         let div = 2;
-        for (let rec of filtered) {
-            let newscore1 = Number(((rec.score / score_max) * 100).toFixed(4));
-            let newscore2 = Number(((1 - (rank / len_max)) * 100).toFixed(4));
-            rec.score = ((newscore1 * div) + (newscore2 * 1)) / (div + 1);
-            rank++;
+        if (!r) {
+            for (let rec of filtered) {
+                let c = origCrew.find(fc => fc.symbol === rec.symbol);
+                if (c) {
+                    c.ranks.scores.overall_rank = rank++;
+                }
+            }
+        }
+        else {
+            for (let rec of filtered) {
+                let newscore1 = Number(((rec.score / score_max) * 100).toFixed(4));
+                let newscore2 = Number(((1 - (rank / len_max)) * 100).toFixed(4));
+                rec.score = ((newscore1 * div) + (newscore2 * 1)) / (div + 1);
+                rank++;
+            }
         }
         normalize(filtered);
     }
 
-    for (let r = 0; r <= 5; r++) {
-        let filtered = results.filter(f => !r || f.rarity === r);
+    for (let r = 1; r <= 5; r++) {
+        let filtered = results.filter(f => f.rarity === r);
         filtered.sort((a, b) => b.score - a.score);
         let rank = 1;
         for (let rec of filtered) {
             let c = origCrew.find(fc => fc.symbol === rec.symbol);
             if (c) {
-                if (!r) {
-                    c.ranks.scores.overall_rank = rank++;
-                }
-                else {
-                    c.ranks.scores.rarity_overall = rec.score;
-                    c.ranks.scores.rarity_overall_rank = rank++;
-                    c.ranks.scores.overall_grade = numberToGrade(rec.score / 100);
-                }
+                c.ranks.scores.rarity_overall = rec.score;
+                c.ranks.scores.rarity_overall_rank = rank++;
+                c.ranks.scores.overall_grade = numberToGrade(rec.score / 100);
             }
         }
     }
