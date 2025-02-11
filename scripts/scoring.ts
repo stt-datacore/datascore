@@ -32,15 +32,13 @@ function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs: BuffS
     // Aggregate:
     let qpower = Object.values(crew.best_quipment!.aggregate_by_skill).reduce((p, n) => p > n ? p : n, 0);
     // Voyage:
-    // calcQLots(crew, quipment, buffs, true, undefined, 'all');
-    let vpower = [crew.best_quipment_1_2!, crew.best_quipment_1_3!, crew.best_quipment_2_3!, crew.best_quipment_3!].map(q => !q ? 0 : q.aggregate_power).reduce((p, n) => p > n ? p : n, 0);
-
+    let vpower = [crew.best_quipment_1_2!, crew.best_quipment_1_3!, crew.best_quipment_2_3!, crew.best_quipment_3!, crew.best_quipment_top!].map(q => !q ? 0 : q.aggregate_power).reduce((p, n) => p > n ? p : n, 0);
     // Base:
     calcQLots(crew, quipment, buffs, true, undefined, 'core');
-    let bpower = [crew.best_quipment_1_2!, crew.best_quipment_1_3!, crew.best_quipment_2_3!, crew.best_quipment_3!].map(q => !q ? 0 : q.aggregate_power).reduce((p, n) => p > n ? p : n, 0);
+    let bpower = [crew.best_quipment_1_2!, crew.best_quipment_1_3!, crew.best_quipment_2_3!, crew.best_quipment_3!, crew.best_quipment_top!].map(q => !q ? 0 : q.aggregate_power).reduce((p, n) => p > n ? p : n, 0);
     // Proficiency:
     calcQLots(crew, quipment, buffs, true, undefined, 'proficiency');
-    let gpower = [crew.best_quipment_1_2!, crew.best_quipment_1_3!, crew.best_quipment_2_3!, crew.best_quipment_3!].map(q => !q ? 0 : q.aggregate_power).reduce((p, n) => p > n ? p : n, 0);
+    let gpower = [crew.best_quipment_1_2!, crew.best_quipment_1_3!, crew.best_quipment_2_3!, crew.best_quipment_3!, crew.best_quipment_top!].map(q => !q ? 0 : q.aggregate_power).reduce((p, n) => p > n ? p : n, 0);
 
     return { qpower, vpower, bpower, gpower, avg: 0, symbol: crew.symbol };
 }
