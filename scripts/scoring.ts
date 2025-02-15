@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { ComputedSkill, CrewMember, Ranks, RankScoring, Skill } from '../../website/src/model/crew';
 import { BuffStatTable, calculateMaxBuffs, lookupAMSeatsByTrait } from '../../website/src/utils/voyageutils';
-import { applyCrewBuffs, getVariantTraits, numberToGrade, skillSum } from '../../website/src/utils/crewutils';
+import { applyCrewBuffs, getSkillOrderScore, getSkillOrderStats, getVariantTraits, numberToGrade, SkillRarityReport, skillSum } from '../../website/src/utils/crewutils';
 import { Collection } from '../../website/src/model/game-elements';
 import { getAllStatBuffs } from '../../website/src/utils/collectionutils';
 import { EquipmentItem } from '../../website/src/model/equipment';
@@ -210,13 +210,21 @@ export function score() {
     const origCrew = JSON.parse(JSON.stringify(crew)) as CrewMember[];
     const pcols = potentialCols(crew, collections, TRAIT_NAMES);
 
+    const skill_reports = (() => {
+        const output = [] as SkillRarityReport<CrewMember>[][];
+        for (let rarity = 1; rarity <= 5; rarity++) {
+            output.push(getSkillOrderStats({ roster: crew.filter(f => f.max_rarity === rarity), returnCrew: false }));
+        }
+        return output;
+    })();
+
     const crewNames = (() => {
         const cn = {} as {[key:string]: string};
-        crew.forEach(c => cn[c.symbol] = c.name);
+        origCrew.forEach(c => cn[c.symbol] = c.name);
         return cn;
     })();
 
-    function normalize(results: RarityScore[], inverse?: boolean, min_balance?: boolean) {
+    function normalize(results: RarityScore[], inverse?: boolean, min_balance?: boolean, not_crew?: boolean) {
         results = results.slice();
         results.sort((a, b) => b.score - a.score);
         let max = results[0].score;
@@ -230,7 +238,21 @@ export function score() {
                 r.score = Number((((r.score - min) / max) * 100).toFixed(4));
             }
         }
-        results.sort((a, b) => b.score - a.score || crewNames[a.symbol].localeCompare(crewNames[b.symbol]));
+
+        results.sort((a, b) => {
+            let r = b.score - a.score;
+            if (!r) {
+                if (!not_crew) {
+                    if (crewNames[a.symbol] && crewNames[b.symbol]) {
+                        r = crewNames[a.symbol].localeCompare(b.symbol);
+                    }
+                    else {
+                        console.log(`Missing crew names for ${a.symbol} or ${b.symbol}`)!
+                    }
+                }
+            }
+            return r;
+        });
         return results;
     }
 
@@ -328,12 +350,18 @@ export function score() {
     if (DEBUG) console.log(cols.slice(0, 20));
 
     results = [].slice();
+    let skillpos = [] as RarityScore[];
     let buckets = [[], [], [], [], [], []] as CrewMember[][];
     for (let c of origCrew) {
         buckets[c.max_rarity].push(c);
     }
 
     for (let c of crew) {
+        skillpos.push({
+            symbol: c.symbol,
+            rarity: c.max_rarity,
+            score: getSkillOrderScore(c, skill_reports[c.max_rarity-1])
+        });
         results.push({
             symbol: c.symbol,
             rarity: c.max_rarity,
@@ -342,9 +370,13 @@ export function score() {
     }
 
     let skillrare = normalize(results, true);
+    skillpos = normalize(skillpos);
 
     if (DEBUG) console.log("Skill-Order Rarity")
     if (DEBUG) console.log(skillrare.slice(0, 20));
+
+    if (DEBUG) console.log("Triplet Power")
+    if (DEBUG) console.log(skillpos.slice(0, 20));
 
     results = [].slice();
 
@@ -386,7 +418,7 @@ export function score() {
         });
     }
 
-    tcolnorm = normalize(tcolnorm);
+    tcolnorm = normalize(tcolnorm, undefined, undefined, true);
 
     if (DEBUG) console.log("Potential Collections")
     if (DEBUG) console.log(tcolnorm);
@@ -470,6 +502,9 @@ export function score() {
         let i_maincast_n = mains.findIndex(f => f.symbol === c.symbol);
         let maincast_n = mains[i_maincast_n].score;
 
+        let i_pos_n = skillpos.findIndex(f => f.symbol === c.symbol);
+        let pos_n = skillpos[i_pos_n].score;
+
         let i_sk_rare_n = skillrare.findIndex(f => f.symbol === c.symbol);
         let sk_rare_n = skillrare[i_sk_rare_n].score;
 
@@ -499,6 +534,9 @@ export function score() {
 
         c.ranks.scores.main_cast = maincast_n;
         c.ranks.main_cast_rank = i_maincast_n + 1;
+
+        c.ranks.scores.skill_positions = pos_n;
+        c.ranks.skill_positions_rank = i_pos_n + 1;
 
         c.ranks.scores.skill_rarity = sk_rare_n;
         c.ranks.skill_rarity_rank = i_sk_rare_n + 1;
@@ -544,6 +582,7 @@ export function score() {
         velocity_n *= 0.2;
         voyage_n *= 7;
         crit_n *= 0.2;
+        pos_n *= 0.5;
 
         let scores = [
             amseat_n,
@@ -559,7 +598,8 @@ export function score() {
             tert_rare_n,
             velocity_n,
             voyage_n,
-            crit_n
+            crit_n,
+            pos_n
         ];
 
         results.push({
