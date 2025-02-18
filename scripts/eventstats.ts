@@ -5,7 +5,7 @@ import { GameEvent } from '../../website/src/model/player';
 import { CrewMember } from '../../website/src/model/crew';
 import { getEventStats } from '../../website/src/utils/event_stats';
 
-const STATIC_PATH = `${__dirname}/../../static/structured/`;
+const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 
 async function compileEventStats() {
     const evPath = `${STATIC_PATH}event_instances.json`;

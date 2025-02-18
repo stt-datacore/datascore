@@ -104,11 +104,29 @@ function velocity(crew: CrewMember, roster: CrewMember[]) {
     return highint.reduce((p, n) => p + n, 0);
 }
 
-function castCount(crew: CrewMember, roster: CrewMember[], maincast: MainCast) {
+function variantScore(variants: string[], roster: CrewMember[]) {
+    let score = roster.filter(c => c.traits_hidden.some(th => variants.includes(th))).map(c => c.max_rarity * (1 + (c.max_rarity / 2))).reduce((p, n) => p + n, 0);
+    return score;
+}
+
+function castScore(crew: CrewMember, roster: CrewMember[], maincast: MainCast) {
     let variants = getVariantTraits(crew);
     variants = [ ...new Set(Object.values(maincast).map((m: string[]) => m.filter(f => variants.includes(f))).flat()) ];
+    //return variantScore(variants, roster);
     let count = roster.filter(c => c.traits_hidden.some(th => variants.includes(th))).length;
     return count;
+}
+
+function mainCastValue(symbol: string, maincast: MainCast) {
+    let shows = 0;
+    let inc = 0;
+    Object.entries(maincast).forEach(([key, value]: [string, string[]], idx) => {
+        if (value.includes(symbol)) shows++;
+        inc += (1 + idx);
+    });
+    if (shows === 0 || inc === 0) return -1;
+    inc /= shows;
+    return inc;
 }
 
 function skillRare(crew: CrewMember, roster: CrewMember[]) {
@@ -224,7 +242,7 @@ export function score() {
         return cn;
     })();
 
-    function normalize(results: RarityScore[], inverse?: boolean, min_balance?: boolean, not_crew?: boolean) {
+    function normalize(results: RarityScore[], inverse?: boolean, min_balance?: boolean, not_crew?: boolean, tie_breaker?: <T extends { symbol: string }>(a: T, b: T) => number) {
         results = results.slice();
         results.sort((a, b) => b.score - a.score);
         let max = results[0].score;
@@ -242,7 +260,10 @@ export function score() {
         results.sort((a, b) => {
             let r = b.score - a.score;
             if (!r) {
-                if (!not_crew) {
+                if (tie_breaker) {
+                    r = tie_breaker(a, b);
+                }
+                if (!r && !not_crew) {
                     if (crewNames[a.symbol] && crewNames[b.symbol]) {
                         r = crewNames[a.symbol].localeCompare(b.symbol);
                     }
@@ -477,14 +498,37 @@ export function score() {
         results.push({
             symbol: c.symbol,
             rarity: c.max_rarity,
-            score: castCount(c, crew, maincast)
+            score: castScore(c, crew, maincast)
         });
     }
 
-    let mains = normalize(results);
+    let mains = normalize(results, false, false, false, (a, b) => {
+        let av = mainCastValue(a.symbol, maincast);
+        let bv = mainCastValue(b.symbol, maincast);
+        if (av && bv) return av - bv;
+        else if (av) return -1;
+        else if (bv) return 1;
+        return 0;
+    });
 
     if (DEBUG) console.log("Main cast score")
     if (DEBUG) console.log(mains.slice(0, 20));
+
+    results = [].slice();
+
+    for (let c of crew) {
+        let variants = getVariantTraits(c);
+        results.push({
+            symbol: c.symbol,
+            rarity: c.max_rarity,
+            score: variantScore(variants, crew)
+        });
+    }
+
+    let variants = normalize(results);
+
+    if (DEBUG) console.log("Variant score")
+    if (DEBUG) console.log(variants.slice(0, 20));
 
     results = [].slice();
 
@@ -501,6 +545,9 @@ export function score() {
 
         let i_maincast_n = mains.findIndex(f => f.symbol === c.symbol);
         let maincast_n = mains[i_maincast_n].score;
+
+        let i_variant_n = variants.findIndex(f => f.symbol === c.symbol);
+        let variant_n = variants[i_variant_n].score;
 
         let i_pos_n = skillpos.findIndex(f => f.symbol === c.symbol);
         let pos_n = skillpos[i_pos_n].score;
@@ -535,6 +582,9 @@ export function score() {
         c.ranks.scores.main_cast = maincast_n;
         c.ranks.main_cast_rank = i_maincast_n + 1;
 
+        c.ranks.scores.variant = variant_n;
+        c.ranks.variant_rank = i_variant_n + 1;
+
         c.ranks.scores.skill_positions = pos_n;
         c.ranks.skill_positions_rank = i_pos_n + 1;
 
@@ -568,8 +618,31 @@ export function score() {
         let ship_n = c.ranks.scores.ship.overall;
         c.ranks.ship_rank = c.ranks.scores.ship.overall_rank;
 
+        /*
+
+
+    - Voyage Score                         Weight: 7
+    - Skill-Order Rarity                   Weight: 2
+    - Gauntlet Score                       Weight: 1.59
+    - Shuttle/Base Score                   Weight: 1
+    - Quipment Score                       Weight: 0.85
+    - Antimatter Seating Score             Weight: 0.5
+    - Skill Position Score                 Weight: 0.5
+    - Stat-Boosting Collection Score       Weight: 0.5
+    - Tertiary Skill Rarity Score          Weight: 0.3
+    - FBB Node-Cracking Trait Score        Weight: 0.25
+    - Elevated Crit Gauntlet               Weight: 0.2
+    - Skill-Order Velocity Score           Weight: 0.2
+    - Main Cast Score                      Weight: 0.15
+    - Potential Collection Score           Weight: 0.15
+    - Variant Score                        Weight: 0.15
+    - Ship Ability Score                   Weight: 0.125
+
+        */
+
         amseat_n *= 0.5;
         maincast_n *= 0.15;
+        variant_n *= 0.01;
         colscore_n *= 0.5;
         gauntlet_n *= 1.59;
         pcs_n *= 0.15;
@@ -587,6 +660,7 @@ export function score() {
         let scores = [
             amseat_n,
             maincast_n,
+            variant_n,
             colscore_n,
             gauntlet_n,
             pcs_n,
