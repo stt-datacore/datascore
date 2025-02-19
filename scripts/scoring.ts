@@ -683,7 +683,7 @@ export function score() {
         });
     }
 
-    results = normalize(results, false, true);
+    normalize(results, false, true);
 
     origCrew.forEach((c) => {
         c.ranks.scores ??= {} as RankScoring;
@@ -702,12 +702,13 @@ export function score() {
     results.sort((a, b) => b.score - a.score);
 
     for (let r = 0; r <= 5; r++) {
-        let filtered = results.filter(f => !r || f.rarity === r)!;
+        let filtered = results.filter(f => !r || f.rarity === r);
         filtered.sort((a, b) => b.score - a.score);
         let score_max = filtered[0].score;
-        let len_max = filtered.length;
+        let len_max = filtered.length * 1.75;
         let rank = 1;
-        let div = 2;
+        let score_mul = 2;
+        let rank_mul = 4;
         if (!r) {
             for (let rec of filtered) {
                 let c = origCrew.find(fc => fc.symbol === rec.symbol);
@@ -718,13 +719,13 @@ export function score() {
         }
         else {
             for (let rec of filtered) {
-                let newscore1 = Number(((rec.score / score_max) * 100).toFixed(4));
-                let newscore2 = Number(((1 - (rank / len_max)) * 100).toFixed(4));
-                rec.score = ((newscore1 * div) + (newscore2 * 1)) / (div + 1);
+                let score_num = Number(((rec.score / score_max) * 100).toFixed(4));
+                let rank_num = Number(((1 - ((rank - 1) / len_max)) * 100).toFixed(4));
+                rec.score = ((score_num * score_mul) + (rank_num * rank_mul)) / (rank_mul + score_mul);
                 rank++;
             }
         }
-        normalize(filtered);
+        if (r) normalize(filtered);
     }
 
     for (let r = 1; r <= 5; r++) {
@@ -768,7 +769,7 @@ export function score() {
         results.forEach((result, idx) => {
             let c = origCrew.find(f => f.symbol === result.symbol)!;
             if (idx < 50) {
-                console.log(`${c.name.padEnd(40, ' ')}`, `Score ${result.score}`.padEnd(15, ' '), `Grade: ${numberToGrade(result.score / 100)}`);
+                console.log(`${c.name.padEnd(40, ' ')}`, `Score ${c.ranks.scores.rarity_overall}`.padEnd(15, ' '), `Grade: ${c.ranks.scores.overall_grade}`);
             }
         });
     }
