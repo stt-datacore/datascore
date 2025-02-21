@@ -444,7 +444,7 @@ function main() {
 		} else {
 			crew.bigbook_tier = mdData.meta.bigbook_tier ? Number.parseInt(mdData.meta.bigbook_tier) : -1;
 			//crew.events = mdData.meta.events ? Number.parseInt(mdData.meta.events) : 0;
-			crew.in_portal = !!mdData.meta.in_portal;
+			// crew.in_portal = !!mdData.meta.in_portal;
 
 			if (mdData.meta.date) {
 				// Date is in European format :) "dd/mm/yyyy"
