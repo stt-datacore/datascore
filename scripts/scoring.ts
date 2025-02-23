@@ -705,7 +705,7 @@ export function score() {
         let filtered = results.filter(f => !r || f.rarity === r);
         filtered.sort((a, b) => b.score - a.score);
         let score_max = filtered[0].score;
-        let len_max = filtered.length * 1.75;
+        let len_max = filtered.length * 1.5;
         let rank = 1;
         let score_mul = 2;
         let rank_mul = 4;
