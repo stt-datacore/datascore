@@ -16,6 +16,7 @@ import { CalcRes, ShipCalcConfig } from './ships/paracalc';
 import { score } from './scoring';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
+const LEVEL_PATH = `${__dirname}/../../../../scripts/data/`;
 
 async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance = 0) {
     const Triggers = {
@@ -41,6 +42,37 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     const runStart = new Date();
 
     const ship_schematics = JSON.parse(fs.readFileSync(STATIC_PATH + 'ship_schematics.json', 'utf-8')) as Schematics[];
+    const ship_levels = JSON.parse(fs.readFileSync(LEVEL_PATH + 'ship_levels.json', 'utf-8')) as any[];
+    const conslevel = ship_levels.find(f => f.symbol === 'constellation_ship');
+    const constellation = {
+        symbol: 'constellation_ship',
+        rarity: 1,
+        max_level: 5,
+        level: 5,
+        antimatter: 1250,
+        name: 'Constellation Class',
+        icon: { file: '/ship_previews_fed_constellationclass' },
+        traits: ['federation','explorer'],
+        battle_stations: [
+            {
+                skill: 'command_skill'
+            },
+            {
+                skill: 'diplomacy_skill'
+            }
+        ],
+        owned: false,
+        levels: conslevel.levels
+    } as Ship;
+
+    ship_schematics.push({
+        ship: constellation,
+        rarity: constellation.rarity,
+        cost: 0,
+        id: 1,
+        icon: constellation.icon!
+    });
+
     const crew = JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8')) as CrewMember[];
 
     const VERBOSE = process.argv.includes("--verbose") || process.argv.includes("-v");
@@ -74,7 +106,11 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         return typicalcd;
     })();
 
-    const ships = mergeShips(ship_schematics.filter(sc => highestLevel(sc.ship) == (sc.ship.max_level ?? sc.ship.level) + 1 && (sc.ship.battle_stations?.length)), [], true);
+    const ships = mergeShips(ship_schematics.filter(sc => {
+        if (highestLevel(sc.ship) == (sc.ship.max_level ?? sc.ship.level) + 1 && (sc.ship.battle_stations?.length)) return true;
+        return false;
+    }), [], true);
+
     ships.sort((a, b) => shipnum(b) - shipnum(a));
 
     const origShips = JSON.parse(JSON.stringify(ships)) as Ship[];
@@ -141,9 +177,15 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         for (let x = 0; x < cship; x += bucketsize) {
             const bidx = Math.floor(x / bucketsize);
             let buckets = shipBuckets[bidx];
-            let promises = buckets.map((ship, idx2) => new Promise<CalcRes>((resolve, reject) => {
-                const ws = newships.length && newships.some(ws => ws.symbol === ship.symbol);
-                if (newships.length && !ws && !newcrew.length) return;
+            let promises = buckets.map((ship, idx2) => new Promise<CalcRes | undefined>((resolve, reject) => {
+                const ws = newships.length && newships.some(tship => tship.symbol === ship.symbol);
+                if (ws) {
+                    console.log(`Test new ship ${ship.name}`)
+                }
+                if ((newships.length && !ws) && !newcrew.length) {
+                    resolve(undefined);
+                    return;
+                }
                 const shipcrew = ws ? crew : workcrew;
                 const config: ShipCalcConfig = {
                     ships,
@@ -161,7 +203,9 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                     workerData: config,
                 });
                 worker.on('message', (data) => {
-                    worker.terminate();
+                    // setTimeout(() => {
+                    //     worker.terminate();
+                    // });
                     resolve(data);
                 });
                 worker.on('error', reject);

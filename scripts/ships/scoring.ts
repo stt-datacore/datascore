@@ -311,7 +311,7 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
         }
     }
 
-    let conds = data?.actions?.map(mp => mp.status).filter(f => f) as number[];
+    let conds = data?.actions?.map(mp => mp.status).filter(f => f) as number[] ?? [];
     let skills = data.battle_stations?.map(b => b.skill);
 
     let cs = [] as CrewMember[];
