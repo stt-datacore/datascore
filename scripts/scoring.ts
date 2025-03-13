@@ -781,48 +781,48 @@ export function score() {
 
         /*
 
-    - Voyage-Plus Score                    Weight: 1
-    - Gauntlet-Plus Score                  Weight: 0.5
+    - Voyage-Plus Score                    Weight: 0.25
+    - Gauntlet-Plus Score                  Weight: 0.25
     - Shuttle-Plus Score                   Weight: 0.25
 
     - Voyage Score                         Weight: 2 + Rarity
-    - Skill-Order Rarity                   Weight: 2
+    - Skill-Order Rarity                   Weight: 3
     - Gauntlet Score                       Weight: 1.59
     - Shuttle/Base Score                   Weight: 1
-    - Quipment Score                       Weight: 0.85
-    - Antimatter Seating Score             Weight: 0.5
-    - Stat-Boosting Collection Score       Weight: 0.5
-    - Skill Position Score                 Weight: 0.5
-    - Tertiary Skill Rarity Score          Weight: 0.3
+    - Quipment Score                       Weight: 0.25
+    - Antimatter Seating Score             Weight: 0.25
+    - Stat-Boosting Collection Score       Weight: 0.25
+    - Skill Position Score                 Weight: 0.25
     - FBB Node-Cracking Trait Score        Weight: 0.25
     - Elevated Crit Gauntlet               Weight: 0.2
     - Skill-Order Velocity Score           Weight: 0.2
     - Main Cast Score                      Weight: 0.15
     - Potential Collection Score           Weight: 0.15
     - Ship Ability Score                   Weight: 0.125
+    - Tertiary Skill Rarity Score          Weight: 0.1
     - Variant Score                        Weight: 0.04
 
         */
 
-        vplus_n *= 1
-        gplus_n *= 0.5;
+        vplus_n *= 0.25;
+        gplus_n *= 0.25;
         splus_n *= 0.25;
 
         voyage_n *= 2 + c.max_rarity;
-        sk_rare_n *= 2;
+        sk_rare_n *= 3;
         gauntlet_n *= 1.59;
         shuttle_n *= 1;
-        quip_n *= 0.85;
-        amseat_n *= 0.5;
-        colscore_n *= 0.5;
-        pos_n *= 0.5;
-        tert_rare_n *= 0.3;
+        quip_n *= 0.25;
+        amseat_n *= 0.25;
+        colscore_n *= 0.25;
+        pos_n *= 0.25;
         trait_n *= 0.25;
         crit_n *= 0.2;
         velocity_n *= 0.2;
         maincast_n *= 0.15;
         pcs_n *= 0.15;
         ship_n *= 0.125;
+        tert_rare_n *= 0.1;
         variant_n *= 0.04;
 
         let scores = [
