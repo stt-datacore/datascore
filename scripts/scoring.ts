@@ -1,20 +1,23 @@
 import fs from 'fs';
-import { ComputedSkill, CrewMember, Ranks, RankScoring, Skill } from '../../website/src/model/crew';
+import { ComputedSkill, CrewMember, QuipmentDetails, Ranks, RankScoring, Skill } from '../../website/src/model/crew';
 import { BuffStatTable, calculateMaxBuffs, lookupAMSeatsByTrait } from '../../website/src/utils/voyageutils';
 import { applyCrewBuffs, getSkillOrderScore, getSkillOrderStats, getVariantTraits, numberToGrade, SkillRarityReport, skillSum } from '../../website/src/utils/crewutils';
 import { Collection } from '../../website/src/model/game-elements';
 import { getAllStatBuffs } from '../../website/src/utils/collectionutils';
 import { EquipmentItem } from '../../website/src/model/equipment';
 import { calcQLots } from '../../website/src/utils/equipment';
-import { getItemWithBonus, ItemWithBonus } from '../../website/src/utils/itemutils';
+import { getItemWithBonus, getPossibleQuipment, ItemWithBonus } from '../../website/src/utils/itemutils';
 import { TraitNames } from '../../website/src/model/traits';
 import { potentialCols } from '../../website/src/components/stats/utils';
 import { Gauntlet } from '../../website/src/model/gauntlets';
+import { keyInPause } from 'readline-sync';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 const DEBUG = process.argv.includes('--debug');
 
-type QPowers = { symbol: string, qpower: number, bpower: number, gpower: number, vpower: number, avg: number };
+interface QPowers extends QuipmentDetails {
+    symbol: string;
+}
 
 interface MainCast {
     tos: string[];
@@ -29,18 +32,74 @@ interface MainCast {
 
 function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs: BuffStatTable): QPowers {
     calcQLots(crew, quipment, buffs, true, undefined, 'all');
+    let price_key = '';
+
     // Aggregate:
-    let qpower = Object.values(crew.best_quipment!.aggregate_by_skill).reduce((p, n) => p > n ? p : n, 0);
+    let qpower = Object.values(crew.best_quipment!.aggregate_by_skill).reduce((p, n) => p + n, 0);
+    let possquip = getPossibleQuipment(crew, Object.values(crew.best_quipment!.skill_quipment).flat());
+    let qprice = possquip.map(q => q.recipe?.list.map(rl => rl.count).reduce((p, n) => p + n, 0) ?? 0).reduce((p, n) => p + n, 0);
+
     // Voyage:
-    let vpower = [crew.best_quipment_1_2!, crew.best_quipment_1_3!, crew.best_quipment_2_3!, crew.best_quipment_3!, crew.best_quipment_top!].map(q => !q ? 0 : q.aggregate_power).reduce((p, n) => p > n ? p : n, 0);
+    let vpower = Object.values(crew.best_quipment!.aggregate_by_skill).reduce((p, n) => p > n ? p : n, 0);
+    let ovpower = vpower;
+    let pquips = {} as { [key: string]: EquipmentItem[] };
+    vpower = [vpower, crew.best_quipment_1_2!, crew.best_quipment_1_3!, crew.best_quipment_2_3!, crew.best_quipment_3!, crew.best_quipment_top!].map(q => {
+        let resp = !q ? 0 : typeof q === 'number' ? q : q.aggregate_power;
+        if (resp && !(typeof q === 'number')) {
+            pquips[resp] = Object.values(q.skill_quipment).flat();
+        }
+        return resp;
+    }).reduce((p, n) => p > n ? p : n, 0);
+    if (vpower === ovpower) {
+        price_key = Object.keys(crew.best_quipment!.aggregate_by_skill).find(f => crew.best_quipment!.aggregate_by_skill[f] === vpower)!
+        possquip = getPossibleQuipment(crew, crew.best_quipment!.skill_quipment[price_key]);
+    }
+    else {
+        possquip = getPossibleQuipment(crew, pquips[vpower]);
+    }
+    let vprice = possquip.map(q => q.recipe?.list.map(rl => rl.count).reduce((p, n) => p + n, 0) ?? 0).reduce((p, n) => p + n, 0);
+
     // Base:
     calcQLots(crew, quipment, buffs, true, undefined, 'core');
-    let bpower = [crew.best_quipment_1_2!, crew.best_quipment_1_3!, crew.best_quipment_2_3!, crew.best_quipment_3!, crew.best_quipment_top!].map(q => !q ? 0 : q.aggregate_power).reduce((p, n) => p > n ? p : n, 0);
+    let bpower = Object.values(crew.best_quipment!.aggregate_by_skill).reduce((p, n) => p > n ? p : n, 0);
+    let obpower = bpower;
+    bpower = [vpower, crew.best_quipment_1_2!, crew.best_quipment_1_3!, crew.best_quipment_2_3!, crew.best_quipment_3!, crew.best_quipment_top!].map(q => {
+        let resp = !q ? 0 : typeof q === 'number' ? q : q.aggregate_power;
+        if (resp && !(typeof q === 'number')) {
+            pquips[resp] = Object.values(q.skill_quipment).flat();
+        }
+        return resp;
+    }).reduce((p, n) => p > n ? p : n, 0);
+    if (bpower === obpower) {
+        price_key = Object.keys(crew.best_quipment!.aggregate_by_skill).find(f => crew.best_quipment!.aggregate_by_skill[f] === bpower)!
+        possquip = getPossibleQuipment(crew, crew.best_quipment!.skill_quipment[price_key]);
+    }
+    else {
+        possquip = getPossibleQuipment(crew, pquips[bpower]);
+    }
+    let bprice = possquip.map(q => q.recipe?.list.map(rl => rl.count).reduce((p, n) => p + n, 0) ?? 0).reduce((p, n) => p + n, 0);
+
     // Proficiency:
     calcQLots(crew, quipment, buffs, true, undefined, 'proficiency');
-    let gpower = [crew.best_quipment_1_2!, crew.best_quipment_1_3!, crew.best_quipment_2_3!, crew.best_quipment_3!, crew.best_quipment_top!].map(q => !q ? 0 : q.aggregate_power).reduce((p, n) => p > n ? p : n, 0);
+    let gpower = Object.values(crew.best_quipment!.aggregate_by_skill).reduce((p, n) => p > n ? p : n, 0);
+    let ogpower = gpower;
+    gpower = [vpower, crew.best_quipment_1_2!, crew.best_quipment_1_3!, crew.best_quipment_2_3!, crew.best_quipment_3!, crew.best_quipment_top!].map(q => {
+        let resp = !q ? 0 : typeof q === 'number' ? q : q.aggregate_power;
+        if (resp && !(typeof q === 'number')) {
+            pquips[resp] = Object.values(q.skill_quipment).flat();
+        }
+        return resp;
+    }).reduce((p, n) => p > n ? p : n, 0);
+    if (gpower === ogpower) {
+        price_key = Object.keys(crew.best_quipment!.aggregate_by_skill).find(f => crew.best_quipment!.aggregate_by_skill[f] === gpower)!
+        possquip = getPossibleQuipment(crew, crew.best_quipment!.skill_quipment[price_key]);
+    }
+    else {
+        possquip = getPossibleQuipment(crew, pquips[gpower]);
+    }
+    let gprice = possquip.map(q => q.recipe?.list.map(rl => rl.count).reduce((p, n) => p + n, 0) ?? 0).reduce((p, n) => p + n, 0);
 
-    return { qpower, vpower, bpower, gpower, avg: 0, symbol: crew.symbol };
+    return { qpower, vpower, bpower, gpower, avg: 0, symbol: crew.symbol, qprice, vprice, bprice, gprice };
 }
 
 function normalizeQPowers(qpowers: QPowers[]) {
@@ -51,9 +110,16 @@ function normalizeQPowers(qpowers: QPowers[]) {
             p[power] = Number(((p[power] / max) * 100).toFixed(2))
         }
     });
+    ["qprice", "bprice", "vprice", "gprice"].forEach((power) => {
+        qpowers.sort((a, b) => b[power] - a[power])
+        let max = qpowers[0][power];
+        for (let p of qpowers) {
+            p[power] = Number(((1 - (p[power] / max)) * 100).toFixed(2))
+        }
+    });
 
     for (let p of qpowers) {
-        p.avg = ((p.gpower * 1) + (p.bpower * 1) + (p.qpower * 1) + (p.vpower * 1)) / 4;
+        p.avg = ((p.gpower * 1) + (p.bpower * 1) + (p.qpower * 1) + (p.vpower * 1) + (p.qprice * 0.2) + (p.gprice * 0.2) + (p.vprice * 0.2) + (p.bprice * 0.2)) / 8;
     }
 
     qpowers.sort((a, b) => b.avg - a.avg);
@@ -198,7 +264,7 @@ function collectionScore(c: CrewMember, collections: Collection[]) {
     //return n + c.collection_ids.length;
 }
 
-type RarityScore = { symbol: string, score: number, rarity: number };
+type RarityScore = { symbol: string, score: number, rarity: number, data?: any };
 
 export function score() {
 
@@ -347,7 +413,8 @@ export function score() {
         results.push({
             symbol: c.symbol,
             rarity: c.max_rarity,
-            score: qpc.avg
+            score: qpc.avg,
+            data: qpc
         });
     }
 
@@ -532,6 +599,77 @@ export function score() {
 
     results = [].slice();
 
+    for (let c of crew) {
+        let gauntlet_n = gauntlet.find(f => f.symbol === c.symbol)!.score;
+        let i_crit_n = elacrits.findIndex(f => f.symbol === c.symbol);
+        let crit_n = elacrits[i_crit_n].score;
+
+        let i_quip_n = quips.findIndex(f => f.symbol === c.symbol);
+        let qobj = quips[i_quip_n];
+        let qp = qobj.data as QPowers | undefined;
+        let quip_n = quips[i_quip_n].score;
+
+        results.push({
+            symbol: c.symbol,
+            rarity: c.max_rarity,
+            score: (gauntlet_n + (crit_n * 0.75) + ((qp?.gpower ?? quip_n) * 0.5)) / 3
+        });
+    }
+
+    let gauntlet_plus = normalize(results);
+
+    if (DEBUG) console.log("Gauntlet-Plus score")
+    if (DEBUG) console.log(gauntlet_plus.slice(0, 20));
+
+    results = [].slice();
+
+    for (let c of crew) {
+        let voyage_n = voyage.find(f => f.symbol === c.symbol)!.score;
+        let i_amseat_n = amseats.findIndex(f => f.symbol === c.symbol);
+        let amseat_n = amseats[i_amseat_n].score;
+
+        let i_quip_n = quips.findIndex(f => f.symbol === c.symbol);
+        let qobj = quips[i_quip_n];
+        let qp = qobj.data as QPowers | undefined;
+        let quip_n = quips[i_quip_n].score;
+
+        results.push({
+            symbol: c.symbol,
+            rarity: c.max_rarity,
+            score: (voyage_n + (amseat_n * 0.2) + ((qp?.vpower ?? quip_n) * 0.75)) / 3
+        });
+    }
+
+    let voyage_plus = normalize(results);
+
+    if (DEBUG) console.log("Voyage-Plus score")
+    if (DEBUG) console.log(voyage_plus.slice(0, 20));
+
+    results = [].slice();
+
+    for (let c of crew) {
+        let i_shuttle_n = shuttle.findIndex(f => f.symbol === c.symbol);
+        let shuttle_n = shuttle[i_shuttle_n].score;
+
+        let i_quip_n = quips.findIndex(f => f.symbol === c.symbol);
+        let qobj = quips[i_quip_n];
+        let qp = qobj.data as QPowers | undefined;
+        let quip_n = quips[i_quip_n].score;
+
+        results.push({
+            symbol: c.symbol,
+            rarity: c.max_rarity,
+            score: (shuttle_n + ((qp?.bpower ?? quip_n) * 0.5)) / 2
+        });
+    }
+
+    let shuttle_plus = normalize(results);
+
+    if (DEBUG) console.log("Voyage-Plus score")
+    if (DEBUG) console.log(voyage_plus.slice(0, 20));
+
+    results = [].slice();
+
     for (let c of origCrew) {
         let gauntlet_n = gauntlet.find(f => f.symbol === c.symbol)!.score;
         let voyage_n = voyage.find(f => f.symbol === c.symbol)!.score;
@@ -564,6 +702,11 @@ export function score() {
         let i_quip_n = quips.findIndex(f => f.symbol === c.symbol);
         let quip_n = quips[i_quip_n].score;
 
+        c.ranks.scores.quipment_details = { ...quips[i_quip_n].data as QuipmentDetails ?? {} };
+        if (c.ranks.scores.quipment_details) {
+            delete c.ranks.scores.quipment_details["symbol"];
+        }
+
         let i_trait_n = traits.findIndex(f => f.symbol === c.symbol);
         let trait_n = traits[i_trait_n].score;
 
@@ -578,6 +721,15 @@ export function score() {
 
         let i_crit_n = elacrits.findIndex(f => f.symbol === c.symbol);
         let crit_n = elacrits[i_crit_n].score;
+
+        let i_gplus_n = gauntlet_plus.findIndex(f => f.symbol === c.symbol);
+        let gplus_n = gauntlet_plus[i_gplus_n].score;
+
+        let i_splus_n = shuttle_plus.findIndex(f => f.symbol === c.symbol);
+        let splus_n = shuttle_plus[i_splus_n].score;
+
+        let i_vplus_n = voyage_plus.findIndex(f => f.symbol === c.symbol);
+        let vplus_n = voyage_plus[i_vplus_n].score;
 
         c.ranks.scores.main_cast = maincast_n;
         c.ranks.main_cast_rank = i_maincast_n + 1;
@@ -615,47 +767,63 @@ export function score() {
         c.ranks.scores.crit = crit_n;
         c.ranks.crit_rank = i_crit_n + 1;
 
+        c.ranks.scores.gauntlet_plus = gplus_n;
+        c.ranks.scores.gauntlet_plus_rank = i_gplus_n + 1;
+
+        c.ranks.scores.voyage_plus = vplus_n;
+        c.ranks.scores.voyage_plus_rank = i_vplus_n + 1;
+
+        c.ranks.scores.shuttle_plus = splus_n;
+        c.ranks.scores.shuttle_plus_rank = i_splus_n + 1;
+
         let ship_n = c.ranks.scores.ship.overall;
         c.ranks.ship_rank = c.ranks.scores.ship.overall_rank;
 
         /*
 
+    - Voyage-Plus Score                    Weight: 1
+    - Gauntlet-Plus Score                  Weight: 0.5
+    - Shuttle-Plus Score                   Weight: 0.25
 
-    - Voyage Score                         Weight: 7
+    - Voyage Score                         Weight: 2 + Rarity
     - Skill-Order Rarity                   Weight: 2
     - Gauntlet Score                       Weight: 1.59
     - Shuttle/Base Score                   Weight: 1
     - Quipment Score                       Weight: 0.85
     - Antimatter Seating Score             Weight: 0.5
-    - Skill Position Score                 Weight: 0.5
     - Stat-Boosting Collection Score       Weight: 0.5
+    - Skill Position Score                 Weight: 0.5
     - Tertiary Skill Rarity Score          Weight: 0.3
     - FBB Node-Cracking Trait Score        Weight: 0.25
     - Elevated Crit Gauntlet               Weight: 0.2
     - Skill-Order Velocity Score           Weight: 0.2
     - Main Cast Score                      Weight: 0.15
     - Potential Collection Score           Weight: 0.15
-    - Variant Score                        Weight: 0.15
     - Ship Ability Score                   Weight: 0.125
+    - Variant Score                        Weight: 0.04
 
         */
 
-        amseat_n *= 0.5;
-        maincast_n *= 0.15;
-        variant_n *= 0.01;
-        colscore_n *= 0.5;
-        gauntlet_n *= 1.59;
-        pcs_n *= 0.15;
-        quip_n *= 0.85;
-        ship_n *= 0.125;
-        shuttle_n *= 1;
+        vplus_n *= 1
+        gplus_n *= 0.5;
+        splus_n *= 0.25;
+
+        voyage_n *= 2 + c.max_rarity;
         sk_rare_n *= 2;
-        trait_n *= 0.25;
-        tert_rare_n *= 0.3;
-        velocity_n *= 0.2;
-        voyage_n *= 7;
-        crit_n *= 0.2;
+        gauntlet_n *= 1.59;
+        shuttle_n *= 1;
+        quip_n *= 0.85;
+        amseat_n *= 0.5;
+        colscore_n *= 0.5;
         pos_n *= 0.5;
+        tert_rare_n *= 0.3;
+        trait_n *= 0.25;
+        crit_n *= 0.2;
+        velocity_n *= 0.2;
+        maincast_n *= 0.15;
+        pcs_n *= 0.15;
+        ship_n *= 0.125;
+        variant_n *= 0.04;
 
         let scores = [
             amseat_n,
@@ -673,7 +841,10 @@ export function score() {
             velocity_n,
             voyage_n,
             crit_n,
-            pos_n
+            pos_n,
+            gplus_n,
+            vplus_n,
+            splus_n
         ];
 
         results.push({
