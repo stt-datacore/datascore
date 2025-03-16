@@ -782,8 +782,13 @@ export function score() {
         /*
 
     - Voyage-Plus Score                    Weight: 0.25
+        - Voyage Score + (Antimatter Seats * 0.2) + (Quipment * 0.75)
+
     - Gauntlet-Plus Score                  Weight: 0.25
+        - Gauntlet Score + (High Crit Gauntlets * 0.75) + (Quipment * 0.5)
+
     - Shuttle-Plus Score                   Weight: 0.25
+        - Shuttle/Base Score + (Quipment * 0.5)
 
     - Voyage Score                         Weight: 2 + Rarity
     - Skill-Order Rarity                   Weight: 3
