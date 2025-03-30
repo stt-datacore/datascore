@@ -596,6 +596,18 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         }
     }
 
+    if (fs.existsSync(STATIC_PATH + 'all_ships.json')) {
+        console.log("Writing to all_ships.json...");
+        const allships = JSON.parse(fs.readFileSync(STATIC_PATH + 'all_ships.json', 'utf-8')) as Ship[];
+        Object.entries(shipRanksOut).forEach(([symbol, ranks]) => {
+            const c = allships.find(f => f.symbol === symbol);
+            if (c) {
+                c.ranks = ranks;
+            }
+        });
+        fs.writeFileSync(STATIC_PATH + 'all_ships.json', JSON.stringify(allships));
+    }
+
     fs.writeFileSync(STATIC_PATH + 'crew.json', JSON.stringify(crewFresh));
     fs.writeFileSync(STATIC_PATH + 'ship_schematics.json', JSON.stringify(shipFresh));
 
