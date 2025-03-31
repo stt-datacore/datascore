@@ -41,6 +41,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
 
     const runStart = new Date();
 
+    const all_ships = JSON.parse(fs.readFileSync(STATIC_PATH + 'all_ships.json', 'utf-8')) as Ship[];
     const ship_schematics = JSON.parse(fs.readFileSync(STATIC_PATH + 'ship_schematics.json', 'utf-8')) as Schematics[];
     const ship_levels = JSON.parse(fs.readFileSync(LEVEL_PATH + 'ship_levels.json', 'utf-8')) as any[];
     const conslevel = ship_levels.find(f => f.symbol === 'constellation_ship');
@@ -106,10 +107,18 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         return typicalcd;
     })();
 
-    const ships = mergeShips(ship_schematics.filter(sc => {
-        if (highestLevel(sc.ship) == (sc.ship.max_level ?? sc.ship.level) + 1 && (sc.ship.battle_stations?.length)) return true;
-        return false;
-    }), [], true);
+    const ships = all_ships.map((ship) => {
+        ship.accuracy *= 1.16;
+        ship.attack *= 1.16;
+        ship.evasion *= 1.16;
+        ship.hull *= 1.16;
+        ship.shields *= 1.16;
+        return ship;
+    });
+    // const ships = mergeShips(ship_schematics.filter(sc => {
+    //     if (highestLevel(sc.ship) == (sc.ship.max_level ?? sc.ship.level) + 1 && (sc.ship.battle_stations?.length)) return true;
+    //     return false;
+    // }), [], true);
 
     ships.sort((a, b) => shipnum(b) - shipnum(a));
 
@@ -463,10 +472,6 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         buffer.push(text);
         if (VERBOSE) console.log(...params);
     }
-
-    console.log("".padEnd(40, ""), "Arena Ship/Crew");
-    console.log("".padEnd(40, ""), "FBB Ship/Crew");
-    console.log("-------------------------------------------------------------------");
 
     [offs_2, defs_2, ship_3].forEach((scores, idx) => {
         printAndLog(" ");
