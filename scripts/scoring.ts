@@ -9,10 +9,33 @@ import { getItemWithBonus } from '../../website/src/utils/itemutils';
 import { TraitNames } from '../../website/src/model/traits';
 import { potentialCols } from '../../website/src/components/stats/utils';
 import { Gauntlet } from '../../website/src/model/gauntlets';
-import { QPowers, scoreQuipment } from './quipment';
+import { QPowers, scoreQuipment, sortingQuipmentScoring } from './quipment';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 const DEBUG = process.argv.includes('--debug');
+
+interface ConstituentWeights {
+    voyage: number
+    voyage_plus: number
+    shuttle: number
+    shuttle_plus: number
+    gauntlet: number
+    gauntlet_plus: number
+    crit: number
+    ship: number
+    quipment: number
+    collections: number
+    trait: number
+    main_cast: number
+    variant: number
+    potential_cols: number
+    skill_positions: number
+    skill_rarity: number
+    am_seating: number
+    tertiary_rarity: number
+    velocity: number
+}
+
 
 interface MainCast {
     tos: string[];
@@ -46,6 +69,11 @@ function normalizeQPowers(qpowers: QPowers[]) {
     }
 
     qpowers.sort((a, b) => b.avg - a.avg);
+    let amax = qpowers[0].avg;
+
+    qpowers.forEach((item) => {
+        item.avg = Number(((item.avg / amax) * 100).toFixed(2));
+    });
 }
 
 function elacrit(gauntlets: Gauntlet[], crew: CrewMember) {
@@ -190,6 +218,7 @@ function collectionScore(c: CrewMember, collections: Collection[]) {
 type RarityScore = { symbol: string, score: number, rarity: number, data?: any };
 
 export function score() {
+    const Weights: {[key:string]: ConstituentWeights} = {};
 
     console.log("Scoring crew...");
 
@@ -322,12 +351,12 @@ export function score() {
     if (DEBUG) console.log(traits.slice(0, 20));
 
     results = [].slice();
-
-    let qpowers = [] as QPowers[];
-    for (let c of crew) {
-        let data = scoreQuipment(c, quipment, maxbuffs);
-        qpowers.push(data);
-    }
+    let qpowers = sortingQuipmentScoring(crew, quipment, maxbuffs);
+    // let qpowers = [] as QPowers[];
+    // for (let c of crew) {
+    //     let data = scoreQuipment(c, quipment, maxbuffs);
+    //     qpowers.push(data);
+    // }
 
     normalizeQPowers(qpowers);
 
@@ -597,11 +626,11 @@ export function score() {
         let gauntlet_n = gauntlet.find(f => f.symbol === c.symbol)!.score;
         let voyage_n = voyage.find(f => f.symbol === c.symbol)!.score;
         let i_shuttle_n = shuttle.findIndex(f => f.symbol === c.symbol);
-        let shuttle_n = shuttle[i_shuttle_n].score;
+        let core_n = shuttle[i_shuttle_n].score;
 
         c.ranks.scores.gauntlet = gauntlet_n;
         c.ranks.scores.voyage = voyage_n;
-        c.ranks.scores.shuttle = shuttle_n;
+        c.ranks.scores.shuttle = core_n;
         c.ranks.shuttleRank = i_shuttle_n + 1;
 
         let i_maincast_n = mains.findIndex(f => f.symbol === c.symbol);
@@ -611,10 +640,10 @@ export function score() {
         let variant_n = variants[i_variant_n].score;
 
         let i_pos_n = skillpos.findIndex(f => f.symbol === c.symbol);
-        let pos_n = skillpos[i_pos_n].score;
+        let skpos_n = skillpos[i_pos_n].score;
 
         let i_sk_rare_n = skillrare.findIndex(f => f.symbol === c.symbol);
-        let sk_rare_n = skillrare[i_sk_rare_n].score;
+        let sko_rare_n = skillrare[i_sk_rare_n].score;
 
         let i_tert_rare_n = tertrare.findIndex(f => f.symbol === c.symbol);
         let tert_rare_n = tertrare[i_tert_rare_n].score;
@@ -623,7 +652,7 @@ export function score() {
         let amseat_n = amseats[i_amseat_n].score;
 
         let i_quip_n = quips.findIndex(f => f.symbol === c.symbol);
-        let quip_n = quips[i_quip_n].score;
+        let quipment_n = quips[i_quip_n].score;
 
         c.ranks.scores.quipment_details = { ...quips[i_quip_n].data as QuipmentDetails ?? {} };
         if (c.ranks.scores.quipment_details) {
@@ -631,19 +660,19 @@ export function score() {
         }
 
         let i_trait_n = traits.findIndex(f => f.symbol === c.symbol);
-        let trait_n = traits[i_trait_n].score;
+        let fbbtrait_n = traits[i_trait_n].score;
 
         let i_colscore_n = cols.findIndex(f => f.symbol === c.symbol);
-        let colscore_n = cols[i_colscore_n].score;
+        let sbcolscore_n = cols[i_colscore_n].score;
 
         let i_pcs_n = pcolscores.findIndex(f => f.symbol === c.symbol);
-        let pcs_n = pcolscores[i_pcs_n].score;
+        let pcol_n = pcolscores[i_pcs_n].score;
 
         let i_velocity_n = velocities.findIndex(f => f.symbol === c.symbol);
         let velocity_n = velocities[i_velocity_n].score;
 
         let i_crit_n = elacrits.findIndex(f => f.symbol === c.symbol);
-        let crit_n = elacrits[i_crit_n].score;
+        let elacrit_n = elacrits[i_crit_n].score;
 
         let i_gplus_n = gauntlet_plus.findIndex(f => f.symbol === c.symbol);
         let gplus_n = gauntlet_plus[i_gplus_n].score;
@@ -660,34 +689,34 @@ export function score() {
         c.ranks.scores.variant = variant_n;
         c.ranks.variant_rank = i_variant_n + 1;
 
-        c.ranks.scores.skill_positions = pos_n;
+        c.ranks.scores.skill_positions = skpos_n;
         c.ranks.skill_positions_rank = i_pos_n + 1;
 
-        c.ranks.scores.skill_rarity = sk_rare_n;
+        c.ranks.scores.skill_rarity = sko_rare_n;
         c.ranks.skill_rarity_rank = i_sk_rare_n + 1;
 
         c.ranks.scores.tertiary_rarity = tert_rare_n;
         c.ranks.tertiary_rarity_rank = i_tert_rare_n + 1;
 
-        c.ranks.scores.quipment = quip_n;
+        c.ranks.scores.quipment = quipment_n;
         c.ranks.quipment_rank = i_quip_n + 1;
 
         c.ranks.scores.am_seating = amseat_n;
         c.ranks.am_seating_rank = i_amseat_n + 1;
 
-        c.ranks.scores.trait = trait_n;
+        c.ranks.scores.trait = fbbtrait_n;
         c.ranks.traitRank = i_trait_n + 1;
 
-        c.ranks.scores.collections = colscore_n;
+        c.ranks.scores.collections = sbcolscore_n;
         c.ranks.collections_rank = i_colscore_n + 1;
 
-        c.ranks.scores.potential_cols = pcs_n;
+        c.ranks.scores.potential_cols = pcol_n;
         c.ranks.potential_cols_rank = i_pcs_n + 1;
 
         c.ranks.scores.velocity = velocity_n;
         c.ranks.velocity_rank = i_velocity_n + 1;
 
-        c.ranks.scores.crit = crit_n;
+        c.ranks.scores.crit = elacrit_n;
         c.ranks.crit_rank = i_crit_n + 1;
 
         c.ranks.scores.gauntlet_plus = gplus_n;
@@ -702,8 +731,7 @@ export function score() {
         let ship_n = c.ranks.scores.ship.overall;
         c.ranks.ship_rank = c.ranks.scores.ship.overall_rank;
 
-        /*
-
+/*
     - Voyage-Plus Score                    Weight: 0.25
         - Voyage Score + (Antimatter Seats * 0.2) + (Quipment * 0.75)
 
@@ -715,61 +743,87 @@ export function score() {
 
     - Voyage Score                         Weight: 2 + Rarity
     - Skill-Order Rarity                   Weight: 3
-    - Gauntlet Score                       Weight: 1.59
-    - Shuttle/Base Score                   Weight: 1
-    - Quipment Score                       Weight: 0.25
-    - Antimatter Seating Score             Weight: 0.25
+    - Gauntlet Score                       Weight: 1.7
+    - Ship Ability Score                   Weight: 1.25
+    - Shuttle/Base Score                   Weight: 1.1
+    - Skill Position Score                 Weight: 1
+    - Quipment Score                       Weight: 0.40
+    - Antimatter Seating Score             Weight: 0.35
+    - Elevated Crit Gauntlet               Weight: 0.267
     - Stat-Boosting Collection Score       Weight: 0.25
-    - Skill Position Score                 Weight: 0.25
     - FBB Node-Cracking Trait Score        Weight: 0.25
-    - Elevated Crit Gauntlet               Weight: 0.2
-    - Skill-Order Velocity Score           Weight: 0.2
-    - Main Cast Score                      Weight: 0.15
+    - Main Cast Score                      Weight: 0.2
+    - Skill-Order Velocity Score           Weight: 0.15
     - Potential Collection Score           Weight: 0.15
-    - Ship Ability Score                   Weight: 0.125
     - Tertiary Skill Rarity Score          Weight: 0.1
     - Variant Score                        Weight: 0.04
 
-        */
+*/
 
-        vplus_n *= 0.25;
-        gplus_n *= 0.25;
-        splus_n *= 0.25;
+        Weights[c.max_rarity] ??= {
+            voyage_plus: 0.25,
+            shuttle_plus: 0.25,
+            gauntlet_plus: 0.25,
+            voyage: 2 + c.max_rarity,
+            skill_rarity: 3,
+            gauntlet: 1.7,
+            ship: 0.125,
+            shuttle: 1.1,
+            skill_positions: 1,
+            quipment: 0.40,
+            am_seating: 0.35,
+            crit: 0.267,
+            collections: 0.25,
+            trait: 0.25,
+            main_cast: 0.2,
+            velocity: 0.15,
+            potential_cols: 0.15,
+            tertiary_rarity: 0.1,
+            variant: 0.04,
+        }
 
-        voyage_n *= 2 + c.max_rarity;
-        sk_rare_n *= 3;
-        gauntlet_n *= 1.59;
-        shuttle_n *= 1;
-        quip_n *= 0.25;
-        amseat_n *= 0.25;
-        colscore_n *= 0.25;
-        pos_n *= 0.25;
-        trait_n *= 0.25;
-        crit_n *= 0.2;
-        velocity_n *= 0.2;
-        maincast_n *= 0.15;
-        pcs_n *= 0.15;
-        ship_n *= 0.125;
-        tert_rare_n *= 0.1;
-        variant_n *= 0.04;
+        const weight = Weights[c.max_rarity];
+
+        vplus_n *= weight.voyage_plus;
+        gplus_n *= weight.gauntlet_plus;
+        splus_n *= weight.shuttle_plus;
+
+        voyage_n *= weight.voyage;
+        sko_rare_n *= weight.skill_rarity;
+        gauntlet_n *= weight.gauntlet;
+
+        // ship is already * 10, this is effectively 1.25
+        ship_n *= weight.ship;
+        core_n *= weight.shuttle;
+        skpos_n *= weight.skill_positions;
+        quipment_n *= weight.quipment;
+        amseat_n *= weight.am_seating;
+        elacrit_n *= weight.crit;
+        sbcolscore_n *= weight.collections;
+        fbbtrait_n *= weight.trait;
+        maincast_n *= weight.main_cast;
+        velocity_n *= weight.velocity;
+        pcol_n *= weight.potential_cols;
+        tert_rare_n *= weight.tertiary_rarity;
+        variant_n *= weight.variant;
 
         let scores = [
             amseat_n,
             maincast_n,
             variant_n,
-            colscore_n,
+            sbcolscore_n,
             gauntlet_n,
-            pcs_n,
-            quip_n,
+            pcol_n,
+            quipment_n,
             ship_n,
-            shuttle_n,
-            sk_rare_n,
-            trait_n,
+            core_n,
+            sko_rare_n,
+            fbbtrait_n,
             tert_rare_n,
             velocity_n,
             voyage_n,
-            crit_n,
-            pos_n,
+            elacrit_n,
+            skpos_n,
             gplus_n,
             vplus_n,
             splus_n
@@ -874,6 +928,7 @@ export function score() {
     }
     if (DEBUG) console.log(`Results: ${results.length}`);
     fs.writeFileSync(STATIC_PATH + 'crew.json', JSON.stringify(origCrew));
+    fs.writeFileSync(STATIC_PATH + 'current_weighting.json', JSON.stringify(Weights));
     console.log("Done.");
 }
 
