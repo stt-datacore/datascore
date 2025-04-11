@@ -715,11 +715,11 @@ export function score() {
             delete c.ranks.scores.quipment_details["symbol"];
         }
 
-        c.ranks.scores.power_quipment_details = qpowersP.find(f => f.symbol === c.symbol) as QuipmentDetails;
-        delete c.ranks.scores.power_quipment_details["symbol"];
+        (c.ranks.scores as any).power_quipment_details = qpowersP.find(f => f.symbol === c.symbol) as QuipmentDetails;
+        delete (c.ranks.scores as any).power_quipment_details["symbol"];
 
-        c.ranks.scores.versatility_quipment_details = qpowersV.find(f => f.symbol === c.symbol) as QuipmentDetails;
-        delete c.ranks.scores.versatility_quipment_details["symbol"];
+        (c.ranks.scores as any).versatility_quipment_details = qpowersV.find(f => f.symbol === c.symbol) as QuipmentDetails;
+        delete (c.ranks.scores as any).versatility_quipment_details["symbol"];
 
         let i_trait_n = traits.findIndex(f => f.symbol === c.symbol);
         let fbbtrait_n = traits[i_trait_n].score;
@@ -825,22 +825,22 @@ export function score() {
             voyage_plus: 0.25,
             shuttle_plus: 0.25,
             gauntlet_plus: 0.25,
-            voyage: 2 + ((c.max_rarity) * (c.max_rarity / 5)),
-            skill_rarity: 3,
+            voyage: 2                   + ((c.max_rarity) * (c.max_rarity / 5)),
+            skill_rarity: 3             - (0.2 * (5 - c.max_rarity)),
             gauntlet: 1.7,
-            ship: 0.125,
-            skill_positions: 1.1,
-            shuttle: 1,
-            quipment: 0.40,
-            am_seating: 0.35 - (0.07 * (5 - c.max_rarity)),
-            crit: 0.267 + (0.1 * (5 - c.max_rarity)),
-            collections: 0.25 + (0.3 * (5 - c.max_rarity)),
-            trait: 0.25 + (0.2 * (5 - c.max_rarity)),
-            main_cast: 0.2,
+            ship: 0.125                 + (0.5 * (5 - c.max_rarity)),
+            skill_positions: 1.1        - (0.2 * (5 - c.max_rarity)),
+            shuttle: 1                  - (0.1 * (5 - c.max_rarity)),
+            quipment: 0.40              + (1.0 * (5 - c.max_rarity)),
+            am_seating: 0.35            - (0.07 * (5 - c.max_rarity)),
+            crit: 0.267,
+            collections: 0.25           + (1.5 * (5 - c.max_rarity)),
+            trait: 0.25                 + (1.5 * (5 - c.max_rarity)),
+            main_cast: 0.20             + (0.1 * (5 - c.max_rarity)),
+            potential_cols: 0.17        + (0.17 * (5 - c.max_rarity)),
             velocity: 0.15,
-            potential_cols: 0.15 + (0.15 * (5 - c.max_rarity)),
             tertiary_rarity: 0.1,
-            variant: 0.04 + (0.2 * (5 - c.max_rarity)),
+            variant: 0.04               + (0.02 * (5 - c.max_rarity)),
         }
 
         const weight = Weights[c.max_rarity];
