@@ -242,7 +242,7 @@ export function score() {
 
     const collections = JSON.parse(fs.readFileSync(STATIC_PATH + 'collections.json', 'utf-8')) as Collection[];
     const TRAIT_NAMES = JSON.parse(fs.readFileSync(STATIC_PATH + 'translation_en.json', 'utf-8')).trait_names as TraitNames;
-    const buffcap = JSON.parse(fs.readFileSync(STATIC_PATH + 'all_buffs.json', 'utf-8'));
+    const buffcap = JSON.parse(fs.readFileSync(STATIC_PATH + 'skill_bufs.json', 'utf-8'));
     const maxbuffs = calculateMaxBuffs(buffcap);
     const crew = (JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8')) as CrewMember[]);
     const origCrew = JSON.parse(JSON.stringify(crew)) as CrewMember[];
