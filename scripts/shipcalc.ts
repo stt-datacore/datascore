@@ -128,29 +128,39 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     let cached = readBattleCache(cacheFile, process.argv.includes("--fresh"))
 
     if (cached?.length) {
-        console.log("Checking for new crew...");
-        let c_crew = [ ... new Set(cached.map(m => m.crew)) ];
-        let g_crew = crew.map(m => m.symbol);
+        console.log("Checking integrity...");
+        let corrupt = false;
+        corrupt = cached.some(c => !c.ship || !c.crew);
 
-        g_crew = g_crew.filter((c, i) => g_crew.findIndex(cc => cc === c) === i && !c_crew.includes(c));
-
-        if (g_crew.length) {
-            newcrew = g_crew.map(s => crew.find(c => c.symbol === s)!);
-            if (newcrew.length) {
-                console.log(`Updating cache with ${newcrew.length} new crew...`);
-            }
+        if (corrupt) {
+            cached = [];
+            console.log("Corrupted entries found. Doing full recomputation.");
         }
-        console.log("Checking for new ships...");
+        else {
+            console.log("Checking for new crew...");
+            let c_crew = [ ... new Set(cached.map(m => m.crew)) ];
+            let g_crew = crew.map(m => m.symbol);
 
-        let c_ships = [ ... new Set(cached.map(m => m.ship)) ];
-        let g_ships = ships.map(m => m.symbol);
+            g_crew = g_crew.filter((c, i) => g_crew.findIndex(cc => cc === c) === i && !c_crew.includes(c));
 
-        g_ships = g_ships.filter((c, i) => g_ships.findIndex(cc => cc === c) === i && !c_ships.includes(c));
+            if (g_crew.length) {
+                newcrew = g_crew.map(s => crew.find(c => c.symbol === s)!);
+                if (newcrew.length) {
+                    console.log(`Updating cache with ${newcrew.length} new crew...`);
+                }
+            }
+            console.log("Checking for new ships...");
 
-        if (g_ships.length) {
-            newships = g_ships.map(s => ships.find(c => c.symbol === s)!);
-            if (newships.length) {
-                console.log(`Updating cache with ${newships.length} new ships...`);
+            let c_ships = [ ... new Set(cached.map(m => m.ship)) ];
+            let g_ships = ships.map(m => m.symbol);
+
+            g_ships = g_ships.filter((c, i) => g_ships.findIndex(cc => cc === c) === i && !c_ships.includes(c));
+
+            if (g_ships.length) {
+                newships = g_ships.map(s => ships.find(c => c.symbol === s)!);
+                if (newships.length) {
+                    console.log(`Updating cache with ${newships.length} new ships...`);
+                }
             }
         }
     }
