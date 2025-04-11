@@ -3,6 +3,8 @@ import { CrewMember } from "../../website/src/model/crew";
 import { Collection } from "../../website/src/model/game-elements";
 import { TraitNames } from "../../website/src/model/traits";
 
+type PColType = { trait: string, count: number, distance: number };
+
 export function computePotentialColScores(crew: CrewMember[], collections: Collection[], TRAIT_NAMES: TraitNames) {
     if (crew?.length && collections?.length && TRAIT_NAMES) {
         let moving_number = 0;
@@ -14,7 +16,7 @@ export function computePotentialColScores(crew: CrewMember[], collections: Colle
             }
         });
         moving_number /= collections.map((c, i) => i + 1).reduce((p, n) => p + n, 0);
-        let potential = potentialCols(crew, collections, TRAIT_NAMES);
+        let potential = potentialCols(crew, collections, TRAIT_NAMES) as PColType[];
         potential.sort((a, b) => b.count - a.count);
 
         let max_c = potential[0].count;
