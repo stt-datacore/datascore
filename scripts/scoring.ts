@@ -13,6 +13,7 @@ import { QPowers, scoreQuipment, sortingQuipmentScoring } from './quipment';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 const DEBUG = process.argv.includes('--debug');
+const QUIET = process.argv.includes('--quiet');
 
 interface ConstituentWeights {
     voyage: number
@@ -220,7 +221,7 @@ type RarityScore = { symbol: string, score: number, rarity: number, data?: any }
 export function score() {
     const Weights: {[key:string]: ConstituentWeights} = {};
 
-    console.log("Scoring crew...");
+    if (!QUIET) console.log("DataScore\nLoading data sets...");
 
     const maincast = JSON.parse(fs.readFileSync(STATIC_PATH + 'maincast.json', 'utf-8')) as MainCast;
     const items = JSON.parse(fs.readFileSync(STATIC_PATH + 'items.json', 'utf-8')) as EquipmentItem[];
@@ -321,20 +322,28 @@ export function score() {
         return normalize(results);
     }
 
+    if (!QUIET) console.log("Scoring crew...");
+
+    if (!QUIET) console.log("Scoring voyages...");
     let results = makeResults('all')
     let voyage = results;
     if (DEBUG) console.log("Voyage")
     if (DEBUG) console.log(voyage.slice(0, 20));
+
+    if (!QUIET) console.log("Scoring gauntlet...");
     results = makeResults('proficiency')
     let gauntlet = results;
     if (DEBUG) console.log("Gauntlet")
     if (DEBUG) console.log(gauntlet.slice(0, 20));
+
+    if (!QUIET) console.log("Scoring shuttle/core...");
     results = makeResults('core')
     let shuttle = results;
     if (DEBUG) console.log("Shuttle")
     if (DEBUG) console.log(shuttle.slice(0, 20));
     results = [].slice();
 
+    if (!QUIET) console.log("Scoring FBB traits...");
     traitScoring(crew);
 
     for (let c of crew) {
@@ -351,23 +360,33 @@ export function score() {
     if (DEBUG) console.log(traits.slice(0, 20));
 
     results = [].slice();
+
+    if (!QUIET) console.log("Scoring quipment using sorting method...");
     let qpowersV = sortingQuipmentScoring(crew, quipment, maxbuffs);
-
     let qpowers = [] as QPowers[];
+    let qpowersP = [] as QPowers[];
 
+    if (!QUIET) console.log("Scoring quipment using power method...");
     for (let c of crew) {
         let data = scoreQuipment(c, quipment, maxbuffs);
         qpowers.push(data);
     }
 
-    for (let qp of qpowers) {
+    qpowersP = JSON.parse(JSON.stringify(qpowers));
+
+    for (const qp of qpowers) {
+        let c = crew.find(f => f.symbol === qp.symbol)!;
+        let factor = 0.5 + (5 / c.max_rarity);
+
         let vp = qpowersV.find(f => f.symbol === qp.symbol)!;
         Object.keys(qp).forEach((key) => {
             if (typeof qp[key] !== 'number') return;
-            qp[key] = ((qp[key] * 1) + (vp[key] * 1)) / 2;
+            qp[key] = ((qp[key] * factor) + (vp[key])) / 2;
         });
     }
 
+    normalizeQPowers(qpowersV);
+    normalizeQPowers(qpowersP);
     normalizeQPowers(qpowers);
 
     for (let qpc of qpowers) {
@@ -387,6 +406,8 @@ export function score() {
 
     results = [].slice();
 
+    if (!QUIET) console.log("Scoring collections...");
+
     for (let c of crew) {
         results.push({
             symbol: c.symbol,
@@ -398,6 +419,8 @@ export function score() {
     let cols = normalize(results);
     if (DEBUG) console.log("Stat-Boosting Collections")
     if (DEBUG) console.log(cols.slice(0, 20));
+
+    if (!QUIET) console.log("Scoring skill-order rarity...");
 
     results = [].slice();
     let skillpos = [] as RarityScore[];
@@ -428,6 +451,8 @@ export function score() {
     if (DEBUG) console.log("Triplet Power")
     if (DEBUG) console.log(skillpos.slice(0, 20));
 
+    if (!QUIET) console.log("Scoring tertiary skill rarity...");
+
     results = [].slice();
 
     for (let c of crew) {
@@ -442,6 +467,8 @@ export function score() {
 
     if (DEBUG) console.log("Tertiary Rarity")
     if (DEBUG) console.log(tertrare.slice(0, 20));
+
+    if (!QUIET) console.log("Scoring velocity...");
 
     results = [].slice();
 
@@ -458,6 +485,8 @@ export function score() {
 
     if (DEBUG) console.log("Velocity")
     if (DEBUG) console.log(velocities.slice(0, 20));
+
+    if (!QUIET) console.log("Scoring potential collections...");
 
     let tcolnorm = [] as RarityScore[];
     for (let pc of pcols) {
@@ -491,6 +520,8 @@ export function score() {
     if (DEBUG) console.log("Potential Collection Score")
     if (DEBUG) console.log(pcolscores.slice(0, 20));
 
+    if (!QUIET) console.log("Scoring elevated-crit gauntlets...");
+
     results = [].slice();
 
     for (let c of crew) {
@@ -506,6 +537,8 @@ export function score() {
     if (DEBUG) console.log("Elevated Crit Gauntlet Score")
     if (DEBUG) console.log(elacrits.slice(0, 20));
 
+    if (!QUIET) console.log("Scoring Antimatter traits...");
+
     results = [].slice();
 
     for (let c of crew) {
@@ -520,6 +553,8 @@ export function score() {
 
     if (DEBUG) console.log("Antimatter Seats")
     if (DEBUG) console.log(amseats.slice(0, 20));
+
+    if (!QUIET) console.log("Scoring main-cast...");
 
     results = [].slice();
 
@@ -543,6 +578,8 @@ export function score() {
     if (DEBUG) console.log("Main cast score")
     if (DEBUG) console.log(mains.slice(0, 20));
 
+    if (!QUIET) console.log("Scoring crew variants...");
+
     results = [].slice();
 
     for (let c of crew) {
@@ -558,6 +595,8 @@ export function score() {
 
     if (DEBUG) console.log("Variant score")
     if (DEBUG) console.log(variants.slice(0, 20));
+
+    if (!QUIET) console.log("Scoring gauntlet plus...");
 
     results = [].slice();
 
@@ -583,6 +622,8 @@ export function score() {
     if (DEBUG) console.log("Gauntlet-Plus score")
     if (DEBUG) console.log(gauntlet_plus.slice(0, 20));
 
+    if (!QUIET) console.log("Scoring voyage plus...");
+
     results = [].slice();
 
     for (let c of crew) {
@@ -607,6 +648,8 @@ export function score() {
     if (DEBUG) console.log("Voyage-Plus score")
     if (DEBUG) console.log(voyage_plus.slice(0, 20));
 
+    if (!QUIET) console.log("Scoring shuttle/core plus...");
+
     results = [].slice();
 
     for (let c of crew) {
@@ -627,8 +670,10 @@ export function score() {
 
     let shuttle_plus = normalize(results);
 
-    if (DEBUG) console.log("Voyage-Plus score")
-    if (DEBUG) console.log(voyage_plus.slice(0, 20));
+    if (DEBUG) console.log("Shuttle-Plus score")
+    if (DEBUG) console.log(shuttle_plus.slice(0, 20));
+
+    if (!QUIET) console.log("Applying weights and final scoring...");
 
     results = [].slice();
 
@@ -665,9 +710,16 @@ export function score() {
         let quipment_n = quips[i_quip_n].score;
 
         c.ranks.scores.quipment_details = { ...quips[i_quip_n].data as QuipmentDetails ?? {} };
+
         if (c.ranks.scores.quipment_details) {
             delete c.ranks.scores.quipment_details["symbol"];
         }
+
+        c.ranks.scores.power_quipment_details = qpowersP.find(f => f.symbol === c.symbol) as QuipmentDetails;
+        delete c.ranks.scores.power_quipment_details["symbol"];
+
+        c.ranks.scores.versatility_quipment_details = qpowersV.find(f => f.symbol === c.symbol) as QuipmentDetails;
+        delete c.ranks.scores.versatility_quipment_details["symbol"];
 
         let i_trait_n = traits.findIndex(f => f.symbol === c.symbol);
         let fbbtrait_n = traits[i_trait_n].score;
@@ -755,8 +807,8 @@ export function score() {
     - Skill-Order Rarity                   Weight: 3
     - Gauntlet Score                       Weight: 1.7
     - Ship Ability Score                   Weight: 1.25
-    - Shuttle/Base Score                   Weight: 1.1
-    - Skill Position Score                 Weight: 1
+    - Skill Position Score                 Weight: 1.1
+    - Shuttle/Base Score                   Weight: 1
     - Quipment Score                       Weight: 0.40
     - Antimatter Seating Score             Weight: 0.35
     - Elevated Crit Gauntlet               Weight: 0.267
@@ -769,27 +821,26 @@ export function score() {
     - Variant Score                        Weight: 0.04
 
 */
-
         Weights[c.max_rarity] ??= {
             voyage_plus: 0.25,
             shuttle_plus: 0.25,
             gauntlet_plus: 0.25,
-            voyage: 2 + c.max_rarity,
+            voyage: 2 + ((c.max_rarity) * (c.max_rarity / 5)),
             skill_rarity: 3,
             gauntlet: 1.7,
             ship: 0.125,
-            shuttle: 1.1,
-            skill_positions: 1,
+            skill_positions: 1.1,
+            shuttle: 1,
             quipment: 0.40,
-            am_seating: 0.35,
-            crit: 0.267,
-            collections: 0.25,
-            trait: 0.25,
+            am_seating: 0.35 - (0.07 * (5 - c.max_rarity)),
+            crit: 0.267 + (0.1 * (5 - c.max_rarity)),
+            collections: 0.25 + (0.3 * (5 - c.max_rarity)),
+            trait: 0.25 + (0.2 * (5 - c.max_rarity)),
             main_cast: 0.2,
             velocity: 0.15,
-            potential_cols: 0.15,
+            potential_cols: 0.15 + (0.15 * (5 - c.max_rarity)),
             tertiary_rarity: 0.1,
-            variant: 0.04,
+            variant: 0.04 + (0.2 * (5 - c.max_rarity)),
         }
 
         const weight = Weights[c.max_rarity];
@@ -937,9 +988,11 @@ export function score() {
         });
     }
     if (DEBUG) console.log(`Results: ${results.length}`);
+    if (!QUIET) console.log("Writing crew.json...");
     fs.writeFileSync(STATIC_PATH + 'crew.json', JSON.stringify(origCrew));
+    if (!QUIET) console.log("Writing current_weighting.json...");
     fs.writeFileSync(STATIC_PATH + 'current_weighting.json', JSON.stringify(Weights));
-    console.log("Done.");
+    if (!QUIET) console.log("Done.");
 }
 
 if (process.argv[1].includes('scoring')) {
