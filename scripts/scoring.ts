@@ -351,12 +351,22 @@ export function score() {
     if (DEBUG) console.log(traits.slice(0, 20));
 
     results = [].slice();
-    let qpowers = sortingQuipmentScoring(crew, quipment, maxbuffs);
-    // let qpowers = [] as QPowers[];
-    // for (let c of crew) {
-    //     let data = scoreQuipment(c, quipment, maxbuffs);
-    //     qpowers.push(data);
-    // }
+    let qpowersV = sortingQuipmentScoring(crew, quipment, maxbuffs);
+
+    let qpowers = [] as QPowers[];
+
+    for (let c of crew) {
+        let data = scoreQuipment(c, quipment, maxbuffs);
+        qpowers.push(data);
+    }
+
+    for (let qp of qpowers) {
+        let vp = qpowersV.find(f => f.symbol === qp.symbol)!;
+        Object.keys(qp).forEach((key) => {
+            if (typeof qp[key] !== 'number') return;
+            qp[key] = ((qp[key] * 1) + (vp[key] * 1)) / 2;
+        });
+    }
 
     normalizeQPowers(qpowers);
 
