@@ -10,6 +10,7 @@ import { TraitNames } from '../../website/src/model/traits';
 import { potentialCols } from '../../website/src/components/stats/utils';
 import { Gauntlet } from '../../website/src/model/gauntlets';
 import { QPowers, scoreQuipment, sortingQuipmentScoring } from './quipment';
+import { computePotentialColScores } from './cols';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 const DEBUG = process.argv.includes('--debug');
@@ -245,7 +246,7 @@ export function score() {
     const maxbuffs = calculateMaxBuffs(buffcap);
     const crew = (JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8')) as CrewMember[]);
     const origCrew = JSON.parse(JSON.stringify(crew)) as CrewMember[];
-    const pcols = potentialCols(crew, collections, TRAIT_NAMES);
+    const pcols = computePotentialColScores(crew, collections, TRAIT_NAMES);
 
     const skill_reports = (() => {
         const output = [] as SkillRarityReport<CrewMember>[][];
