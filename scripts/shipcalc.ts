@@ -130,8 +130,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     if (cached?.length) {
         console.log("Checking integrity...");
         let corrupt = false;
-        corrupt = cached.some(c => !c.ship || !c.crew);
-
+        corrupt = cached.some(c => !c.ship || (!c.crew && !c.seated?.length && !c.reference_battle));
         if (corrupt) {
             cached = [];
             console.log("Corrupted entries found. Doing full recomputation.");
