@@ -681,13 +681,13 @@ export function score() {
     for (let c of origCrew) {
         let gauntlet_n = gauntlet.find(f => f.symbol === c.symbol)!.score;
         let voyage_n = voyage.find(f => f.symbol === c.symbol)!.score;
-        let i_shuttle_n = shuttle.findIndex(f => f.symbol === c.symbol);
-        let core_n = shuttle[i_shuttle_n].score;
+        let i_core_n = shuttle.findIndex(f => f.symbol === c.symbol);
+        let core_n = shuttle[i_core_n].score;
 
         c.ranks.scores.gauntlet = gauntlet_n;
         c.ranks.scores.voyage = voyage_n;
         c.ranks.scores.shuttle = core_n;
-        c.ranks.shuttleRank = i_shuttle_n + 1;
+        c.ranks.shuttleRank = i_core_n + 1;
 
         let i_maincast_n = mains.findIndex(f => f.symbol === c.symbol);
         let maincast_n = mains[i_maincast_n].score;
