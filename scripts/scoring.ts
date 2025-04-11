@@ -377,12 +377,12 @@ export function score() {
 
     for (const qp of qpowers) {
         let c = crew.find(f => f.symbol === qp.symbol)!;
-        let factor = 0.5 + (5 / c.max_rarity);
+        //let factor = 0.5 + (5 / c.max_rarity);
 
         let vp = qpowersV.find(f => f.symbol === qp.symbol)!;
         Object.keys(qp).forEach((key) => {
             if (typeof qp[key] !== 'number') return;
-            qp[key] = ((qp[key] * factor) + (vp[key])) / 2;
+            qp[key] = ((qp[key]) + (vp[key])) / 2;
         });
     }
 
