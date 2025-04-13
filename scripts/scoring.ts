@@ -855,7 +855,7 @@ export function score() {
             collections: 0.25           + (0.5 * (5 - c.max_rarity)),
             trait: 0.25                 + (0.5 * (5 - c.max_rarity)),
             potential_cols: 0.17        + (0.17 * (5 - c.max_rarity)),
-            main_cast: 0.15             + (0.1 * (5 - c.max_rarity)),
+            main_cast: 0.20             + (0.1 * (5 - c.max_rarity)),
             velocity: 0.15,
             ship: 0.145                 + (0.5 * (5 - c.max_rarity)),
             tertiary_rarity: 0.1,
