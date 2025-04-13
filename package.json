@@ -11,7 +11,7 @@
     "shipcalc-fresh": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/shipcalc.js --fresh",
     "scoring": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/scoring.js --debug",
     "calc": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/scoring.js",
-    "build-scripts": "yarn tsc --project ./tsconfig.node.json",
+    "build": "yarn tsc --project ./tsconfig.node.json",
     "eventstats": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/eventstats.js"
   },
   "dependencies": {

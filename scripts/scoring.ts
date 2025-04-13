@@ -1,16 +1,15 @@
 import fs from 'fs';
 import { ComputedSkill, CrewMember, QuipmentDetails, Ranks, RankScoring, Skill } from '../../website/src/model/crew';
-import { calculateMaxBuffs, lookupAMSeatsByTrait } from '../../website/src/utils/voyageutils';
-import { applyCrewBuffs, getSkillOrderScore, getSkillOrderStats, getVariantTraits, numberToGrade, SkillRarityReport, skillSum } from '../../website/src/utils/crewutils';
-import { Collection } from '../../website/src/model/game-elements';
-import { getAllStatBuffs } from '../../website/src/utils/collectionutils';
 import { EquipmentItem } from '../../website/src/model/equipment';
-import { getItemWithBonus } from '../../website/src/utils/itemutils';
-import { TraitNames } from '../../website/src/model/traits';
-import { potentialCols } from '../../website/src/components/stats/utils';
+import { Collection } from '../../website/src/model/game-elements';
 import { Gauntlet } from '../../website/src/model/gauntlets';
-import { QPowers, scoreQuipment, sortingQuipmentScoring } from './quipment';
+import { TraitNames } from '../../website/src/model/traits';
+import { getAllStatBuffs } from '../../website/src/utils/collectionutils';
+import { applyCrewBuffs, getSkillOrderScore, getSkillOrderStats, getVariantTraits, numberToGrade, SkillRarityReport, skillSum } from '../../website/src/utils/crewutils';
+import { getItemWithBonus } from '../../website/src/utils/itemutils';
+import { calculateMaxBuffs, lookupAMSeatsByTrait } from '../../website/src/utils/voyageutils';
 import { computePotentialColScores } from './cols';
+import { QPowers, scoreQuipment, sortingQuipmentScoring } from './quipment';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 const DEBUG = process.argv.includes('--debug');
@@ -579,10 +578,29 @@ export function score() {
     if (DEBUG) console.log("Main cast score")
     if (DEBUG) console.log(mains.slice(0, 20));
 
-    if (!QUIET) console.log("Scoring crew variants...");
+    if (!QUIET) console.log("Scoring crew variants/events...");
 
     results = [].slice();
 
+    // let events = eventScoring();
+
+    // for (let c of crew) {
+    //     let ev = events.crew.find(evc => evc.symbol === c.symbol);
+    //     if (ev) {
+    //         results.push({
+    //             symbol: c.symbol,
+    //             rarity: c.max_rarity,
+    //             score: ev.score
+    //         });
+    //     }
+    //     else {
+    //         results.push({
+    //             symbol: c.symbol,
+    //             rarity: c.max_rarity,
+    //             score: 0
+    //         });
+    //     }
+    // }
     for (let c of crew) {
         let variants = getVariantTraits(c);
         results.push({
@@ -594,7 +612,7 @@ export function score() {
 
     let variants = normalize(results);
 
-    if (DEBUG) console.log("Variant score")
+    if (DEBUG) console.log("Variant/event score")
     if (DEBUG) console.log(variants.slice(0, 20));
 
     if (!QUIET) console.log("Scoring gauntlet plus...");
@@ -828,18 +846,18 @@ export function score() {
             gauntlet_plus: 0.25,
             voyage: 2                   + ((c.max_rarity) * (c.max_rarity / 5)),
             skill_rarity: 3             - (0.2 * (5 - c.max_rarity)),
-            gauntlet: 1.7,
-            ship: 0.125                 + (0.5 * (5 - c.max_rarity)),
+            quipment: 1.77              + (0.3 * (5 - c.max_rarity)),
+            gauntlet: 1.73,
             skill_positions: 1.1        - (0.2 * (5 - c.max_rarity)),
             shuttle: 1                  - (0.1 * (5 - c.max_rarity)),
-            quipment: 0.40              + (0.3 * (5 - c.max_rarity)),
-            am_seating: 0.35            - (0.07 * (5 - c.max_rarity)),
             crit: 0.267,
+            am_seating: 0.25            - (0.07 * (5 - c.max_rarity)),
             collections: 0.25           + (0.5 * (5 - c.max_rarity)),
             trait: 0.25                 + (0.5 * (5 - c.max_rarity)),
-            main_cast: 0.20             + (0.1 * (5 - c.max_rarity)),
             potential_cols: 0.17        + (0.17 * (5 - c.max_rarity)),
+            main_cast: 0.15             + (0.1 * (5 - c.max_rarity)),
             velocity: 0.15,
+            ship: 0.145                 + (0.5 * (5 - c.max_rarity)),
             tertiary_rarity: 0.1,
             variant: 0.04               + (0.02 * (5 - c.max_rarity)),
         }
@@ -853,8 +871,6 @@ export function score() {
         voyage_n *= weight.voyage;
         sko_rare_n *= weight.skill_rarity;
         gauntlet_n *= weight.gauntlet;
-
-        // ship is already * 10, this is effectively 1.25
         ship_n *= weight.ship;
         core_n *= weight.shuttle;
         skpos_n *= weight.skill_positions;
