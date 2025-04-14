@@ -39,6 +39,7 @@ async function compileEventStats() {
         });
     });
 
+    fs.writeFileSync(`${STATIC_PATH}event_stats.json`, JSON.stringify(stats));
 }
 
 async function main() {
