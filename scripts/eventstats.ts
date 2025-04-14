@@ -4,7 +4,9 @@ import { EventInstance, EventLeaderboard } from '../../website/src/model/events'
 import { GameEvent } from '../../website/src/model/player';
 import { CrewMember } from '../../website/src/model/crew';
 import { getEventStats } from '../../website/src/utils/event_stats';
+import { eventScoring } from './eventscoring';
 
+const DEBUG = process.argv.includes("--debug");
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 
 async function compileEventStats() {
@@ -25,21 +27,26 @@ async function compileEventStats() {
         });
     });
 
-    Object.entries(typeBuckets).forEach(([type, tstat]) => {
-        console.log("");
-        console.log(`${type} : Top 5 Most Competitive By Minimum Score`);
-        console.log("-----------");
-        tstat.slice(0, 5).forEach((stat) => {
-            console.log(`[${stat.instance_id}]: ${stat.event_name}${stat.discovered ? ` (${stat.discovered.toDateString()})` : ''}`);
-            console.log(`    Reward:       ${stat.crew}`);
-            console.log(`    Avg:          ${Math.floor(stat.avg).toLocaleString()} VP`);
-            console.log(`    Max:          ${stat.max.toLocaleString()} VP`);
-            console.log(`    Min:          ${stat.min.toLocaleString()} VP`);
-            console.log(`    Median:       ${stat.median.toLocaleString()} VP`);
+    const scoring = eventScoring();
+
+    if (DEBUG) {
+        Object.entries(typeBuckets).forEach(([type, tstat]) => {
+            console.log("");
+            console.log(`${type} : Top 5 Most Competitive By Minimum Score`);
+            console.log("-----------");
+            tstat.slice(0, 5).forEach((stat) => {
+                console.log(`[${stat.instance_id}]: ${stat.event_name}${stat.discovered ? ` (${stat.discovered.toDateString()})` : ''}`);
+                console.log(`    Reward:       ${stat.crew}`);
+                console.log(`    Avg:          ${Math.floor(stat.avg).toLocaleString()} VP`);
+                console.log(`    Max:          ${stat.max.toLocaleString()} VP`);
+                console.log(`    Min:          ${stat.min.toLocaleString()} VP`);
+                console.log(`    Median:       ${stat.median.toLocaleString()} VP`);
+            });
         });
-    });
+    }
 
     fs.writeFileSync(`${STATIC_PATH}event_stats.json`, JSON.stringify(stats));
+    fs.writeFileSync(`${STATIC_PATH}event_scoring.json`, JSON.stringify(scoring));
 }
 
 async function main() {

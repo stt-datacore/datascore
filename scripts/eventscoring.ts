@@ -44,21 +44,21 @@ export function eventScoring() {
         if (eventData) {
             for (let fc of eventData.featured) {
                 featured_crew[fc] ??= 0;
-                featured_crew[fc] += event.instance_id;
+                featured_crew[fc] += 1;
             }
             for (let fc of eventData.bonus) {
                 crew_score[fc] ??= 0;
-                crew_score[fc] += event.instance_id;
+                crew_score[fc] += 1;
             }
             if (eventData.activeContent?.bonus_traits?.length) {
                 for (let bc of eventData.activeContent.bonus_traits) {
                     if (variant_ref[bc]) {
                         variant_traits[bc] ??= 0;
-                        variant_traits[bc] += event.instance_id;
+                        variant_traits[bc] += 1;
                     }
                     else if (publicTraits.includes(bc)) {
                         bonus_traits[bc] ??= 0;
-                        bonus_traits[bc] += event.instance_id;
+                        bonus_traits[bc] += 1;
                     }
                 }
             }
@@ -132,4 +132,6 @@ export function eventScoring() {
     }
 }
 
-//eventScoring();
+if (process.argv.includes('--runes')) {
+    eventScoring();
+}
