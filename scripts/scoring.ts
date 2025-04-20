@@ -8,7 +8,7 @@ import { getAllStatBuffs } from '../../website/src/utils/collectionutils';
 import { applyCrewBuffs, getSkillOrderScore, getSkillOrderStats, getVariantTraits, numberToGrade, SkillRarityReport, skillSum } from '../../website/src/utils/crewutils';
 import { getItemWithBonus } from '../../website/src/utils/itemutils';
 import { calculateMaxBuffs, lookupAMSeatsByTrait } from '../../website/src/utils/voyageutils';
-import { computePotentialColScores } from './cols';
+import { computePotentialColScores, splitCollections } from './cols';
 import { QPowers, scoreQuipment, sortingQuipmentScoring } from './quipment';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
@@ -244,6 +244,7 @@ export function score() {
     const buffcap = JSON.parse(fs.readFileSync(STATIC_PATH + 'all_buffs.json', 'utf-8'));
     const maxbuffs = calculateMaxBuffs(buffcap);
     const crew = (JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8')) as CrewMember[]);
+    const crewCSV = fs.readFileSync(STATIC_PATH + 'crew.csv', 'utf-8').split('\r\n');
     const origCrew = JSON.parse(JSON.stringify(crew)) as CrewMember[];
     const pcols = computePotentialColScores(crew, collections, TRAIT_NAMES);
 
@@ -1004,12 +1005,35 @@ export function score() {
             }
         });
     }
+
     if (DEBUG) console.log(`Results: ${results.length}`);
     if (!QUIET) console.log("Writing crew.json...");
     fs.writeFileSync(STATIC_PATH + 'crew.json', JSON.stringify(origCrew));
+
+    if (!QUIET) console.log("Updating crew CSV...");
+    updateCrewCsv(crewCSV, origCrew, collections);
+
+    fs.writeFileSync(STATIC_PATH + 'crew.csv', crewCSV.join("\r\n"));
+
     if (!QUIET) console.log("Writing current_weighting.json...");
     fs.writeFileSync(STATIC_PATH + 'current_weighting.json', JSON.stringify(Weights));
     if (!QUIET) console.log("Done.");
+}
+
+function updateCrewCsv(csv: string[], crew: CrewMember[], collections: Collection[]) {
+    const { vanity, statBoosting, crewCols } = splitCollections(collections);
+
+    if (csv[0].includes('potential_collections')) return;
+    csv[0] += ", shuttle_rank, collections_rank, ship_rank, overall_rank, stat_collections, crew_collections, vanity_collections, potential_collections";
+    let idx = 1;
+    for (let c of crew) {
+        let r = c.ranks.scores;
+        let van = c.collection_ids.filter(id => vanity.some(vi => vi.id == Number(id)));
+        let stat = c.collection_ids.filter(id => statBoosting.some(vi => vi.id == Number(id)));
+        let cc = c.collection_ids.filter(id => crewCols.some(vi => vi.id == Number(id)));
+
+        csv[idx++] += `, ${r.shuttle}, ${r.collections}, ${r.ship.overall}, ${r.overall}, ${stat.length}, ${cc.length}, ${van.length}, ${r.potential_cols}`;
+    }
 }
 
 if (process.argv[1].includes('scoring')) {

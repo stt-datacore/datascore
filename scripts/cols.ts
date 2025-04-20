@@ -39,3 +39,21 @@ export function computePotentialColScores(crew: CrewMember[], collections: Colle
         return [];
     }
 }
+
+export function splitCollections(cols: Collection[]) {
+    const vanity = [] as Collection[];
+    const statBoosting = [] as Collection[];
+    const crewCols = [] as Collection[];
+    for (let col of cols) {
+        if (col.milestones?.some(mi => mi.buffs?.length)) {
+            statBoosting.push(col);
+        }
+        else if (col.milestones?.some(mi => mi.rewards.some(r => r.type === 1))) {
+            crewCols.push(col);
+        }
+        else {
+            vanity.push(col);
+        }
+    }
+    return { vanity, statBoosting, crewCols };
+}
