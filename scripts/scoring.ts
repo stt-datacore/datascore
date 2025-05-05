@@ -942,7 +942,7 @@ export function score() {
         let len_max = filtered.length * 1.5;
         let rank = 1;
         let score_mul = 2;
-        let rank_mul = 4;
+        let rank_mul = 2 * (filtered[0].score - filtered[1].score);
         if (!r) {
             for (let rec of filtered) {
                 let c = origCrew.find(fc => fc.symbol === rec.symbol);
