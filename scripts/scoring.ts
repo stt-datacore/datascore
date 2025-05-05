@@ -12,6 +12,8 @@ import { computePotentialColScores, splitCollections } from './cols';
 import { QPowers, scoreQuipment, sortingQuipmentScoring } from './quipment';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
+const SCRIPTS_DATA_PATH = `${__dirname}/../../../../scripts/data/`;
+
 const DEBUG = process.argv.includes('--debug');
 const QUIET = process.argv.includes('--quiet');
 
@@ -1017,7 +1019,112 @@ export function score() {
 
     if (!QUIET) console.log("Writing current_weighting.json...");
     fs.writeFileSync(STATIC_PATH + 'current_weighting.json', JSON.stringify(Weights));
+
+    const digestPath = `${SCRIPTS_DATA_PATH}change_log_digest.json`;
+    const changeFile = `change_log_${(new Date()).getTime()}.json`;
+    const changePath = `${SCRIPTS_DATA_PATH}${changeFile}`;
+
+    let old = [] as Digest[];
+    const current = makeLogFormat(origCrew);
+    if (fs.existsSync(digestPath)) {
+        old = JSON.parse(fs.readFileSync(digestPath, 'utf-8')) as Digest[];
+    }
+    const change_log = makeChangeLog(old, current);
+
+    if (!QUIET) console.log("Writing change_log_digest.json...");
+    fs.writeFileSync(digestPath, JSON.stringify(current, null, 4));
+    if (change_log.length) {
+        if (!QUIET) console.log(`Writing ${changeFile}...`);
+        fs.writeFileSync(changePath, JSON.stringify(change_log, null, 4));
+    }
     if (!QUIET) console.log("Done.");
+}
+
+type Digest = {
+    symbol: string,
+    name: string,
+    rarity: number,
+    rank: number,
+    rarity_rank: number,
+    grade: string;
+}
+
+type Change = {
+    symbol: string,
+    rarity: number,
+    is_new: boolean,
+    is_published: boolean,
+    old?: {
+        name: string,
+        rank: number,
+        rarity_rank: number,
+        grade: string
+    },
+    current: {
+        name: string,
+        rank: number,
+        rarity_rank: number,
+        grade: string
+    }
+}
+
+function makeChangeLog(old: Digest[], current: Digest[]) {
+    const result = [] as Change[];
+    for (let obj of current) {
+        let objold = old.find(f => f.symbol === obj.symbol);
+        if (objold) {
+            if (obj.grade !== objold.grade || obj.rank !== objold.rank || obj.rarity_rank !== objold.rarity_rank || obj.name !== objold.name) {
+                result.push({
+                    symbol: obj.symbol,
+                    rarity: obj.rarity,
+                    is_new: false,
+                    is_published: false,
+                    old: {
+                        name: objold.name,
+                        rank: objold.rank,
+                        rarity_rank: objold.rarity_rank,
+                        grade: objold.grade
+                    },
+                    current: {
+                        name: obj.name,
+                        rank: obj.rank,
+                        rarity_rank: obj.rarity_rank,
+                        grade: obj.grade
+                    }
+                });
+            }
+        }
+        else {
+            result.push({
+                symbol: obj.symbol,
+                rarity: obj.rarity,
+                is_new: true,
+                is_published: false,
+                current: {
+                    name: obj.name,
+                    rank: obj.rank,
+                    rarity_rank: obj.rarity_rank,
+                    grade: obj.grade
+                }
+            });
+        }
+    }
+    return result;
+}
+
+function makeLogFormat(origCrew: CrewMember[]) {
+    let p = [] as Digest[];
+    for (let c of origCrew) {
+        p.push({
+            symbol: c.symbol,
+            name: c.name,
+            rarity: c.max_rarity,
+            rank: c.ranks.scores.overall_rank,
+            rarity_rank: c.ranks.scores.rarity_overall_rank,
+            grade: c.ranks.scores.overall_grade
+        });
+    }
+    return p;
 }
 
 function updateCrewCsv(csv: string[], crew: CrewMember[], collections: Collection[]) {
