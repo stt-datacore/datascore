@@ -44,7 +44,7 @@ async function calculateShip(config: ShipCalcConfig) {
         let work_oppo = undefined as Ship | undefined;
         let work_ship = undefined as Ship | undefined
 
-        console.log(`Run all crew on ${ship.name} (FBB Only)...`);
+        console.log(`Run ${shipcrew.length} crew on ${ship.name} (FBB Only)...`);
 
         work_ship = getCleanShipCopy(ship);
         runres = runBattles(current_id, rate, work_ship, [], allruns, runidx, hrpool, false, false, undefined, false, arena_variance, fbb_variance, true);
@@ -60,7 +60,7 @@ async function calculateShip(config: ShipCalcConfig) {
             current_id = runres.current_id;
         }
 
-        console.log(`Run all crew on ${ship.name} (Arena Only; Opponent: SELF) ...`);
+        console.log(`Run ${shipcrew.length} crew on ${ship.name} (Arena Only; Opponent: SELF) ...`);
 
         for (let c of shipcrew) {
             work_ship = getCleanShipCopy(ship);
@@ -70,7 +70,7 @@ async function calculateShip(config: ShipCalcConfig) {
             current_id = runres.current_id;
         }
 
-        console.log(`Run all crew on ${ship.name} (Arena Only; Opponent: ${opponent?.name ?? 'NONE'}) ...`);
+        console.log(`Run ${shipcrew.length} crew on ${ship.name} (Arena Only; Opponent: ${opponent?.name ?? 'NONE'}) ...`);
         if (opponent) {
             runres = runBattles(current_id, rate, getCleanShipCopy(ship), [], allruns, runidx, hrpool, false, true, getCleanShipCopy(opponent), false, arena_variance, fbb_variance, true);
             runidx = runres.runidx;
