@@ -93,7 +93,7 @@ async function calculateShip(config: ShipCalcConfig) {
         }
 
         if (opponent) {
-            console.log(`Run all crew on ${opponent.name} (Arena Only; Opponent: ${work_ship?.name}) ...`);
+            console.log(`Run ${shipcrew.length} crew on ${opponent.name} (Arena Only; Opponent: ${work_ship?.name}) ...`);
             for (let c of shipcrew) {
                 work_ship = getCleanShipCopy(ship);
                 work_oppo = getCleanShipCopy(opponent);
