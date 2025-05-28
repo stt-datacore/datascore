@@ -277,7 +277,7 @@ export const shipCompatibility = (ship: Ship, crew: CrewMember, used_seats?: str
     return { score: compat, trigger, seat } as ShipCompat;
 }
 
-export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string | Ship, fbb: boolean, offs?: Score[], defs?: Score[], c?: CrewMember, no_sort = false, opponent?: Ship, prefer_oppo_time = false, typical_cd = 8) => {
+export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string | Ship, fbb: false | 1 | 2, offs?: Score[], defs?: Score[], c?: CrewMember, no_sort = false, opponent?: Ship, prefer_oppo_time = false, typical_cd = 8) => {
     let data = typeof ship === 'string' ? ships.find(f => f.symbol === ship) : ships.find(f => f.symbol === ship.symbol);
     if (!data?.battle_stations?.length) return undefined;
     data = { ...data } as Ship;
@@ -443,8 +443,8 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
     else if (full === 4) {
         if (fbb) {
             need_boom = 1;
-            need_crit = 1;
-            need_hr = 2;
+            need_crit = 1 + (2 - fbb);
+            need_hr = fbb;
         }
         else {
             need_boom = 3;

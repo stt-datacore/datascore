@@ -360,10 +360,12 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
 
     let arena_p2 = ships.map(sh => getStaffedShip(origShips, crew, sh, false, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
     arena_p2 = arena_p2.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, false, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
-    let fbb_p2 = ships.map(sh => getStaffedShip(origShips, crew, sh, true, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
-    fbb_p2 = fbb_p2.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, true, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
+    let fbb_p2 = ships.map(sh => getStaffedShip(origShips, crew, sh, 2, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
+    fbb_p2 = fbb_p2.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, 2, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
+    let fbb_p3 = ships.map(sh => getStaffedShip(origShips, crew, sh, 1, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
+    fbb_p3 = fbb_p2.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, 1, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
 
-    allruns.length = ((arena_p2.length * arena_p2.length) * 4) + (fbb_p2.length * 6);
+    allruns.length = ((arena_p2.length * arena_p2.length) * 4) + (fbb_p2.length * 6) + (fbb_p3.length * 6);
 
     runidx = 0;
 
@@ -421,7 +423,16 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     console.log("Testing ships in Fleet Boss battles...");
 
     for (let ship of fbb_p2) {
-        if (VERBOSE) console.log(`Scoring FBB on ${ship.name} (${count++} / ${fbb_p2.length})...`);
+        if (VERBOSE) console.log(`Scoring Max 2-HR FBB on ${ship.name} (${count++} / ${fbb_p2.length})...`);
+        let crew = ship.battle_stations!.map(m => m.crew!);
+        let runres = runBattles(current_id, rate, ship, crew, allruns, runidx, hrpool, true, false, undefined, false, arena_variance, fbb_variance);
+
+        runidx = runres.runidx;
+        current_id = runres.current_id;
+    }
+
+    for (let ship of fbb_p3) {
+        if (VERBOSE) console.log(`Scoring Max 1-HR FBB on ${ship.name} (${count++} / ${fbb_p2.length})...`);
         let crew = ship.battle_stations!.map(m => m.crew!);
         let runres = runBattles(current_id, rate, ship, crew, allruns, runidx, hrpool, true, false, undefined, false, arena_variance, fbb_variance);
 
