@@ -725,12 +725,9 @@ export function processScores(
     const getTopScore = (scores: Scoreable[], mode: 'arena' | 'fbb') => {
         if (mode === 'fbb') {
             if (score_mode === 'defense') {
-                // let high = scores.map(score => fbb_length - score.average_index).reduce((p, n) => p == -1 || p > n ? n : p, -1);
-                // return fbb_length - high;
                 let maxdur = getMaxDuration(scores);
                 let maxdmg = getMaxTotalDamage(scores);
                 return scores.map(ss => ((ss.duration / maxdur) * DurMul) + ((ss.total_damage / maxdmg) * DmgMul)).reduce((p, n) => p > n ? p : n, 0);
-                // //return scores.map(ss => ss.duration * ss.total_damage).reduce((p, n) => p > n ? p : n, 0);
             }
             else {
                 return scores.map(ss => ss.total_damage).reduce((p, n) => p > n ? p : n, 0);
@@ -738,12 +735,9 @@ export function processScores(
         }
         else {
             if (score_mode === 'defense') {
-                // let high = scores.map(score => fbb_length - score.average_index).reduce((p, n) => p == -1 || p > n ? n : p, -1);
-                // return fbb_length - high;
                 let maxdur = getMaxDuration(scores);
                 let maxdmg = getMaxTotalDamage(scores);
                 return scores.map(ss => ((ss.duration / maxdur) * DurMul) + ((ss.total_damage / maxdmg) * DmgMul)).reduce((p, n) => p > n ? p : n, 0);
-                // //return scores.map(ss => ss.duration * ss.total_damage).reduce((p, n) => p > n ? p : n, 0);
             }
             else {
                 let high = scores.map(score => arena_length - score.average_index).reduce((p, n) => p == -1 || p > n ? n : p, -1);
@@ -752,23 +746,9 @@ export function processScores(
         }
     }
 
-    const getWinScore = (scores: Scoreable[], mode: 'arena' | 'fbb') => {
-        let result = scores.map(ss => ss.win_count).reduce((p, n) => p > n ? p : n, 0);
-        if (result) return result;
-        if (mode === 'fbb') {
-            return scores.map(ss => ss.total_damage).reduce((p, n) => p > n ? p : n, 0);
-        }
-        else {
-            return scores.map(ss => ss.duration).reduce((p, n) => p > n ? p : n, 0);
-        }
-    }
-
     const getMyScore = (top: number, score: Scoreable, mode: 'arena' | 'fbb', maxdmg?: number, maxdur?: number) => {
         if (mode === 'fbb') {
             if (score_mode === 'defense' && maxdmg && maxdur) {
-                // return fbb_length - score.average_index;
-                //return arenaruns.length - score.average_index;
-                //return score.duration * score.total_damage;
                 return ((score.duration / maxdur) * DurMul) + ((score.total_damage / maxdmg) * DmgMul);
             }
             else {
@@ -777,26 +757,11 @@ export function processScores(
         }
         else {
             if (score_mode === 'defense' && maxdmg && maxdur) {
-                // return fbb_length - score.average_index;
-                //return arenaruns.length - score.average_index;
-                //return score.duration * score.total_damage;
                 return ((score.duration / maxdur) * DurMul) + ((score.total_damage / maxdmg) * DmgMul);
             }
             else {
                 return arena_length - score.average_index;
             }
-        }
-    }
-
-    const getMyWinScore = (top: number, score: Scoreable, mode: 'arena' | 'fbb') => {
-        let result = score.win_count;
-        if (top) return result;
-
-        if (mode === 'fbb') {
-            return score.total_damage;
-        }
-        else {
-            return score.duration;
         }
     }
 
@@ -823,17 +788,6 @@ export function processScores(
                     raw_score.final *= 0.25;
                 }
             }
-
-            // const maxwins_arena = getWinScore(ls_arena, 'arena');
-            // let mywins_arena = getMyWinScore(maxwins_arena, raw_score, 'arena');
-
-            // if (score_mode === 'offense' && maxwins_arena && mywins_arena) {
-            //     let my_arenawin = (mywins_arena / maxwins_arena);
-            //     raw_score.final = my_arena * my_arenawin;
-            // }
-            // else {
-            //     raw_score.final = my_arena;
-            // }
         }
 
         for (let bg of b_groups) {
@@ -859,8 +813,6 @@ export function processScores(
         if (score_mode === 'ship') {
             scorearena = scorearena.sort((a, b) => b.group - a.group).slice(0, 1);
             scorefbb = scorefbb.sort((a, b) => b.group - a.group).slice(0, 1);
-            // score.arena_data = scorearena;
-            // score.fbb_data = scorefbb;
         }
         else {
             scorearena.sort((a, b) => a.group - b.group);
@@ -895,9 +847,6 @@ export const createScoreData = (config: ScoreDataConfig) => {
 
     shipscores.length = 0;
     if (!bypass_crew) crewscores.length = 0;
-    // const defnum = (s: BattleRunBase) => {
-    //     return s.duration * s.damage;
-    // }
     const scoreRun = (runs: BattleRunBase[], is_fbb: boolean, scores: Score[], score_type: 'crew' | 'ship') => {
         if (!is_fbb && score_type === 'crew') {
             runs.sort((a, b) => {
