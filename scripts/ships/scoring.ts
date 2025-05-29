@@ -547,6 +547,7 @@ export function scoreToShipScore(score: Score, kind: 'offense' | 'defense' | 'sh
     if (Number.isNaN(score.fbb_final) || score.fbb_final == Infinity) {
         score.fbb_final = 0;
     }
+
     const result = {
         kind,
         overall: score.overall_final,
@@ -554,7 +555,9 @@ export function scoreToShipScore(score: Score, kind: 'offense' | 'defense' | 'sh
         fbb: score.fbb_final,
         divisions: {
             fbb: {},
-            arena: {}
+            arena: {},
+            fbb_crew: {},
+            arena_crew: {}
         },
         overall_rank: score.overall_rank ?? 0,
         arena_rank: score.arena_rank ?? 0,
@@ -564,10 +567,12 @@ export function scoreToShipScore(score: Score, kind: 'offense' | 'defense' | 'sh
     score.arena_data.forEach((obj, idx) => {
         if (Number.isNaN(obj.final) || obj.final == Infinity) obj.final = 0;
         result.divisions.arena[obj.group] = obj.final;
+        result.divisions.arena_crew[obj.group] = obj.max_staff;
     });
 
     score.fbb_data.forEach((obj, idx) => {
         result.divisions.fbb[obj.group] = obj.final;
+        result.divisions.fbb_crew[obj.group] = obj.max_staff;
         if (Number.isNaN(obj.final) || obj.final == Infinity) obj.final = 0;
     });
 

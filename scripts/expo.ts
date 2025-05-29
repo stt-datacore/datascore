@@ -1,13 +1,14 @@
-import os from 'os';
-import { Worker, isMainThread, workerData, parentPort } from 'node:worker_threads';
 import fs from 'fs';
-import { CrewMember, CrossFuseTarget } from "../../website/src/model/crew";
-import { Ship, Schematics } from "../../website/src/model/ship";
-import { getBosses, highestLevel, MaxDefense, MaxOffense, mergeShips } from "../../website/src/utils/shiputils";
-import { BattleRun, shipnum, getMaxTime, shipCompatibility } from './ships/scoring';
-import { processBattleRun } from './ships/battle';
-import { iterateBattle } from '../../website/src/workers/battleworkerutils';
+import { isMainThread, parentPort, Worker, workerData } from 'node:worker_threads';
+import os from 'os';
+import { CrewMember } from "../../website/src/model/crew";
+import { ReferenceShip, Ship } from "../../website/src/model/ship";
+import { TranslationSet } from '../../website/src/model/traits';
 import { ComesFrom } from '../../website/src/model/worker';
+import { getBosses, MaxDefense, MaxOffense, mergeRefShips } from "../../website/src/utils/shiputils";
+import { iterateBattle } from '../../website/src/workers/battleworkerutils';
+import { processBattleRun } from './ships/battle';
+import { BattleRun, getMaxTime, shipCompatibility, shipnum } from './ships/scoring';
 import { makeBuckets } from './ships/util';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
@@ -30,13 +31,13 @@ type TScore = {
     }[]
 };
 
-
 export function expo() {
 
-    const ship_schematics = JSON.parse(fs.readFileSync(STATIC_PATH + 'ship_schematics.json', 'utf-8')) as Schematics[];
+    const trans = JSON.parse(fs.readFileSync(STATIC_PATH + 'translation_en.json', 'utf-8')) as TranslationSet;
+    const refs = JSON.parse(fs.readFileSync(STATIC_PATH + 'all_ships.json', 'utf-8')) as ReferenceShip[];
     const crew = JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8')) as CrewMember[];
 
-    const ships = mergeShips(ship_schematics.filter(sc => highestLevel(sc.ship) == (sc.ship.max_level ?? sc.ship.level) + 1 && (sc.ship.battle_stations?.length)), [], true);
+    const ships = mergeRefShips(refs, [], trans.ship_trait_names);
     ships.sort((a, b) => shipnum(b) - shipnum(a));
 
     const origShips = JSON.parse(JSON.stringify(ships)) as Ship[];
@@ -333,9 +334,11 @@ async function critBoomThing() {
 
     const start = new Date();
 
-    const ship_schematics = JSON.parse(fs.readFileSync(STATIC_PATH + 'ship_schematics.json', 'utf-8')) as Schematics[];
+    const refs = JSON.parse(fs.readFileSync(STATIC_PATH + 'all_ships.json', 'utf-8')) as ReferenceShip[];
+    const trans = JSON.parse(fs.readFileSync(STATIC_PATH + 'translation_en.json', 'utf-8')) as TranslationSet;
+
     const crew = JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8')) as CrewMember[];
-    const ships = mergeShips(ship_schematics.filter(sc => highestLevel(sc.ship) == (sc.ship.max_level ?? sc.ship.level) + 1 && (sc.ship.battle_stations?.length)), [], true);
+    const ships = mergeRefShips(refs, [], trans.ship_trait_names);
     ships.sort((a, b) => shipnum(b) - shipnum(a));
     const hrpool = crew.filter(f => f.action.ability?.type === 2 && !f.action.limit && !f.action.ability?.condition).sort((a, b) => b.action.ability!.amount - a.action.ability!.amount || a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount || a.action.cycle_time - b.action.cycle_time);
 
