@@ -31,108 +31,108 @@ type TScore = {
     }[]
 };
 
-export function expo() {
+// export function expo() {
 
-    const trans = JSON.parse(fs.readFileSync(STATIC_PATH + 'translation_en.json', 'utf-8')) as TranslationSet;
-    const refs = JSON.parse(fs.readFileSync(STATIC_PATH + 'all_ships.json', 'utf-8')) as ReferenceShip[];
-    const crew = JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8')) as CrewMember[];
+//     const trans = JSON.parse(fs.readFileSync(STATIC_PATH + 'translation_en.json', 'utf-8')) as TranslationSet;
+//     const refs = JSON.parse(fs.readFileSync(STATIC_PATH + 'all_ships.json', 'utf-8')) as ReferenceShip[];
+//     const crew = JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8')) as CrewMember[];
 
-    const ships = mergeRefShips(refs, [], trans.ship_trait_names);
-    ships.sort((a, b) => shipnum(b) - shipnum(a));
+//     const ships = mergeRefShips(refs, [], trans.ship_trait_names);
+//     ships.sort((a, b) => shipnum(b) - shipnum(a));
 
-    const origShips = JSON.parse(JSON.stringify(ships)) as Ship[];
+//     const origShips = JSON.parse(JSON.stringify(ships)) as Ship[];
 
-    const buckets = {} as { [key: string]: TScore[] };
+//     const buckets = {} as { [key: string]: TScore[] };
 
-    crew.forEach((c) => {
-        let uptime = getMaxTime(c);
-        if (uptime < 180 && c.action.limit) {
-            uptime = c.action.duration * c.action.limit;
-        }
-        else if (!c.action.limit) {
-            let u = 180 - c.action.initial_cooldown;
-            uptime = Math.floor(u / c.action.cycle_time) * c.action.duration;
-        }
+//     crew.forEach((c) => {
+//         let uptime = getMaxTime(c);
+//         if (uptime < 180 && c.action.limit) {
+//             uptime = c.action.duration * c.action.limit;
+//         }
+//         else if (!c.action.limit) {
+//             let u = 180 - c.action.initial_cooldown;
+//             uptime = Math.floor(u / c.action.cycle_time) * c.action.duration;
+//         }
 
-        if (!c.action.ability) {
-            buckets[-1] ??= [];
-            buckets[-1].push({
-                crew: c.symbol,
-                ability: -1,
-                activation: c.action.bonus_amount / (c.action.initial_cooldown + 1),
-                uptime,
-                score: uptime * c.action.bonus_amount,
-                trigger: -1,
-                limit: c.action.limit ?? 0,
-                avg_power: 0
-            });
-        }
-        else {
-            buckets[c.action.ability.type] ??= [];
-            buckets[c.action.ability.type].push({
-                crew: c.symbol,
-                ability: c.action.ability.type,
-                activation: c.action.ability.amount / (c.action.initial_cooldown + 1),
-                uptime,
-                score: c.action.bonus_amount,
-                trigger: c.action.ability.condition,
-                limit: c.action.limit ?? 0,
-                avg_power: 0
-            });
-        }
-    });
+//         if (!c.action.ability) {
+//             buckets[-1] ??= [];
+//             buckets[-1].push({
+//                 crew: c.symbol,
+//                 ability: -1,
+//                 activation: c.action.bonus_amount / (c.action.initial_cooldown + 1),
+//                 uptime,
+//                 score: uptime * c.action.bonus_amount,
+//                 trigger: -1,
+//                 limit: c.action.limit ?? 0,
+//                 avg_power: 0
+//             });
+//         }
+//         else {
+//             buckets[c.action.ability.type] ??= [];
+//             buckets[c.action.ability.type].push({
+//                 crew: c.symbol,
+//                 ability: c.action.ability.type,
+//                 activation: c.action.ability.amount / (c.action.initial_cooldown + 1),
+//                 uptime,
+//                 score: c.action.bonus_amount,
+//                 trigger: c.action.ability.condition,
+//                 limit: c.action.limit ?? 0,
+//                 avg_power: 0
+//             });
+//         }
+//     });
 
-    Object.values(buckets).forEach((bucket) => {
-        bucket.sort((a, b) => {
-            return ((b.activation * b.score) - (a.activation * a.score))
-        });
-    });
+//     Object.values(buckets).forEach((bucket) => {
+//         bucket.sort((a, b) => {
+//             return ((b.activation * b.score) - (a.activation * a.score))
+//         });
+//     });
 
-    const boom = buckets[5];
-    let id = 1;
-    for (let score of boom) {
-        score.ships = [];
-        let c = crew.find(f => f.symbol === score.crew)!;
-        for (let s of ships) {
-            let bosses = getBosses(s, c).sort((a, b) => b.id - a.id);
-            if (!bosses?.length) continue;
-            const boss = bosses[0];
-            const attacks = iterateBattle(10, true, s, [c], boss, undefined, undefined, 180, undefined, undefined, false, 0, true, true, false);
-            const battle = processBattleRun(id++, 'fbb_5', attacks, [c], 10, undefined, true, true);
+//     const boom = buckets[5];
+//     let id = 1;
+//     for (let score of boom) {
+//         score.ships = [];
+//         let c = crew.find(f => f.symbol === score.crew)!;
+//         for (let s of ships) {
+//             let bosses = getBosses(s, c).sort((a, b) => b.id - a.id);
+//             if (!bosses?.length) continue;
+//             const boss = bosses[0];
+//             const attacks = iterateBattle(10, true, s, [c], boss, undefined, undefined, 180, undefined, undefined, false, 0, true, false, false);
+//             const battle = processBattleRun(id++, 'fbb_5', attacks, [c], 10, undefined, true, true);
 
-            if (!battle) continue;
+//             if (!battle) continue;
 
-            let asym = c.action.symbol;
-            let uptime = battle.uptimes.find(f => f.action === asym);
-            let power = battle.action_powers[asym] || [];
+//             let asym = c.action.symbol;
+//             let uptime = battle.uptimes.find(f => f.action === asym);
+//             let power = battle.action_powers[asym] || [];
 
-            if (uptime) {
-                score.ships ??= [];
-                score.ships.push({
-                    ship: s.symbol,
-                    uptime: uptime.uptime,
-                    damage: battle.attack,
-                    comes_from: power,
-                    compat: shipCompatibility(s, c).score
-                });
-            }
-        }
+//             if (uptime) {
+//                 score.ships ??= [];
+//                 score.ships.push({
+//                     ship: s.symbol,
+//                     uptime: uptime.uptime,
+//                     damage: battle.attack,
+//                     comes_from: power,
+//                     compat: shipCompatibility(s, c).score
+//                 });
+//             }
+//         }
 
-        //score.avg_power = score.ships.map(m => m.damage).reduce((p, n) => p + n) / score.ships.length;
-        score.uptime = score.ships.map(m => m.uptime).reduce((p, n) => p + n, 0) / score.ships.length;
+//         //score.avg_power = score.ships.map(m => m.damage).reduce((p, n) => p + n) / score.ships.length;
+//         score.uptime = score.ships.map(m => m.uptime).reduce((p, n) => p + n, 0) / score.ships.length;
 
-        let a_compat = score.ships.map(m => m.compat).reduce((p, n) => p + n, 0) / score.ships.length;
-        let from_power = score.ships.map(m => m.comes_from.filter(f => f.type === score.ability && f.action === c.action.symbol).map(f => f.bonus).reduce((p, n) => p + n, 0)).reduce((p, n) => p + n, 0) / score.ships.length;
-        score.avg_power = from_power;
-        score.score *= score.uptime * a_compat * from_power;
-    }
+//         let a_compat = score.ships.map(m => m.compat).reduce((p, n) => p + n, 0) / score.ships.length;
+//         let from_power = score.ships.map(m => m.comes_from.filter(f => f.type === score.ability && f.action === c.action.symbol).map(f => f.bonus).reduce((p, n) => p + n, 0)).reduce((p, n) => p + n, 0) / score.ships.length;
+//         score.avg_power = from_power;
+//         score.score *= score.uptime * a_compat * from_power;
+//     }
 
-    boom.sort((a, b) => (b.activation * b.score) - (a.activation * a.score));
+//     boom.sort((a, b) => (b.activation * b.score) - (a.activation * a.score));
 
-    boom.slice(0, 10).forEach((b) => {
-        console.log(b);
-    })
-}
+//     boom.slice(0, 10).forEach((b) => {
+//         console.log(b);
+//     })
+// }
 
 export type CritBoom = { crit: string, boom: string, bosses: number[] };
 
@@ -220,7 +220,7 @@ async function processShip(ship: Ship, crew: CrewMember[], critbooms: CritBoom[]
                     if (play1) {
                         newstaff = [crit, boom].concat(hrstaff);
 
-                        let battle = iterateBattle(10, true, ship, newstaff, boss, MaxDefense, MaxOffense, 180, undefined, undefined, false, 0, true, true, false);
+                        let battle = iterateBattle(10, true, ship, newstaff, boss, MaxDefense, MaxOffense, 180, undefined, undefined, false, 0, true, false, false);
                         let attack = processBattleRun(id++, `fbb_${boss.id-1}` as any, battle, newstaff, 10, boss, true, false);
 
                         if (attack) {
@@ -245,7 +245,7 @@ async function processShip(ship: Ship, crew: CrewMember[], critbooms: CritBoom[]
                     if (play2) {
                         newstaff = [boom, crit].concat(hrstaff);
 
-                        let battle = iterateBattle(10, true, ship, newstaff, boss, MaxDefense, MaxOffense, 180, undefined, undefined, false, 0, true, true, false);
+                        let battle = iterateBattle(10, true, ship, newstaff, boss, MaxDefense, MaxOffense, 180, undefined, undefined, false, 0, true, false, false);
                         let attack = processBattleRun(id++, `fbb_${boss.id-1}` as any, battle, newstaff, 10, boss, true, false);
 
                         if (attack) {
@@ -327,9 +327,6 @@ async function processShip(ship: Ship, crew: CrewMember[], critbooms: CritBoom[]
 
 }
 
-
-
-
 async function critBoomThing() {
 
     const start = new Date();
@@ -337,18 +334,15 @@ async function critBoomThing() {
     const refs = JSON.parse(fs.readFileSync(STATIC_PATH + 'all_ships.json', 'utf-8')) as ReferenceShip[];
     const trans = JSON.parse(fs.readFileSync(STATIC_PATH + 'translation_en.json', 'utf-8')) as TranslationSet;
 
-    const crew = JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8')) as CrewMember[];
+    const crew = (JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8')) as CrewMember[]).filter(f => !f.action.limit);
     const ships = mergeRefShips(refs, [], trans.ship_trait_names);
     ships.sort((a, b) => shipnum(b) - shipnum(a));
     const hrpool = crew.filter(f => f.action.ability?.type === 2 && !f.action.limit && !f.action.ability?.condition).sort((a, b) => b.action.ability!.amount - a.action.ability!.amount || a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount || a.action.cycle_time - b.action.cycle_time);
 
     console.log(`Finding crit-boom combos...`);
-    const critbooms = getCritBooms(crew);
 
+    const critbooms = getCritBooms(crew);
     const bestbooms = [] as { ship: string, crew: string[], damage: number }[];
-    const tempbooms = [] as { ship: string, crew: string[], damage: number }[];
-    const battles = [] as BattleRun[];
-    let id = 1;
 
     const __boomdir = './build/crit-boom-cache';
 
