@@ -735,7 +735,12 @@ export function processScores(
                 return scores.map(ss => ((ss.duration / maxdur) * DurMul) + ((ss.total_damage / maxdmg) * DmgMul)).reduce((p, n) => p > n ? p : n, 0);
             }
             else {
-                return scores.map(ss => ss.total_damage).reduce((p, n) => p > n ? p : n, 0);
+                if (score_mode === 'ship') {
+                    return scores.map(ss => ss.max_damage).reduce((p, n) => p > n ? p : n, 0);
+                }
+                else {
+                    return scores.map(ss => ss.total_damage).reduce((p, n) => p > n ? p : n, 0);
+                }
             }
         }
         else {
@@ -757,7 +762,12 @@ export function processScores(
                 return ((score.duration / maxdur) * DurMul) + ((score.total_damage / maxdmg) * DmgMul);
             }
             else {
-                return score.total_damage;
+                if (score_mode === 'ship') {
+                    return score.max_damage;
+                }
+                else {
+                    return score.total_damage;
+                }
             }
         }
         else {

@@ -14,6 +14,7 @@ import { battleRunsToCache, cacheToBattleRuns, readBattleCache } from './ships/c
 import { makeBuckets } from './ships/util';
 import { CalcRes, ShipCalcConfig } from './ships/paracalc';
 import { score } from './scoring';
+import { createMulitpleShips } from './ships/seating';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 const LEVEL_PATH = `${__dirname}/../../../../scripts/data/`;
@@ -365,6 +366,18 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     let fbb_p3 = ships.map(sh => getStaffedShip(origShips, crew, sh, 1, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
     fbb_p3 = fbb_p2.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, 1, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
 
+    fbb_p2 = fbb_p2.map(ship => {
+        let result = createMulitpleShips(ship);
+        if (!result) return [ship];
+        return result;
+    }).flat();
+
+    fbb_p3 = fbb_p3.map(ship => {
+        let result = createMulitpleShips(ship);
+        if (!result) return [ship];
+        return result;
+    }).flat();
+
     allruns.length = ((arena_p2.length * arena_p2.length) * 4) + (fbb_p2.length * 6) + (fbb_p3.length * 6);
 
     runidx = 0;
@@ -425,7 +438,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     for (let ship of fbb_p2) {
         if (VERBOSE) console.log(`Scoring Max 2-HR FBB on ${ship.name} (${count++} / ${fbb_p2.length})...`);
         let crew = ship.battle_stations!.map(m => m.crew!);
-        let runres = runBattles(current_id, rate, ship, crew, allruns, runidx, hrpool, true, false, undefined, false, arena_variance, fbb_variance);
+        let runres = runBattles(current_id, rate, ship, crew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
 
         runidx = runres.runidx;
         current_id = runres.current_id;
@@ -434,7 +447,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     for (let ship of fbb_p3) {
         if (VERBOSE) console.log(`Scoring Max 1-HR FBB on ${ship.name} (${count++} / ${fbb_p2.length})...`);
         let crew = ship.battle_stations!.map(m => m.crew!);
-        let runres = runBattles(current_id, rate, ship, crew, allruns, runidx, hrpool, true, false, undefined, false, arena_variance, fbb_variance);
+        let runres = runBattles(current_id, rate, ship, crew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
 
         runidx = runres.runidx;
         current_id = runres.current_id;
@@ -497,6 +510,11 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         printAndLog(" ");
         printAndLog(`${idx == 0 ? 'Offense' : idx == 1 ? 'Defense' : 'Ship'}`);
         printAndLog(" ");
+
+        scores = scores.sort((a, b) => a.name.localeCompare(b.name) || b.overall_final - a.overall_final);
+        if (scores[0].name === scores[1].name) {
+            console.log(`Identical entries detected!!! ${scores[0].name}`);
+        }
 
         scores.sort((a, b) => b.fbb_final - a.fbb_final);
         scores.forEach((score, i) => score.fbb_rank = i + 1);
