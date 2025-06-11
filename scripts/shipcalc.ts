@@ -131,7 +131,17 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     if (cached?.length) {
         console.log("Checking integrity...");
         let corrupt = false;
-        corrupt = cached.some(c => !c.ship || (!c.crew && !c.seated?.length && !c.reference_battle));
+
+        cached.forEach((cc) => {
+            if (!cc.crew && !cc.reference_battle) {
+                if (cc.seated?.length) {
+                    cc.crew = cc.seated[0];
+                }
+            }
+        });
+
+        corrupt = cached.some(c => !c.ship || (!c.crew && !c.reference_battle));
+
         if (corrupt) {
             cached = [];
             console.log("Corrupted entries found. Doing full recomputation.");
@@ -171,114 +181,125 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     let count = 1;
     let cship = ships.length;
 
-    if (!cached?.length || newcrew.length || newships.length) {
-        const workcrew = newcrew.length ? newcrew : crew;
+    for (let ts = 0; ts < 2; ts++) {
+        if (ts) {
+            cached = [].slice();
+            newships.length = 0;
+            newcrew.length = 0;
+            console.log(`Detected a corruption in crew mapping (symbol change?)!!  Doing full recalculation.`);
+        }
 
-        if (cached.length) {
+        if (!cached?.length || newcrew.length || newships.length) {
+            const workcrew = newcrew.length ? newcrew : crew;
+
+            if (cached.length) {
+                allruns = cacheToBattleRuns(ships, crew, cached);
+                runidx = allruns.length;
+            }
+            else {
+                runidx = 0;
+            }
+
+            console.log("Calculate crew and ship battle scores...");
+            console.log(`Frame Rate: ${rate} per second.`)
+
+            allruns.length = (ships.length * crew.length * 18);
+            console.log(`Alloc ${allruns.length} items.`);
+
+            const bucketsize = Math.max(Math.floor(os.cpus().length / 2), 2);
+            const shipBuckets = makeBuckets(ships, bucketsize);
+
+            cship = ships.length;
+            let startidx = 0;
+            for (let x = 0; x < cship; x += bucketsize) {
+                const bidx = Math.floor(x / bucketsize);
+                let buckets = shipBuckets[bidx];
+                let promises = buckets.map((ship, idx2) => new Promise<CalcRes | undefined>((resolve, reject) => {
+                    const ws = newships.length && newships.some(tship => tship.symbol === ship.symbol);
+                    if (ws) {
+                        console.log(`Test new ship ${ship.name}`)
+                    }
+                    if ((newships.length && !ws) && !newcrew.length) {
+                        resolve(undefined);
+                        return;
+                    }
+                    const shipcrew = ws ? crew : workcrew;
+                    const config: ShipCalcConfig = {
+                        ships,
+                        ship_idx: startidx + idx2,
+                        crew,
+                        ship_crew: shipcrew,
+                        runidx,
+                        current_id,
+                        rate,
+                        hrpool,
+                        arena_variance,
+                        fbb_variance
+                    }
+                    const worker = new Worker(__dirname + '/ships/paracalc.js', {
+                        workerData: config,
+                    });
+                    worker.on('message', (data) => {
+                        // setTimeout(() => {
+                        //     worker.terminate();
+                        // });
+                        resolve(data);
+                    });
+                    worker.on('error', reject);
+                    worker.on('exit', (code) => {
+                    if (code !== 0)
+                        reject(new Error(`Worker stopped with exit code ${code}`));
+                    });
+                }));
+
+                startidx += buckets.length;
+
+                await Promise.all(promises).then((done) => {
+                    done.forEach((d) => {
+                        if (d) {
+                            for (let dboom of d.allruns) {
+                                if (dboom.crew) {
+                                    let sym = dboom.crew.symbol;
+                                    delete dboom.crew;
+                                    dboom.crew = crew.find(f => f.symbol === sym)!;
+                                }
+                                if (dboom.ship) {
+                                    let sym = dboom.ship.symbol;
+                                    delete (dboom as any).ship;
+                                    dboom.ship = ships.find(f => f.symbol === sym)!;
+                                }
+                                if (dboom.boss) {
+                                    let id = dboom.boss.id;
+                                    delete (dboom as any).boss;
+                                    dboom.boss = AllBosses.find(f => f.id === id)!;
+                                }
+                                if (dboom.opponent) {
+                                    let sym = dboom.opponent.symbol;
+                                    delete (dboom as any).opponent;
+                                    dboom.opponent = ships.find(f => f.symbol === sym)!;
+                                }
+                                if (dboom) {
+                                    allruns[runidx++] = dboom;
+                                }
+                            }
+                            d.allruns.length = 0;
+                        }
+                    });
+                });
+                promises.length = 0;
+            }
+
+            console.log("Saving battle run cache...");
+            allruns.splice(runidx);
+
+            battleRunsToCache(allruns, cacheFile);
+        }
+        else {
             allruns = cacheToBattleRuns(ships, crew, cached);
             runidx = allruns.length;
         }
-        else {
-            runidx = 0;
-        }
 
-        console.log("Calculate crew and ship battle scores...");
-        console.log(`Frame Rate: ${rate} per second.`)
-
-        allruns.length = (ships.length * crew.length * 18);
-        console.log(`Alloc ${allruns.length} items.`);
-
-        const bucketsize = Math.max(Math.floor(os.cpus().length / 2), 2);
-        const shipBuckets = makeBuckets(ships, bucketsize);
-
-        cship = ships.length;
-        let startidx = 0;
-        for (let x = 0; x < cship; x += bucketsize) {
-            const bidx = Math.floor(x / bucketsize);
-            let buckets = shipBuckets[bidx];
-            let promises = buckets.map((ship, idx2) => new Promise<CalcRes | undefined>((resolve, reject) => {
-                const ws = newships.length && newships.some(tship => tship.symbol === ship.symbol);
-                if (ws) {
-                    console.log(`Test new ship ${ship.name}`)
-                }
-                if ((newships.length && !ws) && !newcrew.length) {
-                    resolve(undefined);
-                    return;
-                }
-                const shipcrew = ws ? crew : workcrew;
-                const config: ShipCalcConfig = {
-                    ships,
-                    ship_idx: startidx + idx2,
-                    crew,
-                    ship_crew: shipcrew,
-                    runidx,
-                    current_id,
-                    rate,
-                    hrpool,
-                    arena_variance,
-                    fbb_variance
-                }
-                const worker = new Worker(__dirname + '/ships/paracalc.js', {
-                    workerData: config,
-                });
-                worker.on('message', (data) => {
-                    // setTimeout(() => {
-                    //     worker.terminate();
-                    // });
-                    resolve(data);
-                });
-                worker.on('error', reject);
-                worker.on('exit', (code) => {
-                if (code !== 0)
-                    reject(new Error(`Worker stopped with exit code ${code}`));
-                });
-            }));
-
-            startidx += buckets.length;
-
-            await Promise.all(promises).then((done) => {
-                done.forEach((d) => {
-                    if (d) {
-                        for (let dboom of d.allruns) {
-                            if (dboom.crew) {
-                                let sym = dboom.crew.symbol;
-                                delete dboom.crew;
-                                dboom.crew = crew.find(f => f.symbol === sym)!;
-                            }
-                            if (dboom.ship) {
-                                let sym = dboom.ship.symbol;
-                                delete (dboom as any).ship;
-                                dboom.ship = ships.find(f => f.symbol === sym)!;
-                            }
-                            if (dboom.boss) {
-                                let id = dboom.boss.id;
-                                delete (dboom as any).boss;
-                                dboom.boss = AllBosses.find(f => f.id === id)!;
-                            }
-                            if (dboom.opponent) {
-                                let sym = dboom.opponent.symbol;
-                                delete (dboom as any).opponent;
-                                dboom.opponent = ships.find(f => f.symbol === sym)!;
-                            }
-                            if (dboom) {
-                                allruns[runidx++] = dboom;
-                            }
-                        }
-                        d.allruns.length = 0;
-                    }
-                });
-            });
-            promises.length = 0;
-        }
-
-        console.log("Saving battle run cache...");
-        allruns.splice(runidx);
-
-        battleRunsToCache(allruns, cacheFile);
-    }
-    else {
-        allruns = cacheToBattleRuns(ships, crew, cached);
-        runidx = allruns.length;
+        if (allruns.every(ar => !!ar.crew || !!ar.reference_battle)) break;
     }
 
     console.log("Filtering runs into arena and fbb buckets ...");
