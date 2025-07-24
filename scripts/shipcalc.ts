@@ -345,6 +345,68 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
 
     allruns.length = 0;
 
+    if (process.argv.includes("--crew")) {
+        let x = process.argv.indexOf("--crew");
+        if (process.argv.length > x + 1) {
+            let symbol = process.argv[x + 1];
+            let c = crew.find(f => f.symbol === symbol);
+            if (c) {
+                console.log(`Scores for ${c.max_rarity}* Crew: ${c.name}`);
+                let carena = arenaruns.filter(f => f.crew?.symbol === symbol);
+                let cfbb = fbbruns.filter(f => f.crew?.symbol === symbol);
+                carena.sort((a, b) => {
+                    if (a.win === b.win) {
+                        if (a.type === 'defense') {
+                            return b.duration - a.duration || b.damage - a.damage;
+                        }
+                        else {
+                            return b.damage - a.damage || b.duration - a.duration;
+                        }
+                    }
+                    else if (a.win) {
+                        return -1;
+                    }
+                    else {
+                        return 1;
+                    }
+                });
+                cfbb.sort((a, b) => {
+                    if (a.win === b.win) {
+                        if (a.type === 'defense') {
+                            return b.duration - a.duration || b.damage - a.damage;
+                        }
+                        else {
+                            return b.damage - a.damage || b.duration - a.duration;
+                        }
+                    }
+                    else if (a.win) {
+                        return -1;
+                    }
+                    else {
+                        return 1;
+                    }
+                });
+                console.log("Arena");
+                console.log("-----");
+                for (let a of carena) {
+                    let ship = ships.find(f => f.symbol === a.ship.symbol);
+                    if (ship) {
+                        console.log(`${a.ship.rarity}* Ship: ${a.ship.name?.padEnd(40, " ")}: ${a.damage.toString().padEnd(15, " ")} ${a.duration.toString().padEnd(5, " ")} ${a.win}`)
+                    }
+                }
+                console.log("\nFBB");
+                console.log("---");
+                for (let a of cfbb) {
+                    let ship = ships.find(f => f.symbol === a.ship.symbol);
+                    if (ship) {
+                        console.log(`${a.ship.rarity}* Ship: ${a.ship.name?.padEnd(40, " ")}: ${a.damage.toString().padEnd(15, " ")} ${a.duration.toString().padEnd(5, " ")} ${a.win}`)
+                    }
+                }
+                process.exit(0);
+            }
+        }
+    }
+
     const shipscores = [] as Score[];
     const crewscores = [] as Score[];
 
