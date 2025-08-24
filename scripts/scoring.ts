@@ -4,7 +4,7 @@ import { EquipmentItem } from '../../website/src/model/equipment';
 import { Collection } from '../../website/src/model/game-elements';
 import { Gauntlet } from '../../website/src/model/gauntlets';
 import { TraitNames } from '../../website/src/model/traits';
-import { getAllStatBuffs } from '../../website/src/utils/collectionutils';
+import { getAllCrewRewards, getAllStatBuffs } from '../../website/src/utils/collectionutils';
 import { applyCrewBuffs, getSkillOrderScore, getSkillOrderStats, getVariantTraits, numberToGrade, SkillRarityReport, skillSum } from '../../website/src/utils/crewutils';
 import { getItemWithBonus } from '../../website/src/utils/itemutils';
 import { calculateMaxBuffs, lookupAMSeatsByTrait } from '../../website/src/utils/voyageutils';
@@ -134,13 +134,16 @@ function castScore(crew: CrewMember, roster: CrewMember[], maincast: MainCast) {
     let variants = getVariantTraits(crew);
     variants = [ ...new Set(Object.values(maincast).map((m: string[]) => m.filter(f => variants.includes(f))).flat()) ];
     //return variantScore(variants, roster);
-    let count = roster.filter(c => c.traits_hidden.some(th => variants.includes(th))).length;
-    return count;
+    let vcrew = roster.filter(c => c.traits_hidden.some(th => variants.includes(th)));
+    let count = vcrew.length;
+    let rarescore = vcrew.map(v => v.max_rarity).reduce((p, n) => p + n, 0);
+    return count * rarescore;
 }
 
-function mainCastValue(symbol: string, maincast: MainCast) {
+function mainCastValue(symbol: string, maincast: MainCast, roster: CrewMember[]) {
     let shows = 0;
     let inc = 0;
+
     Object.entries(maincast).forEach(([key, value]: [string, string[]], idx) => {
         if (value.includes(symbol)) shows++;
         inc += (1 + idx);
@@ -151,24 +154,25 @@ function mainCastValue(symbol: string, maincast: MainCast) {
 }
 
 function skillRare(crew: CrewMember, roster: CrewMember[]) {
-    if (crew.skill_order.length !== 3) {
-        return 1;
-    }
+    // if (crew.skill_order.length !== 3) {
+    //     return 1;
+    // }
 
-    let s1 = crew.skill_order[0];
-    let s2 = crew.skill_order[1];
-    let s3 = crew.skill_order[2];
-    let primes = [s1, s2];
+    let s1 = crew.skill_order[0] || "";
+    let s2 = crew.skill_order[1] || "";
+    let s3 = crew.skill_order[2] || "";
+    //let primes = [s1, s2];
     let ro = roster.filter(c => {
-        if (c.skill_order.length !== 3) return false;
-        let n1 = c.skill_order[0];
-        let n2 = c.skill_order[1];
-        let n3 = c.skill_order[2];
-        let primes2 = [n1, n2];
-        if (s3 === n3 && primes.every(p => primes2.includes(p))) return true;
-        return false;
+        //if (c.skill_order.length !== 3) return false;
+        let n1 = c.skill_order[0] || "";
+        let n2 = c.skill_order[1] || "";
+        let n3 = c.skill_order[2] || "";
+        return (s1 === n1 && s2 === n2 && s3 === n3);
+        // let primes2 = [n1, n2];
+        // if (s3 === n3 && primes.every(p => primes2.includes(p))) return true;
+        //return false;
     });
-    return ro.length / roster.length;
+    return ro.length / roster.length / crew.skill_order.length;
 }
 
 function tertRare(crew: CrewMember, roster: CrewMember[]) {
@@ -201,6 +205,7 @@ function traitScoring(roster: CrewMember[]) {
 
 	const traitCount = {} as { [key: string]: number };
 	roster.forEach((crew) => {
+        if (!crew.in_portal) return;
 		crew.traits.forEach((trait) => {
 			traitCount[trait] ??= 0;
 			traitCount[trait]++;
@@ -209,8 +214,8 @@ function traitScoring(roster: CrewMember[]) {
 	roster.forEach((crew) => {
 		crew.ranks ??= {} as Ranks;
         crew.ranks.scores ??= {} as RankScoring;
-		let traitsum = crew.traits.map(t => traitCount[t]).reduce((p, n) => p + n, 0);
-		crew.ranks.scores.trait = (1 / traitsum) / crew.traits.length;
+		let traitsum = crew.traits.map(t => (traitCount[t] || 0)).reduce((p, n) => p + n, 0);
+		crew.ranks.scores.trait = (1 / traitsum) / crew.traits.filter(f => f in traitCount).length;
 	});
 
 	roster.sort((a, b) => a.ranks.scores.trait - b.ranks.scores.trait);
@@ -218,15 +223,17 @@ function traitScoring(roster: CrewMember[]) {
 	roster.forEach((crew, idx) => crew.ranks.scores.trait = Number((((1 - crew.ranks.scores.trait / max)) * 100).toFixed(4)));
 }
 
+
 function collectionScore(c: CrewMember, collections: Collection[]) {
     const crewcols = c.collection_ids.map(id => collections.find(f => f.id?.toString() == id?.toString())!).filter(f => f.milestones?.some(ms => ms.buffs?.length))
     let n = 0;
     for (let col of crewcols) {
         let buffs = getAllStatBuffs(col);
         n += buffs.map(b => b.quantity!).reduce((p, n) => p + n, 0);
+        let crews = getAllCrewRewards(col);
+        n += crews.map(c => c.quantity!).reduce((p, n) => p + n, 0);
     }
-    return n; // (c.collection_ids.length / collections.length) + (n / crewcols.length);
-    //return n + c.collection_ids.length;
+    return n;
 }
 
 type RarityScore = { symbol: string, score: number, rarity: number, data?: any };
@@ -598,8 +605,8 @@ export function score() {
     }
 
     let mains = normalize(results, false, false, false, (a, b) => {
-        let av = mainCastValue(a.symbol, maincast);
-        let bv = mainCastValue(b.symbol, maincast);
+        let av = mainCastValue(a.symbol, maincast, crew);
+        let bv = mainCastValue(b.symbol, maincast, crew);
         if (av && bv) return av - bv;
         else if (av) return -1;
         else if (bv) return 1;
