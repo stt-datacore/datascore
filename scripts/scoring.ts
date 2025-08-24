@@ -160,6 +160,7 @@ function skillRare(crew: CrewMember, roster: CrewMember[]) {
     let s3 = crew.skill_order[2];
     let primes = [s1, s2];
     let ro = roster.filter(c => {
+        if (c.max_rarity !== crew.max_rarity) return false;
         if (c.skill_order.length !== 3) return false;
         let n1 = c.skill_order[0];
         let n2 = c.skill_order[1];
@@ -168,39 +169,56 @@ function skillRare(crew: CrewMember, roster: CrewMember[]) {
         if (s3 === n3 && primes.every(p => primes2.includes(p))) return true;
         return false;
     });
-    return ro.length / roster.length;
+    return (ro.length / roster.length) / (crew.skill_order.length / crew.max_rarity);
 }
 
-function tertRare(crew: CrewMember, roster: CrewMember[]) {
-    if (crew.skill_order.length !== 3) {
-        return 1;
-    }
-
-    let s3 = crew.skill_order[2];
+function absSkillRare(crew: CrewMember, roster: CrewMember[]) {
+    let s1 = crew.skill_order[0] || "";
+    let s2 = crew.skill_order[1] || "";
+    let s3 = crew.skill_order[2] || "";
     let ro = roster.filter(c => {
-        if (c.skill_order.length !== 3) return false;
-        let n3 = c.skill_order[2];
-        if (s3 === n3) return true;
+        if (c.max_rarity !== crew.max_rarity) return false;
+        if (c.skill_order.length !== crew.skill_order.length) return false;
+        let n1 = c.skill_order[0] || "";
+        let n2 = c.skill_order[1] || "";
+        let n3 = c.skill_order[2] || "";
+        if (s3 === n3 && s2 === n2 && s1 === n1) return true;
         return false;
     });
-    return ro.length / roster.length;
+    return (ro.length / roster.length) / (crew.skill_order.length / crew.max_rarity);
 }
 
-function priRare(crew: CrewMember, roster: CrewMember[]) {
-    let s3 = crew.skill_order[0];
-    let ro = roster.filter(c => {
-        let n3 = c.skill_order[0];
-        if (s3 === n3) return true;
-        return false;
-    });
-    return ro.length / roster.length;
-}
+// function tertRare(crew: CrewMember, roster: CrewMember[]) {
+//     if (crew.skill_order.length !== 3) {
+//         return 1;
+//     }
+
+//     let s3 = crew.skill_order[2];
+//     let ro = roster.filter(c => {
+//         if (c.skill_order.length !== 3) return false;
+//         let n3 = c.skill_order[2];
+//         if (s3 === n3) return true;
+//         return false;
+//     });
+//     return ro.length / roster.length;
+// }
+
+// function priRare(crew: CrewMember, roster: CrewMember[]) {
+//     let s3 = crew.skill_order[0];
+//     let ro = roster.filter(c => {
+//         let n3 = c.skill_order[0];
+//         if (s3 === n3) return true;
+//         return false;
+//     });
+//     return ro.length / roster.length;
+// }
 
 function traitScoring(roster: CrewMember[]) {
 	roster = [ ...roster ];
 
 	const traitCount = {} as { [key: string]: number };
 	roster.forEach((crew) => {
+        if (!crew.in_portal) return;
 		crew.traits.forEach((trait) => {
 			traitCount[trait] ??= 0;
 			traitCount[trait]++;
@@ -209,8 +227,8 @@ function traitScoring(roster: CrewMember[]) {
 	roster.forEach((crew) => {
 		crew.ranks ??= {} as Ranks;
         crew.ranks.scores ??= {} as RankScoring;
-		let traitsum = crew.traits.map(t => traitCount[t]).reduce((p, n) => p + n, 0);
-		crew.ranks.scores.trait = (1 / traitsum) / crew.traits.length;
+		let traitsum = crew.traits.map(t => (traitCount[t] || 0)).reduce((p, n) => p + n, 0);
+		crew.ranks.scores.trait = (1 / traitsum) / crew.traits.filter(f => f in traitCount).length;
 	});
 
 	roster.sort((a, b) => a.ranks.scores.trait - b.ranks.scores.trait);
@@ -459,13 +477,13 @@ export function score() {
     let skillrare = normalize(results, true);
     skillpos = normalize(skillpos);
 
-    if (DEBUG) console.log("Skill-Order Rarity")
+    if (DEBUG) console.log("Generalized skill-order rarity")
     if (DEBUG) console.log(skillrare.slice(0, 20));
 
     if (DEBUG) console.log("Triplet Power")
     if (DEBUG) console.log(skillpos.slice(0, 20));
 
-    if (!QUIET) console.log("Scoring primary skill rarity...");
+    if (!QUIET) console.log("Absolute skill-order rarity...");
 
     results = [].slice();
 
@@ -473,31 +491,31 @@ export function score() {
         results.push({
             symbol: c.symbol,
             rarity: c.max_rarity,
-            score: priRare(c, buckets[c.max_rarity])
+            score: absSkillRare(c, buckets[c.max_rarity])
         });
     }
 
-    let prirare = normalize(results, true);
+    let absrare = normalize(results, true);
 
-    if (DEBUG) console.log("Primary Rarity")
-    if (DEBUG) console.log(prirare.slice(0, 20));
+    if (DEBUG) console.log("Absolute skill-order rarity.")
+    if (DEBUG) console.log(absrare.slice(0, 20));
 
-    if (!QUIET) console.log("Scoring tertiary skill rarity...");
+    // if (!QUIET) console.log("Scoring tertiary skill rarity...");
 
-    results = [].slice();
+    // results = [].slice();
 
-    for (let c of crew) {
-        results.push({
-            symbol: c.symbol,
-            rarity: c.max_rarity,
-            score: tertRare(c, buckets[c.max_rarity])
-        });
-    }
+    // for (let c of crew) {
+    //     results.push({
+    //         symbol: c.symbol,
+    //         rarity: c.max_rarity,
+    //         score: tertRare(c, buckets[c.max_rarity])
+    //     });
+    // }
 
-    let tertrare = normalize(results, true);
+    // let tertrare = normalize(results, true);
 
-    if (DEBUG) console.log("Tertiary Rarity")
-    if (DEBUG) console.log(tertrare.slice(0, 20));
+    // if (DEBUG) console.log("Tertiary Rarity")
+    // if (DEBUG) console.log(tertrare.slice(0, 20));
 
     if (!QUIET) console.log("Scoring velocity...");
 
@@ -750,11 +768,11 @@ export function score() {
         let i_sk_rare_n = skillrare.findIndex(f => f.symbol === c.symbol);
         let sko_rare_n = skillrare[i_sk_rare_n].score;
 
-        let i_tert_rare_n = tertrare.findIndex(f => f.symbol === c.symbol);
-        let tert_rare_n = tertrare[i_tert_rare_n].score;
+        // let i_tert_rare_n = tertrare.findIndex(f => f.symbol === c.symbol);
+        // let tert_rare_n = tertrare[i_tert_rare_n].score;
 
-        let i_pri_rare_n = prirare.findIndex(f => f.symbol === c.symbol);
-        let pri_rare_n = prirare[i_pri_rare_n].score;
+        let i_abs_rare_n = absrare.findIndex(f => f.symbol === c.symbol);
+        let abs_rare_n = absrare[i_abs_rare_n].score;
 
         let i_amseat_n = amseats.findIndex(f => f.symbol === c.symbol);
         let amseat_n = amseats[i_amseat_n].score;
@@ -810,11 +828,16 @@ export function score() {
         c.ranks.scores.skill_rarity = sko_rare_n;
         c.ranks.skill_rarity_rank = i_sk_rare_n + 1;
 
-        c.ranks.scores.primary_rarity = pri_rare_n;
-        c.ranks.primary_rarity_rank = i_pri_rare_n + 1;
+        c.ranks.scores.primary_rarity = abs_rare_n;
+        c.ranks.primary_rarity_rank = i_abs_rare_n + 1;
 
-        c.ranks.scores.tertiary_rarity = tert_rare_n;
-        c.ranks.tertiary_rarity_rank = i_tert_rare_n + 1;
+        // c.ranks.scores.tertiary_rarity = tert_rare_n;
+        // c.ranks.tertiary_rarity_rank = i_tert_rare_n + 1;
+        let i_tert_rare_n = 0;
+        let tert_rare_n = 0;
+
+        c.ranks.scores.tertiary_rarity = 0;
+        c.ranks.tertiary_rarity_rank = 0 + 1;
 
         c.ranks.scores.quipment = quipment_n;
         c.ranks.quipment_rank = i_quip_n + 1;
@@ -861,6 +884,7 @@ export function score() {
 
     - Voyage Score                         Weight: 2 + Rarity
     - Skill-Order Rarity                   Weight: 3
+    - Absolute Skill-Order Rarity          Weight: 2
     - Gauntlet Score                       Weight: 1.7
     - Ship Ability Score                   Weight: 1.25
     - Skill Position Score                 Weight: 1.1
@@ -873,7 +897,7 @@ export function score() {
     - Main Cast Score                      Weight: 0.2
     - Skill-Order Velocity Score           Weight: 0.15
     - Potential Collection Score           Weight: 0.15
-    - Tertiary Skill Rarity Score          Weight: 0.1
+    - Tertiary Skill Rarity Score          Weight: 0.1   **N/A**
     - Variant Score                        Weight: 0.04
 
 */
@@ -882,21 +906,21 @@ export function score() {
             shuttle_plus: 0.25,
             gauntlet_plus: 0.25,
             voyage: 2                   + ((c.max_rarity) * (c.max_rarity / 5)),
-            skill_rarity: 3             - (0.2 * (5 - c.max_rarity)),
-            quipment: 1.77              + (0.3 * (5 - c.max_rarity)),
+            skill_rarity: 1.5           - (0.2 * (5 - c.max_rarity)),
+            primary_rarity: 1           - (0.2 * (5 - c.max_rarity)),
+            quipment: 0.77              + (0.3 * (5 - c.max_rarity)),
             gauntlet: 1.73,
-            skill_positions: 1.1        - (0.2 * (5 - c.max_rarity)),
+            skill_positions: 1          - (0.2 * (5 - c.max_rarity)),
             shuttle: 1                  - (0.1 * (5 - c.max_rarity)),
             crit: 0.267,
             am_seating: 0.25            - (0.07 * (5 - c.max_rarity)),
-            collections: 0.25           + (0.5 * (5 - c.max_rarity)),
-            trait: 0.25                 + (0.5 * (5 - c.max_rarity)),
+            collections: 1              + (0.5 * (5 - c.max_rarity)),
+            trait: 0.75                 + (0.5 * (5 - c.max_rarity)),
             potential_cols: 0.17        + (0.17 * (5 - c.max_rarity)),
             main_cast: 0.20             + (0.1 * (5 - c.max_rarity)),
             velocity: 0.15,
-            ship: 0.145                 + (0.5 * (5 - c.max_rarity)),
-            tertiary_rarity: 0.1,
-            primary_rarity: 0.05,
+            ship: 0.2                   + (0.5 * (5 - c.max_rarity)),
+            tertiary_rarity: 0,
             variant: 0.04               + (0.02 * (5 - c.max_rarity)),
         }
 
@@ -921,7 +945,7 @@ export function score() {
         velocity_n *= weight.velocity;
         pcol_n *= weight.potential_cols;
         tert_rare_n *= weight.tertiary_rarity;
-        pri_rare_n *= weight.primary_rarity;
+        abs_rare_n *= weight.primary_rarity;
         variant_n *= weight.variant;
 
         let scores = [
@@ -936,7 +960,7 @@ export function score() {
             core_n,
             sko_rare_n,
             fbbtrait_n,
-            pri_rare_n,
+            abs_rare_n,
             tert_rare_n,
             velocity_n,
             voyage_n,
