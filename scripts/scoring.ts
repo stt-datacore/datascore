@@ -161,18 +161,21 @@ function skillRare(crew: CrewMember, roster: CrewMember[]) {
     let s1 = crew.skill_order[0] || "";
     let s2 = crew.skill_order[1] || "";
     let s3 = crew.skill_order[2] || "";
-    //let primes = [s1, s2];
+    let primes = [s1, s2];
     let ro = roster.filter(c => {
+        if (c.skill_order.length !== crew.skill_order.length) return false;
         //if (c.skill_order.length !== 3) return false;
         let n1 = c.skill_order[0] || "";
         let n2 = c.skill_order[1] || "";
         let n3 = c.skill_order[2] || "";
+        if (c.skill_order.length === 3) {
+            let primes2 = [n1, n2];
+            if (s3 === n3 && primes.every(p => primes2.includes(p))) return true;
+        }
         return (s1 === n1 && s2 === n2 && s3 === n3);
-        // let primes2 = [n1, n2];
-        // if (s3 === n3 && primes.every(p => primes2.includes(p))) return true;
         //return false;
     });
-    return ro.length / roster.length / crew.skill_order.length;
+    return (ro.length / roster.length) / crew.skill_order.length;
 }
 
 function tertRare(crew: CrewMember, roster: CrewMember[]) {
@@ -226,14 +229,16 @@ function traitScoring(roster: CrewMember[]) {
 
 function collectionScore(c: CrewMember, collections: Collection[]) {
     const crewcols = c.collection_ids.map(id => collections.find(f => f.id?.toString() == id?.toString())!).filter(f => f.milestones?.some(ms => ms.buffs?.length))
-    let n = 0;
+    let cc = crewcols.length;
+    let bu = 0;
+    let cr = 0;
     for (let col of crewcols) {
         let buffs = getAllStatBuffs(col);
-        n += buffs.map(b => b.quantity!).reduce((p, n) => p + n, 0);
+        bu += buffs.map(b => b.quantity!).reduce((p, n) => p + n, 0);
         let crews = getAllCrewRewards(col);
-        n += crews.map(c => c.quantity!).reduce((p, n) => p + n, 0);
+        cr += crews.map(c => c.quantity!).reduce((p, n) => p + n, 0);
     }
-    return n;
+    return (bu * 3) + (cr * 2) + (cc * 1);
 }
 
 type RarityScore = { symbol: string, score: number, rarity: number, data?: any };
