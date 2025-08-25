@@ -593,7 +593,7 @@ export function score() {
         results.push({
             symbol: c.symbol,
             rarity: c.max_rarity,
-            score: c.traits.map(m => lookupAMSeatsByTrait(m)).flat().length
+            score: c.traits.map(m => lookupAMSeatsByTrait(m).filter(skill => c.skill_order.includes(skill))).flat().length
         });
     }
 
