@@ -163,6 +163,7 @@ function skillRare(crew: CrewMember, roster: CrewMember[]) {
     let s3 = crew.skill_order[2] || "";
     let primes = [s1, s2];
     let ro = roster.filter(c => {
+        if (c.max_rarity !== crew.max_rarity) return false;
         if (c.skill_order.length !== crew.skill_order.length) return false;
         //if (c.skill_order.length !== 3) return false;
         let n1 = c.skill_order[0] || "";
@@ -185,6 +186,7 @@ function tertRare(crew: CrewMember, roster: CrewMember[]) {
 
     let s3 = crew.skill_order[2];
     let ro = roster.filter(c => {
+        if (c.max_rarity !== crew.max_rarity) return false;
         if (c.skill_order.length !== 3) return false;
         let n3 = c.skill_order[2];
         if (s3 === n3) return true;
@@ -196,6 +198,7 @@ function tertRare(crew: CrewMember, roster: CrewMember[]) {
 function priRare(crew: CrewMember, roster: CrewMember[]) {
     let s3 = crew.skill_order[0];
     let ro = roster.filter(c => {
+        if (c.max_rarity !== crew.max_rarity) return false;
         let n3 = c.skill_order[0];
         if (s3 === n3) return true;
         return false;
@@ -206,10 +209,12 @@ function priRare(crew: CrewMember, roster: CrewMember[]) {
 function traitScoring(roster: CrewMember[]) {
 	roster = [ ...roster ];
 
+    const allowedTraits = [ ... new Set(roster.filter(f => f.in_portal).map(m => m.traits).flat()) ];
+
 	const traitCount = {} as { [key: string]: number };
 	roster.forEach((crew) => {
-        if (!crew.in_portal) return;
 		crew.traits.forEach((trait) => {
+            if (!allowedTraits.includes(trait)) return;
 			traitCount[trait] ??= 0;
 			traitCount[trait]++;
 		});
@@ -906,7 +911,7 @@ export function score() {
             potential_cols: 0.17        + (0.17 * (5 - c.max_rarity)),
             main_cast: 0.20             + (0.1 * (5 - c.max_rarity)),
             velocity: 0.15,
-            ship: 0.145                 + (0.5 * (5 - c.max_rarity)),
+            ship: 0.145                 + (0.65 * (5 - c.max_rarity)),
             tertiary_rarity: 0.1,
             primary_rarity: 0.05,
             variant: 0.04               + (0.02 * (5 - c.max_rarity)),
@@ -1069,23 +1074,29 @@ export function score() {
     if (!QUIET) console.log("Writing current_weighting.json...");
     fs.writeFileSync(STATIC_PATH + 'current_weighting.json', JSON.stringify(Weights));
 
-    const digestPath = `${SCRIPTS_DATA_PATH}change_log_digest.json`;
-    const changeFile = `change_log_${(new Date()).getTime()}.json`;
-    const changePath = `${SCRIPTS_DATA_PATH}${changeFile}`;
+    if (!process.argv.includes("--nochange")) {
+        const digestPath = `${SCRIPTS_DATA_PATH}change_log_digest.json`;
+        const changeFile = `change_log_${(new Date()).getTime()}.json`;
+        const changePath = `${SCRIPTS_DATA_PATH}${changeFile}`;
 
-    let old = [] as Digest[];
-    const current = makeLogFormat(origCrew);
-    if (fs.existsSync(digestPath)) {
-        old = JSON.parse(fs.readFileSync(digestPath, 'utf-8')) as Digest[];
-    }
-    const change_log = makeChangeLog(old, current);
+        let old = [] as Digest[];
+        const current = makeLogFormat(origCrew);
+        if (fs.existsSync(digestPath)) {
+            old = JSON.parse(fs.readFileSync(digestPath, 'utf-8')) as Digest[];
+        }
+        const change_log = makeChangeLog(old, current);
 
-    if (!QUIET) console.log("Writing change_log_digest.json...");
-    fs.writeFileSync(digestPath, JSON.stringify(current, null, 4));
-    if (change_log.length) {
-        if (!QUIET) console.log(`Writing ${changeFile}...`);
-        fs.writeFileSync(changePath, JSON.stringify(change_log, null, 4));
+        if (!QUIET) console.log("Writing change_log_digest.json...");
+        fs.writeFileSync(digestPath, JSON.stringify(current, null, 4));
+        if (change_log.length) {
+            if (!QUIET) console.log(`Writing ${changeFile}...`);
+            fs.writeFileSync(changePath, JSON.stringify(change_log, null, 4));
+        }
     }
+    else {
+        console.log(`Not writing a change log.`);
+    }
+
     if (!QUIET) console.log("Done.");
 }
 
