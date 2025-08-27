@@ -135,13 +135,16 @@ export function sortingQuipmentScoring(crew: CrewMember[], quipment: ItemWithBon
 }
 
 
-export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs: BuffStatTable): QPowers {
+export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs: BuffStatTable, skill_only?: string): QPowers {
+    crew = {...crew };
+    if (skill_only && skill_only in crew.base_skills) crew.skill_order = [skill_only];
+
     calcQLots(crew, quipment, buffs, true, undefined, 'all');
     let price_key = '';
 
     // Aggregate:
     let qpower = Object.values(crew.best_quipment!.aggregate_by_skill).reduce((p, n) => p + n, 0);
-    let possquip = getPossibleQuipment(crew, Object.values(crew.best_quipment!.skill_quipment).flat());
+    let possquip = getPossibleQuipment(crew, Object.values(crew.best_quipment!.skill_quipment).flat() || []);
     let qprice = possquip.map(q => q.recipe?.list.map(rl => rl.count).reduce((p, n) => p + n, 0) ?? 0).reduce((p, n) => p + n, 0);
 
     // Voyage:
@@ -157,10 +160,10 @@ export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs
     }).reduce((p, n) => p > n ? p : n, 0);
     if (vpower === ovpower) {
         price_key = Object.keys(crew.best_quipment!.aggregate_by_skill).find(f => crew.best_quipment!.aggregate_by_skill[f] === vpower)!
-        possquip = getPossibleQuipment(crew, crew.best_quipment!.skill_quipment[price_key]);
+        possquip = getPossibleQuipment(crew, crew.best_quipment!.skill_quipment[price_key] || []);
     }
     else {
-        possquip = getPossibleQuipment(crew, pquips[vpower]);
+        possquip = getPossibleQuipment(crew, pquips[vpower] || []);
     }
     let vprice = possquip.map(q => q.recipe?.list.map(rl => rl.count).reduce((p, n) => p + n, 0) ?? 0).reduce((p, n) => p + n, 0);
 
@@ -177,10 +180,10 @@ export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs
     }).reduce((p, n) => p > n ? p : n, 0);
     if (bpower === obpower) {
         price_key = Object.keys(crew.best_quipment!.aggregate_by_skill).find(f => crew.best_quipment!.aggregate_by_skill[f] === bpower)!
-        possquip = getPossibleQuipment(crew, crew.best_quipment!.skill_quipment[price_key]);
+        possquip = getPossibleQuipment(crew, crew.best_quipment!.skill_quipment[price_key] || []);
     }
     else {
-        possquip = getPossibleQuipment(crew, pquips[bpower]);
+        possquip = getPossibleQuipment(crew, pquips[bpower] || []);
     }
     let bprice = possquip.map(q => q.recipe?.list.map(rl => rl.count).reduce((p, n) => p + n, 0) ?? 0).reduce((p, n) => p + n, 0);
 
@@ -197,10 +200,10 @@ export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs
     }).reduce((p, n) => p > n ? p : n, 0);
     if (gpower === ogpower) {
         price_key = Object.keys(crew.best_quipment!.aggregate_by_skill).find(f => crew.best_quipment!.aggregate_by_skill[f] === gpower)!
-        possquip = getPossibleQuipment(crew, crew.best_quipment!.skill_quipment[price_key]);
+        possquip = getPossibleQuipment(crew, crew.best_quipment!.skill_quipment[price_key] || []);
     }
     else {
-        possquip = getPossibleQuipment(crew, pquips[gpower]);
+        possquip = getPossibleQuipment(crew, pquips[gpower] || []);
     }
     let gprice = possquip.map(q => q.recipe?.list.map(rl => rl.count).reduce((p, n) => p + n, 0) ?? 0).reduce((p, n) => p + n, 0);
 
@@ -298,3 +301,10 @@ export function multiComp(a: CrewMember, b: CrewMember, combo_id: number) {
 
     return 0;
 };
+
+export function skillQP(crew: CrewMember, skill: string) {
+    if (crew.best_quipment?.aggregate_by_skill) {
+        return crew.best_quipment.aggregate_by_skill[skill] as number | undefined || 0;
+    }
+    return 0;
+}

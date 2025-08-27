@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { ComputedSkill, CrewMember, QuipmentDetails, Ranks, RankScoring, Skill } from '../../website/src/model/crew';
+import { BaseSkills, ComputedSkill, CrewMember, QuipmentDetails, Ranks, RankScoring, Skill } from '../../website/src/model/crew';
 import { EquipmentItem } from '../../website/src/model/equipment';
 import { Collection } from '../../website/src/model/game-elements';
 import { Gauntlet } from '../../website/src/model/gauntlets';
@@ -10,6 +10,7 @@ import { getItemWithBonus } from '../../website/src/utils/itemutils';
 import { calculateMaxBuffs, lookupAMSeatsByTrait } from '../../website/src/utils/voyageutils';
 import { computePotentialColScores, splitCollections } from './cols';
 import { QPowers, scoreQuipment, sortingQuipmentScoring } from './quipment';
+import CONFIG from '../../website/src/components/CONFIG';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 const SCRIPTS_DATA_PATH = `${__dirname}/../../../../scripts/data/`;
@@ -390,50 +391,114 @@ export function score() {
     if (DEBUG) console.log("Traits")
     if (DEBUG) console.log(traits.slice(0, 20));
 
-    results = [].slice();
+    const skills = CONFIG.SKILLS_SHORT.map(m => m.name);
 
-    if (!QUIET) console.log("Scoring quipment using sorting method...");
-    let qpowersV = sortingQuipmentScoring(crew, quipment, maxbuffs);
-    let qpowers = [] as QPowers[];
-    let qpowersP = [] as QPowers[];
+    const testBatches = [[...skills], [skills[0]], [skills[1]], [skills[2]], [skills[3]], [skills[4]], [skills[5]], [...skills]];
 
-    if (!QUIET) console.log("Scoring quipment using power method...");
-    for (let c of crew) {
-        let data = scoreQuipment(c, quipment, maxbuffs);
-        qpowers.push(data);
-    }
+    let allpowers = [] as RarityScore[][];
+    let allpowersP = [] as QPowers[][];
+    let allpowersV = [] as QPowers[][];
 
-    qpowersP = JSON.parse(JSON.stringify(qpowers));
+    testBatches.forEach((batch, idx) => {
+        let testquipment = quipment.filter(f => Object.keys(f.bonusInfo.bonuses).some((b) => batch.includes(b)));
+        if (idx && batch.length > 1) testquipment = testquipment.filter(f => f.item.traits_requirement?.length);
 
-    for (const qp of qpowers) {
-        let c = crew.find(f => f.symbol === qp.symbol)!;
-        //let factor = 0.5 + (5 / c.max_rarity);
+        let testcrew = crew.filter(c => c.skill_order.some(b => batch.includes(b)));
+        results = [].slice();
 
-        let vp = qpowersV.find(f => f.symbol === qp.symbol)!;
-        Object.keys(qp).forEach((key) => {
-            if (typeof qp[key] !== 'number') return;
-            qp[key] = ((qp[key]) + (vp[key])) / 2;
-        });
-    }
+        if (!QUIET) console.log(`Scoring ${batch.length > 1 ? 'all' : batch[0]} quipment using sorting method...`);
+        let qpowersV = sortingQuipmentScoring(testcrew, testquipment, maxbuffs);
+        let qpowers = [] as QPowers[];
+        let qpowersP = [] as QPowers[];
 
-    normalizeQPowers(qpowersV);
-    normalizeQPowers(qpowersP);
-    normalizeQPowers(qpowers);
+        if (!QUIET) console.log(`Scoring ${batch.length > 1 ? 'all' : batch[0]} quipment using power method...`);
+        for (let c of testcrew) {
+            let data = scoreQuipment(c, testquipment, maxbuffs, batch.length === 1 ? batch[0] : undefined);
+            qpowers.push(data);
+        }
 
-    for (let qpc of qpowers) {
-        let c = crew.find(f => f.symbol === qpc.symbol)!
-        results.push({
-            symbol: c.symbol,
-            rarity: c.max_rarity,
-            score: qpc.avg,
-            data: qpc
-        });
-    }
+        qpowersP = JSON.parse(JSON.stringify(qpowers));
 
-    let quips = normalize(results);
+        for (const qp of qpowers) {
+            let c = testcrew.find(f => f.symbol === qp.symbol)!;
+            //let factor = 0.5 + (5 / c.max_rarity);
 
-    if (DEBUG) console.log("Quipment Score")
-    if (DEBUG) console.log(quips.slice(0, 20));
+            let vp = qpowersV.find(f => f.symbol === qp.symbol)!;
+            Object.keys(qp).forEach((key) => {
+                if (typeof qp[key] !== 'number') return;
+                qp[key] = ((qp[key]) + (vp[key])) / 2;
+            });
+        }
+
+        normalizeQPowers(qpowersV);
+        normalizeQPowers(qpowersP);
+        normalizeQPowers(qpowers);
+
+        for (let qpc of qpowers) {
+            let c = crew.find(f => f.symbol === qpc.symbol)!
+            results.push({
+                symbol: c.symbol,
+                rarity: c.max_rarity,
+                score: qpc.avg,
+                data: qpc
+            });
+        }
+        allpowersP.push(qpowersP);
+        allpowersV.push(qpowersV);
+        allpowers.push(normalize(results));
+
+        if (DEBUG) console.log("Quipment Score")
+        if (DEBUG) console.log(allpowers[allpowers.length - 1].slice(0, 20));
+    });
+
+    let quips = allpowers[0];
+    let qpowersP = allpowersP[0];
+    let qpowersV = allpowersV[0];
+
+    // results = [].slice();
+
+    // if (!QUIET) console.log("Scoring quipment using sorting method...");
+    // let qpowersV = sortingQuipmentScoring(crew, quipment, maxbuffs);
+    // let qpowers = [] as QPowers[];
+    // let qpowersP = [] as QPowers[];
+
+    // if (!QUIET) console.log("Scoring quipment using power method...");
+    // for (let c of crew) {
+    //     let data = scoreQuipment(c, quipment, maxbuffs);
+    //     qpowers.push(data);
+    // }
+
+    // qpowersP = JSON.parse(JSON.stringify(qpowers));
+
+    // for (const qp of qpowers) {
+    //     let c = crew.find(f => f.symbol === qp.symbol)!;
+    //     //let factor = 0.5 + (5 / c.max_rarity);
+
+    //     let vp = qpowersV.find(f => f.symbol === qp.symbol)!;
+    //     Object.keys(qp).forEach((key) => {
+    //         if (typeof qp[key] !== 'number') return;
+    //         qp[key] = ((qp[key]) + (vp[key])) / 2;
+    //     });
+    // }
+
+    // normalizeQPowers(qpowersV);
+    // normalizeQPowers(qpowersP);
+    // normalizeQPowers(qpowers);
+
+    // for (let qpc of qpowers) {
+    //     let c = crew.find(f => f.symbol === qpc.symbol)!
+    //     results.push({
+    //         symbol: c.symbol,
+    //         rarity: c.max_rarity,
+    //         score: qpc.avg,
+    //         data: qpc
+    //     });
+    // }
+
+    // let quips = normalize(results);
+
+    // if (DEBUG) console.log("Quipment Score")
+    // if (DEBUG) console.log(quips.slice(0, 20));
 
     results = [].slice();
 
@@ -833,9 +898,6 @@ export function score() {
         c.ranks.scores.tertiary_rarity = tert_rare_n;
         c.ranks.tertiary_rarity_rank = i_tert_rare_n + 1;
 
-        c.ranks.scores.quipment = quipment_n;
-        c.ranks.quipment_rank = i_quip_n + 1;
-
         c.ranks.scores.am_seating = amseat_n;
         c.ranks.am_seating_rank = i_amseat_n + 1;
 
@@ -865,6 +927,28 @@ export function score() {
 
         let ship_n = c.ranks.scores.ship.overall;
         c.ranks.ship_rank = c.ranks.scores.ship.overall_rank;
+
+
+        // Quipment
+        c.ranks.scores.quipment = quipment_n;
+        c.ranks.quipment_rank = i_quip_n + 1;
+
+        c.quipment_score = quipment_n;
+        c.quipment_scores = {
+            command_skill: 0,
+            diplomacy_skill: 0,
+            engineering_skill: 0,
+            security_skill: 0,
+            science_skill: 0,
+            medicine_skill: 0,
+            trait_limited: 0
+        }
+        testBatches[0].forEach((skill, idx) => {
+            let s_quipment_n = allpowers[idx + 1].find(f => f.symbol === c.symbol)?.score || 0;
+            c.quipment_scores![skill] = s_quipment_n;
+        });
+
+        c.quipment_scores.trait_limited = allpowers[allpowers.length - 1].find(f => f.symbol === c.symbol)?.score || 0;
 
 /*
     - Voyage-Plus Score                    Weight: 0.25
