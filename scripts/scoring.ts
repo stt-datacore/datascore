@@ -307,7 +307,7 @@ export function score() {
             voyage_plus: 0.15,
             shuttle_plus: 0.15,
             gauntlet_plus: 0.15,
-            greatness: 1,
+            greatness: 0.5,
             voyage: 3                   + ((c.max_rarity) * (c.max_rarity / 5)),
             skill_rarity: 3             - (0.2 * (5 - c.max_rarity)),
             quipment: 1                 + (0.3 * (5 - c.max_rarity)),
@@ -348,7 +348,7 @@ export function score() {
 
     const greatPowers = {
         greater: 1,
-        lesser: 0.50,
+        lesser: 0.25,
     }
 
     function getEvenDistributions(scores: RarityScore[]) {
