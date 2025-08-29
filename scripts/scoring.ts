@@ -933,6 +933,15 @@ export function score() {
     if (DEBUG) console.log("Shuttle-Plus score")
     if (DEBUG) console.log(shuttle_plus.slice(0, 20));
 
+    results = [].slice();
+    results = crew.map(c => ({
+        symbol: c.symbol,
+        score: c.ranks.scores.ship.overall,
+        rarity: c.max_rarity
+    }));
+
+    results.sort((a, b) => b.score - a.score);
+    measureGreatness(results, 'ship');
 
     results = [].slice();
     if (!QUIET) console.log("Scoring greatness...");
@@ -1092,7 +1101,6 @@ export function score() {
 
         let ship_n = c.ranks.scores.ship.overall;
         c.ranks.ship_rank = c.ranks.scores.ship.overall_rank;
-
 
         // Quipment
         c.ranks.scores.quipment = quipment_n;
