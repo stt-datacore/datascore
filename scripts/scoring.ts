@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { BaseSkills, ComputedSkill, CrewMember, QuipmentDetails, Ranks, RankScoring, Skill } from '../../website/src/model/crew';
+import { ConstituentWeights, ComputedSkill, CrewMember, QuipmentDetails, GreatnessDetails, Ranks, RankScoring, Skill } from '../../website/src/model/crew';
 import { EquipmentItem } from '../../website/src/model/equipment';
 import { Collection } from '../../website/src/model/game-elements';
 import { Gauntlet } from '../../website/src/model/gauntlets';
@@ -17,30 +17,6 @@ const SCRIPTS_DATA_PATH = `${__dirname}/../../../../scripts/data/`;
 
 const DEBUG = process.argv.includes('--debug');
 const QUIET = process.argv.includes('--quiet');
-
-interface ConstituentWeights {
-    voyage: number
-    voyage_plus: number
-    shuttle: number
-    shuttle_plus: number
-    gauntlet: number
-    gauntlet_plus: number
-    crit: number
-    ship: number
-    quipment: number
-    collections: number
-    trait: number
-    main_cast: number
-    variant: number
-    potential_cols: number
-    skill_positions: number
-    skill_rarity: number
-    am_seating: number
-    tertiary_rarity: number
-    primary_rarity: number
-    velocity: number
-}
-
 
 interface MainCast {
     tos: string[];
@@ -247,7 +223,7 @@ function collectionScore(c: CrewMember, collections: Collection[]) {
     return (bu * 3) + (cr * 2) + (cc * 1);
 }
 
-type RarityScore = { symbol: string, score: number, rarity: number, data?: any };
+type RarityScore = { symbol: string, score: number, rarity: number, data?: any, greatness?: number, greatness_details?: GreatnessDetails };
 
 export function score() {
     const Weights: {[key:string]: ConstituentWeights} = {};
@@ -293,7 +269,134 @@ export function score() {
         return cn;
     })();
 
-    function normalize(results: RarityScore[], inverse?: boolean, min_balance?: boolean, not_crew?: boolean, tie_breaker?: <T extends { symbol: string }>(a: T, b: T) => number) {
+    const greatStash = {} as {[key:string]: GreatnessDetails[]};
+
+    CONFIG.RARITIES.forEach((data, idx) => {
+        let c = { max_rarity: idx + 1};
+/*
+    - Voyage-Plus Score                    Weight: 0.25
+        - Voyage Score + (Antimatter Seats * 0.2) + (Quipment * 0.75)
+
+    - Gauntlet-Plus Score                  Weight: 0.25
+        - Gauntlet Score + (High Crit Gauntlets * 0.75) + (Quipment * 0.5)
+
+    - Shuttle-Plus Score                   Weight: 0.25
+        - Shuttle/Base Score + (Quipment * 0.5)
+
+    - Voyage Score                         Weight: 2 + Rarity
+    - Skill-Order Rarity                   Weight: 3
+    - Greatness                            Weight: 1.5
+    - Gauntlet Score                       Weight: 1.7
+    - Ship Ability Score                   Weight: 1.25
+    - Skill Position Score                 Weight: 1.1
+    - Shuttle/Base Score                   Weight: 1
+    - Quipment Score                       Weight: 0.40
+    - Antimatter Seating Score             Weight: 0.35
+    - Elevated Crit Gauntlet               Weight: 0.267
+    - Stat-Boosting Collection Score       Weight: 0.25
+    - FBB Node-Cracking Trait Score        Weight: 0.25
+    - Main Cast Score                      Weight: 0.2
+    - Skill-Order Velocity Score           Weight: 0.15
+    - Potential Collection Score           Weight: 0.15
+    - Tertiary Skill Rarity Score          Weight: 0.1
+    - Variant Score                        Weight: 0.04
+
+*/
+
+        Weights[c.max_rarity] ??= {
+            voyage_plus: 0.15,
+            shuttle_plus: 0.15,
+            gauntlet_plus: 0.15,
+            greatness: 1,
+            voyage: 3                   + ((c.max_rarity) * (c.max_rarity / 5)),
+            skill_rarity: 3             - (0.2 * (5 - c.max_rarity)),
+            quipment: 1                 + (0.3 * (5 - c.max_rarity)),
+            gauntlet: 1.67              + (0.2 * (5 - c.max_rarity)),
+            skill_positions: 1.1        - (0.2 * (5 - c.max_rarity)),
+            shuttle: 1                  - (0.1 * (5 - c.max_rarity)),
+            crit: 0.267,
+            am_seating: 0.25            - (0.07 * (5 - c.max_rarity)),
+            collections: 0.45           + (1.5 * (5 - c.max_rarity)),
+            trait: 0.25                 + (0.5 * (5 - c.max_rarity)),
+            potential_cols: 0.17        + (0.17 * (5 - c.max_rarity)),
+            main_cast: 0.20             + (0.1 * (5 - c.max_rarity)),
+            velocity: 0.15,
+            ship: 0.25                  + (0.65 * (5 - c.max_rarity)),
+            tertiary_rarity: 0.1,
+            primary_rarity: 0.05,
+            variant: 0.04               + (0.02 * (5 - c.max_rarity)),
+            voyage_plus_weights: {
+                voyage: 1,
+                am_seating: 0.2,
+                quipment: 0.75
+            },
+            gauntlet_plus_weights: {
+                gauntlet: 1,
+                crit: 0.75,
+                quipment: 0.5
+            },
+            base_plus_weights: {
+                shuttleRank: 1,
+                quipment: 0.5
+            }
+        }
+
+    });
+
+    const moregreats = ['voyage', 'shuttle', 'gauntlet', 'ship', 'quipment', 'collections'];
+    const lessGreats = Object.keys(Weights[5]).filter(f => !moregreats.includes(f));
+
+    const greatPowers = {
+        greater: 1,
+        lesser: 0.50,
+    }
+
+    function getEvenDistributions(scores: RarityScore[]) {
+        const result = scores.map(score => ({ ...score }));
+        return normalize(result, false, false, false, scores.length);
+    }
+
+    function measureGreatness(results: RarityScore[], name: string) {
+        for (let rarity = 1; rarity <= 5; rarity++) {
+            let workset = results.filter(f => f.rarity === rarity);
+            let distrs = getEvenDistributions(workset);
+            distrs.forEach(d => d.score = distrs.length - d.score);
+            workset.forEach((item, idx) => {
+                let dist = distrs.find(f => f.symbol === item.symbol)!;
+                item.greatness = idx - dist.score;
+                item.greatness_details = {
+                    name,
+                    rank: 0,
+                    score: item.greatness
+                };
+            });
+
+            workset.sort((a, b) => a.greatness! - b.greatness!);
+            let min = workset[0].greatness!;
+
+            if (min < 0) {
+                workset.forEach(ws => ws.greatness! -= min);
+                workset.sort((a, b) => a.greatness! - b.greatness!);
+            }
+
+            let max = workset[workset.length - 1].greatness!;
+
+            for (let ws of workset) {
+                ws.greatness = Number(((1 - (ws.greatness! / max)) * 100).toFixed(4));
+                ws.greatness_details!.score = ws.greatness;
+                greatStash[ws.symbol] ??= [];
+                if (!greatStash[ws.symbol].some(g => g.name === name)) {
+                    greatStash[ws.symbol].push(ws.greatness_details!);
+                }
+            }
+
+            workset.forEach((item, idx) => item.greatness_details!.rank = idx + 1);
+            workset.sort((a, b) => b.score - a.score);
+        }
+    }
+
+    function normalize(results: RarityScore[], inverse?: boolean, min_balance?: boolean, not_crew?: boolean, base = 100, tie_breaker?: <T extends { symbol: string }>(a: T, b: T) => number) {
+        base ??= 100;
         results = results.slice();
         results.sort((a, b) => b.score - a.score);
         let max = results[0].score;
@@ -301,10 +404,10 @@ export function score() {
         max -= min;
         for (let r of results) {
             if (inverse) {
-                r.score = Number((((1 - (r.score - min) / max)) * 100).toFixed(4));
+                r.score = Number((((1 - (r.score - min) / max)) * base).toFixed(4));
             }
             else {
-                r.score = Number((((r.score - min) / max) * 100).toFixed(4));
+                r.score = Number((((r.score - min) / max) * base).toFixed(4));
             }
         }
 
@@ -319,7 +422,8 @@ export function score() {
                         r = crewNames[a.symbol].localeCompare(b.symbol);
                     }
                     else {
-                        console.log(`Missing crew names for ${a.symbol} or ${b.symbol}`)!
+                        return a.symbol.localeCompare(b.symbol);
+                        //console.log(`Missing crew names for ${a.symbol} or ${b.symbol}`)!
                     }
                 }
             }
@@ -351,7 +455,9 @@ export function score() {
                 score: skillSum(skills, mode),
             });
         }
-        return normalize(results);
+        results = normalize(results);
+        measureGreatness(results, mode);
+        return results;
     }
 
     if (!QUIET) console.log("Scoring crew...");
@@ -386,6 +492,7 @@ export function score() {
         });
     }
     results.sort((a, b) => b.score - a.score);
+    measureGreatness(results, "trait");
     let traits = results;
 
     if (DEBUG) console.log("Traits")
@@ -452,6 +559,8 @@ export function score() {
     });
 
     let quips = allpowers[0];
+    measureGreatness(quips, "quipment");
+
     let qpowersP = allpowersP[0];
     let qpowersV = allpowersV[0];
 
@@ -513,7 +622,8 @@ export function score() {
     }
 
     let cols = normalize(results);
-    if (DEBUG) console.log("Stat-Boosting Collections")
+    measureGreatness(cols, "collections");
+    if (DEBUG) console.log("Collections")
     if (DEBUG) console.log(cols.slice(0, 20));
 
     if (!QUIET) console.log("Scoring skill-order rarity...");
@@ -539,7 +649,9 @@ export function score() {
     }
 
     let skillrare = normalize(results, true);
+    measureGreatness(skillrare, 'skill_rarity');
     skillpos = normalize(skillpos);
+    measureGreatness(skillpos, 'skill_positions');
 
     if (DEBUG) console.log("Skill-Order Rarity")
     if (DEBUG) console.log(skillrare.slice(0, 20));
@@ -560,6 +672,7 @@ export function score() {
     }
 
     let prirare = normalize(results, true);
+    measureGreatness(prirare, "primary_rarity");
 
     if (DEBUG) console.log("Primary Rarity")
     if (DEBUG) console.log(prirare.slice(0, 20));
@@ -577,7 +690,7 @@ export function score() {
     }
 
     let tertrare = normalize(results, true);
-
+    measureGreatness(tertrare, 'tertiary_rarity');
     if (DEBUG) console.log("Tertiary Rarity")
     if (DEBUG) console.log(tertrare.slice(0, 20));
 
@@ -595,7 +708,7 @@ export function score() {
     }
 
     let velocities = normalize(results);
-
+    measureGreatness(velocities, 'velocity');
     if (DEBUG) console.log("Velocity")
     if (DEBUG) console.log(velocities.slice(0, 20));
 
@@ -629,6 +742,7 @@ export function score() {
     }
 
     let pcolscores = normalize(results, false, true);
+    measureGreatness(pcolscores, 'potential_cols');
 
     if (DEBUG) console.log("Potential Collection Score")
     if (DEBUG) console.log(pcolscores.slice(0, 20));
@@ -646,6 +760,7 @@ export function score() {
     }
 
     let elacrits = normalize(results);
+    measureGreatness(elacrits, 'crit');
 
     if (DEBUG) console.log("Elevated Crit Gauntlet Score")
     if (DEBUG) console.log(elacrits.slice(0, 20));
@@ -663,6 +778,7 @@ export function score() {
     }
 
     let amseats = normalize(results);
+    measureGreatness(amseats, 'am_seating');
 
     if (DEBUG) console.log("Antimatter Seats")
     if (DEBUG) console.log(amseats.slice(0, 20));
@@ -679,7 +795,7 @@ export function score() {
         });
     }
 
-    let mains = normalize(results, false, false, false, (a, b) => {
+    let mains = normalize(results, false, false, false, 100, (a, b) => {
         let av = mainCastValue(a.symbol, maincast, crew);
         let bv = mainCastValue(b.symbol, maincast, crew);
         if (av && bv) return av - bv;
@@ -687,6 +803,8 @@ export function score() {
         else if (bv) return 1;
         return 0;
     });
+
+    measureGreatness(mains, 'main_cast');
 
     if (DEBUG) console.log("Main cast score")
     if (DEBUG) console.log(mains.slice(0, 20));
@@ -724,6 +842,7 @@ export function score() {
     }
 
     let variants = normalize(results);
+    measureGreatness(variants, 'variant');
 
     if (DEBUG) console.log("Variant/event score")
     if (DEBUG) console.log(variants.slice(0, 20));
@@ -742,14 +861,17 @@ export function score() {
         let qp = qobj.data as QPowers | undefined;
         let quip_n = quips[i_quip_n].score;
 
+        let gplus = Weights[c.max_rarity].gauntlet_plus_weights;
+
         results.push({
             symbol: c.symbol,
             rarity: c.max_rarity,
-            score: (gauntlet_n + (crit_n * 0.75) + ((qp?.gpower ?? quip_n) * 0.5)) / 3
+            score: ((gauntlet_n * gplus.gauntlet) + (crit_n * gplus.crit) + ((qp?.gpower ?? quip_n) * gplus.quipment)) / 3
         });
     }
 
     let gauntlet_plus = normalize(results);
+    measureGreatness(gauntlet_plus, 'gauntlet_plus');
 
     if (DEBUG) console.log("Gauntlet-Plus score")
     if (DEBUG) console.log(gauntlet_plus.slice(0, 20));
@@ -768,14 +890,17 @@ export function score() {
         let qp = qobj.data as QPowers | undefined;
         let quip_n = quips[i_quip_n].score;
 
+        let vplus = Weights[c.max_rarity].voyage_plus_weights;
+
         results.push({
             symbol: c.symbol,
             rarity: c.max_rarity,
-            score: (voyage_n + (amseat_n * 0.2) + ((qp?.vpower ?? quip_n) * 0.75)) / 3
+            score: ((voyage_n * vplus.voyage) + (amseat_n * vplus.am_seating) + ((qp?.vpower ?? quip_n) * vplus.quipment)) / 3
         });
     }
 
     let voyage_plus = normalize(results);
+    measureGreatness(voyage_plus, 'voyage_plus');
 
     if (DEBUG) console.log("Voyage-Plus score")
     if (DEBUG) console.log(voyage_plus.slice(0, 20));
@@ -793,23 +918,56 @@ export function score() {
         let qp = qobj.data as QPowers | undefined;
         let quip_n = quips[i_quip_n].score;
 
+        let bplus = Weights[c.max_rarity].base_plus_weights;
+
         results.push({
             symbol: c.symbol,
             rarity: c.max_rarity,
-            score: (shuttle_n + ((qp?.bpower ?? quip_n) * 0.5)) / 2
+            score: ((shuttle_n * bplus.shuttleRank) + ((qp?.bpower ?? quip_n) * bplus.quipment)) / 2
         });
     }
 
     let shuttle_plus = normalize(results);
+    measureGreatness(shuttle_plus, 'shuttle_plus');
 
     if (DEBUG) console.log("Shuttle-Plus score")
     if (DEBUG) console.log(shuttle_plus.slice(0, 20));
 
-    if (!QUIET) console.log("Applying weights and final scoring...");
 
     results = [].slice();
+    if (!QUIET) console.log("Scoring greatness...");
+    results = Object.entries(greatStash).map(([symbol, great]) => {
+        let c = crew.find(f => f.symbol === symbol)!;
+        let score = great.reduce((p, n) => {
+            let res = n.score;
+            if (moregreats.includes(n.name)) {
+                res *= greatPowers.greater;
+            }
+            else {
+                res *= greatPowers.lesser;
+            }
+            return res + p;
+        }, 0);
+        return {
+            symbol,
+            score,
+            rarity: c.max_rarity
+        } as RarityScore
+    });
+
+    [1,2,3,4,5].forEach((rarity) => {
+        let rareres = results.filter(f => f.rarity === rarity);
+        normalize(rareres);
+    });
+
+    let greatness = results;
+
+    results = [].slice();
+    if (!QUIET) console.log("Applying weights and final scoring...");
 
     for (let c of origCrew) {
+        c.ranks.scores.greatness_details = greatStash[c.symbol] ?? [].slice();
+
         let gauntlet_n = gauntlet.find(f => f.symbol === c.symbol)!.score;
         let voyage_n = voyage.find(f => f.symbol === c.symbol)!.score;
         let i_core_n = shuttle.findIndex(f => f.symbol === c.symbol);
@@ -819,6 +977,9 @@ export function score() {
         c.ranks.scores.voyage = voyage_n;
         c.ranks.scores.shuttle = core_n;
         c.ranks.shuttleRank = i_core_n + 1;
+
+        let i_greatness_n = greatness.findIndex(f => f.symbol === c.symbol);
+        let greatness_n = greatness[i_greatness_n].score;
 
         let i_maincast_n = mains.findIndex(f => f.symbol === c.symbol);
         let maincast_n = mains[i_maincast_n].score;
@@ -850,11 +1011,11 @@ export function score() {
             delete c.ranks.scores.quipment_details["symbol"];
         }
 
-        (c.ranks.scores as any).power_quipment_details = qpowersP.find(f => f.symbol === c.symbol) as QuipmentDetails;
-        delete (c.ranks.scores as any).power_quipment_details["symbol"];
+        (c.ranks.scores).power_quipment_details = qpowersP.find(f => f.symbol === c.symbol) as QuipmentDetails;
+        delete (c.ranks.scores).power_quipment_details["symbol"];
 
-        (c.ranks.scores as any).versatility_quipment_details = qpowersV.find(f => f.symbol === c.symbol) as QuipmentDetails;
-        delete (c.ranks.scores as any).versatility_quipment_details["symbol"];
+        (c.ranks.scores).versatility_quipment_details = qpowersV.find(f => f.symbol === c.symbol) as QuipmentDetails;
+        delete (c.ranks.scores).versatility_quipment_details["symbol"];
 
         let i_trait_n = traits.findIndex(f => f.symbol === c.symbol);
         let fbbtrait_n = traits[i_trait_n].score;
@@ -879,6 +1040,9 @@ export function score() {
 
         let i_vplus_n = voyage_plus.findIndex(f => f.symbol === c.symbol);
         let vplus_n = voyage_plus[i_vplus_n].score;
+
+        c.ranks.scores.greatness = greatness_n;
+        c.ranks.scores.greatness_rank = i_greatness_n + 1;
 
         c.ranks.scores.main_cast = maincast_n;
         c.ranks.main_cast_rank = i_maincast_n + 1;
@@ -950,62 +1114,13 @@ export function score() {
 
         c.quipment_scores.trait_limited = allpowers[allpowers.length - 1].find(f => f.symbol === c.symbol)?.score || 0;
 
-/*
-    - Voyage-Plus Score                    Weight: 0.25
-        - Voyage Score + (Antimatter Seats * 0.2) + (Quipment * 0.75)
-
-    - Gauntlet-Plus Score                  Weight: 0.25
-        - Gauntlet Score + (High Crit Gauntlets * 0.75) + (Quipment * 0.5)
-
-    - Shuttle-Plus Score                   Weight: 0.25
-        - Shuttle/Base Score + (Quipment * 0.5)
-
-    - Voyage Score                         Weight: 2 + Rarity
-    - Skill-Order Rarity                   Weight: 3
-    - Gauntlet Score                       Weight: 1.7
-    - Ship Ability Score                   Weight: 1.25
-    - Skill Position Score                 Weight: 1.1
-    - Shuttle/Base Score                   Weight: 1
-    - Quipment Score                       Weight: 0.40
-    - Antimatter Seating Score             Weight: 0.35
-    - Elevated Crit Gauntlet               Weight: 0.267
-    - Stat-Boosting Collection Score       Weight: 0.25
-    - FBB Node-Cracking Trait Score        Weight: 0.25
-    - Main Cast Score                      Weight: 0.2
-    - Skill-Order Velocity Score           Weight: 0.15
-    - Potential Collection Score           Weight: 0.15
-    - Tertiary Skill Rarity Score          Weight: 0.1
-    - Variant Score                        Weight: 0.04
-
-*/
-        Weights[c.max_rarity] ??= {
-            voyage_plus: 0.15,
-            shuttle_plus: 0.15,
-            gauntlet_plus: 0.15,
-            voyage: 3                   + ((c.max_rarity) * (c.max_rarity / 5)),
-            skill_rarity: 3             - (0.2 * (5 - c.max_rarity)),
-            quipment: 1                 + (0.3 * (5 - c.max_rarity)),
-            gauntlet: 1.67              + (0.2 * (5 - c.max_rarity)),
-            skill_positions: 1.1        - (0.2 * (5 - c.max_rarity)),
-            shuttle: 1                  - (0.1 * (5 - c.max_rarity)),
-            crit: 0.267,
-            am_seating: 0.25            - (0.07 * (5 - c.max_rarity)),
-            collections: 0.45           + (1.5 * (5 - c.max_rarity)),
-            trait: 0.25                 + (0.5 * (5 - c.max_rarity)),
-            potential_cols: 0.17        + (0.17 * (5 - c.max_rarity)),
-            main_cast: 0.20             + (0.1 * (5 - c.max_rarity)),
-            velocity: 0.15,
-            ship: 0.25                  + (0.65 * (5 - c.max_rarity)),
-            tertiary_rarity: 0.1,
-            primary_rarity: 0.05,
-            variant: 0.04               + (0.02 * (5 - c.max_rarity)),
-        }
-
         const weight = Weights[c.max_rarity];
 
         vplus_n *= weight.voyage_plus;
         gplus_n *= weight.gauntlet_plus;
         splus_n *= weight.shuttle_plus;
+
+        greatness_n *= weight.greatness;
 
         voyage_n *= weight.voyage;
         sko_rare_n *= weight.skill_rarity;
@@ -1026,6 +1141,7 @@ export function score() {
         variant_n *= weight.variant;
 
         let scores = [
+            greatness_n,
             amseat_n,
             maincast_n,
             variant_n,
@@ -1080,7 +1196,8 @@ export function score() {
         let len_max = filtered.length * 1.5;
         let rank = 1;
         let score_mul = 2;
-        let rank_mul = 4 * (filtered[0].score - filtered[1].score);
+        //let rank_mul = 6 * (filtered[0].score - filtered[1].score);
+        let rank_mul = filtered.length / (filtered.length / (6 * (filtered[0].score - filtered[1].score)));
         if (!r) {
             for (let rec of filtered) {
                 let c = origCrew.find(fc => fc.symbol === rec.symbol);
@@ -1287,6 +1404,12 @@ function updateCrewCsv(csv: string[], crew: CrewMember[], collections: Collectio
     }
 }
 
-if (process.argv[1].includes('scoring')) {
-    score();
-}
+(async () => {
+    if (process.argv.includes("--wait")) {
+        await new Promise((resolve, reject) => setTimeout(resolve, 10000));
+    }
+    if (process.argv[1].includes('scoring')) {
+        score();
+    }
+})();
+
