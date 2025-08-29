@@ -960,6 +960,7 @@ export function score() {
         normalize(rareres);
     });
 
+    results.sort((a, b) => b.rarity - a.rarity || b.score - a.score);
     let greatness = results;
 
     results = [].slice();
