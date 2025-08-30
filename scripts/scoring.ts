@@ -269,39 +269,17 @@ export function score() {
         return cn;
     })();
 
-    const greatStash = {} as {[key:string]: GreatnessDetails[]};
+    const highgreats = ['voyage', 'shuttle', 'gauntlet', 'ship', 'quipment', 'collections'];
+
+    const greatpowers = {
+        greater: 1,
+        lesser: 0.25,
+    }
+
+    const greatStash = {} as { [key:string]: GreatnessDetails[] };
 
     CONFIG.RARITIES.forEach((data, idx) => {
         let c = { max_rarity: idx + 1};
-/*
-    - Voyage-Plus Score                    Weight: 0.25
-        - Voyage Score + (Antimatter Seats * 0.2) + (Quipment * 0.75)
-
-    - Gauntlet-Plus Score                  Weight: 0.25
-        - Gauntlet Score + (High Crit Gauntlets * 0.75) + (Quipment * 0.5)
-
-    - Shuttle-Plus Score                   Weight: 0.25
-        - Shuttle/Base Score + (Quipment * 0.5)
-
-    - Voyage Score                         Weight: 2 + Rarity
-    - Skill-Order Rarity                   Weight: 3
-    - Greatness                            Weight: 1.5
-    - Gauntlet Score                       Weight: 1.7
-    - Ship Ability Score                   Weight: 1.25
-    - Skill Position Score                 Weight: 1.1
-    - Shuttle/Base Score                   Weight: 1
-    - Quipment Score                       Weight: 0.40
-    - Antimatter Seating Score             Weight: 0.35
-    - Elevated Crit Gauntlet               Weight: 0.267
-    - Stat-Boosting Collection Score       Weight: 0.25
-    - FBB Node-Cracking Trait Score        Weight: 0.25
-    - Main Cast Score                      Weight: 0.2
-    - Skill-Order Velocity Score           Weight: 0.15
-    - Potential Collection Score           Weight: 0.15
-    - Tertiary Skill Rarity Score          Weight: 0.1
-    - Variant Score                        Weight: 0.04
-
-*/
 
         Weights[c.max_rarity] ??= {
             voyage_plus: 0.15,
@@ -343,14 +321,6 @@ export function score() {
 
     });
 
-    const moregreats = ['voyage', 'shuttle', 'gauntlet', 'ship', 'quipment', 'collections'];
-    const lessGreats = Object.keys(Weights[5]).filter(f => !moregreats.includes(f));
-
-    const greatPowers = {
-        greater: 1,
-        lesser: 0.25,
-    }
-
     function getEvenDistributions(scores: RarityScore[]) {
         const result = scores.map(score => ({ ...score }));
         return normalize(result, false, false, false, scores.length);
@@ -367,7 +337,8 @@ export function score() {
                 item.greatness_details = {
                     name,
                     rank: 0,
-                    score: item.greatness
+                    score: item.greatness,
+                    rarity: item.rarity
                 };
             });
 
@@ -949,11 +920,11 @@ export function score() {
         let c = crew.find(f => f.symbol === symbol)!;
         let score = great.reduce((p, n) => {
             let res = n.score;
-            if (moregreats.includes(n.name)) {
-                res *= greatPowers.greater;
+            if (highgreats.includes(n.name)) {
+                res *= greatpowers.greater;
             }
             else {
-                res *= greatPowers.lesser;
+                res *= greatpowers.lesser;
             }
             return res + p;
         }, 0);
