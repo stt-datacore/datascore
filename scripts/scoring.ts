@@ -110,7 +110,6 @@ function variantScore(variants: string[], roster: CrewMember[]) {
 function castScore(crew: CrewMember, roster: CrewMember[], maincast: MainCast) {
     let variants = getVariantTraits(crew);
     variants = [ ...new Set(Object.values(maincast).map((m: string[]) => m.filter(f => variants.includes(f))).flat()) ];
-    //return variantScore(variants, roster);
     let vcrew = roster.filter(c => c.traits_hidden.some(th => variants.includes(th)));
     let count = vcrew.length;
     let rarescore = vcrew.map(v => v.max_rarity).reduce((p, n) => p + n, 0);
@@ -131,10 +130,6 @@ function mainCastValue(symbol: string, maincast: MainCast, roster: CrewMember[])
 }
 
 function skillRare(crew: CrewMember, roster: CrewMember[]) {
-    // if (crew.skill_order.length !== 3) {
-    //     return 1;
-    // }
-
     let s1 = crew.skill_order[0] || "";
     let s2 = crew.skill_order[1] || "";
     let s3 = crew.skill_order[2] || "";
@@ -151,36 +146,49 @@ function skillRare(crew: CrewMember, roster: CrewMember[]) {
             if (s3 === n3 && primes.every(p => primes2.includes(p))) return true;
         }
         return (s1 === n1 && s2 === n2 && s3 === n3);
-        //return false;
     });
     return (ro.length / roster.length) / crew.skill_order.length;
 }
-
+const rarecache = {} as {[key:string]: CrewMember[]};
 function tertRare(crew: CrewMember, roster: CrewMember[]) {
     if (crew.skill_order.length !== 3) {
         return 1;
     }
 
     let s3 = crew.skill_order[2];
-    let ro = roster.filter(c => {
+    let rkkey = `${crew.max_rarity}_${s3}_3`;
+
+    let peers = rarecache[rkkey] || roster.filter(c => {
         if (c.max_rarity !== crew.max_rarity) return false;
         if (c.skill_order.length !== 3) return false;
         let n3 = c.skill_order[2];
         if (s3 === n3) return true;
         return false;
     });
-    return ro.length / roster.length;
+    rarecache[rkkey] = peers;
+    let powers = peers.map(cp => ({ power: skillSum(cp.base_skills[cp.skill_order[2]]), symbol: cp.symbol }));
+    powers.sort((a, b) => a.power - b.power);
+    let fi = powers.findIndex(c => c.symbol === crew.symbol);
+    if (fi !== -1) return ((peers.length + fi) / 2) / roster.length;
+    return peers.length / roster.length;
 }
 
 function priRare(crew: CrewMember, roster: CrewMember[]) {
     let s3 = crew.skill_order[0];
-    let ro = roster.filter(c => {
+    let rkkey = `${crew.max_rarity}_${s3}_1`;
+
+    let peers = rarecache[rkkey] || roster.filter(c => {
         if (c.max_rarity !== crew.max_rarity) return false;
         let n3 = c.skill_order[0];
         if (s3 === n3) return true;
         return false;
     });
-    return ro.length / roster.length;
+    rarecache[rkkey] = peers;
+    let powers = peers.map(cp => ({ power: skillSum(cp.base_skills[cp.skill_order[0]]), symbol: cp.symbol }));
+    powers.sort((a, b) => a.power - b.power);
+    let fi = powers.findIndex(c => c.symbol === crew.symbol);
+    if (fi !== -1) return ((peers.length + fi) / 2) / roster.length;
+    return peers.length / roster.length;
 }
 
 function traitScoring(roster: CrewMember[]) {
@@ -471,13 +479,13 @@ export function score() {
 
     const skills = CONFIG.SKILLS_SHORT.map(m => m.name);
 
-    const testBatches = [[...skills], [skills[0]], [skills[1]], [skills[2]], [skills[3]], [skills[4]], [skills[5]], [...skills]];
+    const quip_sections = [[...skills], [skills[0]], [skills[1]], [skills[2]], [skills[3]], [skills[4]], [skills[5]], [...skills]];
 
     let allpowers = [] as RarityScore[][];
     let allpowersP = [] as QPowers[][];
     let allpowersV = [] as QPowers[][];
 
-    testBatches.forEach((batch, idx) => {
+    quip_sections.forEach((batch, idx) => {
         let testquipment = quipment.filter(f => Object.keys(f.bonusInfo.bonuses).some((b) => batch.includes(b)));
         if (idx && batch.length > 1) testquipment = testquipment.filter(f => f.item.traits_requirement?.length);
 
@@ -498,9 +506,6 @@ export function score() {
         qpowersP = JSON.parse(JSON.stringify(qpowers));
 
         for (const qp of qpowers) {
-            let c = testcrew.find(f => f.symbol === qp.symbol)!;
-            //let factor = 0.5 + (5 / c.max_rarity);
-
             let vp = qpowersV.find(f => f.symbol === qp.symbol)!;
             Object.keys(qp).forEach((key) => {
                 if (typeof qp[key] !== 'number') return;
@@ -534,51 +539,6 @@ export function score() {
 
     let qpowersP = allpowersP[0];
     let qpowersV = allpowersV[0];
-
-    // results = [].slice();
-
-    // if (!QUIET) console.log("Scoring quipment using sorting method...");
-    // let qpowersV = sortingQuipmentScoring(crew, quipment, maxbuffs);
-    // let qpowers = [] as QPowers[];
-    // let qpowersP = [] as QPowers[];
-
-    // if (!QUIET) console.log("Scoring quipment using power method...");
-    // for (let c of crew) {
-    //     let data = scoreQuipment(c, quipment, maxbuffs);
-    //     qpowers.push(data);
-    // }
-
-    // qpowersP = JSON.parse(JSON.stringify(qpowers));
-
-    // for (const qp of qpowers) {
-    //     let c = crew.find(f => f.symbol === qp.symbol)!;
-    //     //let factor = 0.5 + (5 / c.max_rarity);
-
-    //     let vp = qpowersV.find(f => f.symbol === qp.symbol)!;
-    //     Object.keys(qp).forEach((key) => {
-    //         if (typeof qp[key] !== 'number') return;
-    //         qp[key] = ((qp[key]) + (vp[key])) / 2;
-    //     });
-    // }
-
-    // normalizeQPowers(qpowersV);
-    // normalizeQPowers(qpowersP);
-    // normalizeQPowers(qpowers);
-
-    // for (let qpc of qpowers) {
-    //     let c = crew.find(f => f.symbol === qpc.symbol)!
-    //     results.push({
-    //         symbol: c.symbol,
-    //         rarity: c.max_rarity,
-    //         score: qpc.avg,
-    //         data: qpc
-    //     });
-    // }
-
-    // let quips = normalize(results);
-
-    // if (DEBUG) console.log("Quipment Score")
-    // if (DEBUG) console.log(quips.slice(0, 20));
 
     results = [].slice();
 
@@ -1087,7 +1047,7 @@ export function score() {
             medicine_skill: 0,
             trait_limited: 0
         }
-        testBatches[0].forEach((skill, idx) => {
+        quip_sections[0].forEach((skill, idx) => {
             let s_quipment_n = allpowers[idx + 1].find(f => f.symbol === c.symbol)?.score || 0;
             c.quipment_scores![skill] = s_quipment_n;
         });

@@ -12,6 +12,8 @@
     "scoring": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/scoring.js --debug",
     "calc": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/scoring.js",
     "nc-calc": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/scoring.js --nochange",
+    "calc-wait": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/scoring.js --wait",
+    "nc-calc-wait": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/scoring.js --nochange --wait",
     "build": "yarn tsc --project ./tsconfig.node.json",
     "eventstats": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/eventstats.js"
   },
