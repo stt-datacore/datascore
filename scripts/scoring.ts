@@ -729,15 +729,18 @@ export function score() {
     let mains = normalize(results, false, false, false, 100, (a, b) => {
         let av = mainCastValue(a.symbol, maincast);
         let bv = mainCastValue(b.symbol, maincast);
-        if (av && bv) return av - bv;
-        else if (av) return -1;
-        else if (bv) return 1;
-        let acrew = crew.find(f => f.symbol === a.symbol);
-        let bcrew = crew.find(f => f.symbol === b.symbol);
-        if (acrew && bcrew) {
-            return ((new Date(bcrew.date_added)).getTime()) - ((new Date(acrew.date_added)).getTime());
+        let r = 0;
+        if (av && bv) r = av - bv;
+        else if (av) r = -1;
+        else if (bv) r = 1;
+        if (!r) {
+            let acrew = crew.find(f => f.symbol === a.symbol);
+            let bcrew = crew.find(f => f.symbol === b.symbol);
+            if (acrew && bcrew) {
+                r = ((new Date(bcrew.date_added)).getTime()) - ((new Date(acrew.date_added)).getTime());
+            }
         }
-        return 0;
+        return r;
     });
 
     measureGreatness(mains, 'main_cast');
