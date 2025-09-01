@@ -116,7 +116,7 @@ function castScore(crew: CrewMember, roster: CrewMember[], maincast: MainCast) {
     return count * rarescore;
 }
 
-function mainCastValue(symbol: string, maincast: MainCast, roster: CrewMember[]) {
+function mainCastValue(symbol: string, maincast: MainCast) {
     let shows = 0;
     let inc = 0;
 
@@ -124,7 +124,7 @@ function mainCastValue(symbol: string, maincast: MainCast, roster: CrewMember[])
         if (value.includes(symbol)) shows++;
         inc += (1 + idx);
     });
-    if (shows === 0 || inc === 0) return -1;
+    if (shows === 0 || inc === 0) return 0;
     inc /= shows;
     return inc;
 }
@@ -727,11 +727,16 @@ export function score() {
     }
 
     let mains = normalize(results, false, false, false, 100, (a, b) => {
-        let av = mainCastValue(a.symbol, maincast, crew);
-        let bv = mainCastValue(b.symbol, maincast, crew);
+        let av = mainCastValue(a.symbol, maincast);
+        let bv = mainCastValue(b.symbol, maincast);
         if (av && bv) return av - bv;
         else if (av) return -1;
         else if (bv) return 1;
+        let acrew = crew.find(f => f.symbol === a.symbol);
+        let bcrew = crew.find(f => f.symbol === b.symbol);
+        if (acrew && bcrew) {
+            return ((new Date(bcrew.date_added)).getTime()) - ((new Date(acrew.date_added)).getTime());
+        }
         return 0;
     });
 
@@ -772,7 +777,15 @@ export function score() {
         });
     }
 
-    let variants = normalize(results);
+    let variants = normalize(results, undefined, undefined, undefined, undefined, (a, b) => {
+        let acrew = crew.find(f => f.symbol === a.symbol);
+        let bcrew = crew.find(f => f.symbol === b.symbol);
+        if (acrew && bcrew) {
+            return ((new Date(bcrew.date_added)).getTime()) - ((new Date(acrew.date_added)).getTime());
+        }
+        return 0;
+    });
+
     measureGreatness(variants, 'variant');
 
     if (DEBUG) console.log("Variant/event score")
