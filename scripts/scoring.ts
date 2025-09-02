@@ -125,8 +125,8 @@ function mainCastValue(symbol: string, maincast: MainCast) {
         inc += (1 + idx);
     });
     if (shows === 0 || inc === 0) return 0;
-    inc /= shows;
-    return inc;
+    shows /= inc;
+    return shows;
 }
 
 function skillRare(crew: CrewMember, roster: CrewMember[]) {
@@ -439,6 +439,23 @@ export function score() {
         return results;
     }
 
+    const dateGradient = (() => {
+        const Epoch = (new Date("2016-01-01T00:00:00Z")).getTime();
+        const output = [] as RarityScore[];
+        const day = (1000 * 60 * 60 * 24);
+        origCrew.forEach((c) => {
+            let d = new Date(c.date_added);
+            output.push({
+                symbol: c.symbol,
+                score: (d.getTime() - Epoch) / day,
+                rarity: c.max_rarity
+            });
+        });
+        return normalize(output);
+    })();
+
+    /** Begin the scoring section */
+
     if (!QUIET) console.log("Scoring crew...");
 
     if (!QUIET) console.log("Scoring voyages...");
@@ -719,10 +736,13 @@ export function score() {
     results = [].slice();
 
     for (let c of crew) {
+        let cs = castScore(c, crew, maincast);
+        let fm = dateGradient.find(f => f.symbol === c.symbol)!;
+        cs = (cs + fm.score) / 2;
         results.push({
             symbol: c.symbol,
             rarity: c.max_rarity,
-            score: castScore(c, crew, maincast)
+            score: cs
         });
     }
 
@@ -731,15 +751,15 @@ export function score() {
         let bv = mainCastValue(b.symbol, maincast);
         let r = 0;
         if (av && bv) r = av - bv;
-        else if (av) r = -1;
-        else if (bv) r = 1;
-        if (!r) {
-            let acrew = crew.find(f => f.symbol === a.symbol);
-            let bcrew = crew.find(f => f.symbol === b.symbol);
-            if (acrew && bcrew) {
-                r = ((new Date(bcrew.date_added)).getTime()) - ((new Date(acrew.date_added)).getTime());
-            }
-        }
+        // else if (av) r = -1;
+        // else if (bv) r = 1;
+        // if (!r) {
+        //     let acrew = crew.find(f => f.symbol === a.symbol);
+        //     let bcrew = crew.find(f => f.symbol === b.symbol);
+        //     if (acrew && bcrew) {
+        //         r = ((new Date(bcrew.date_added)).getTime()) - ((new Date(acrew.date_added)).getTime());
+        //     }
+        // }
         return r;
     });
 
@@ -773,21 +793,18 @@ export function score() {
     // }
     for (let c of crew) {
         let variants = getVariantTraits(c);
+        let vs = variantScore(variants, crew);
+        let fm = dateGradient.find(f => f.symbol === c.symbol)!;
+        vs = (vs + fm.score) / 2;
+
         results.push({
             symbol: c.symbol,
             rarity: c.max_rarity,
-            score: variantScore(variants, crew)
+            score: vs
         });
     }
 
-    let variants = normalize(results, undefined, undefined, undefined, undefined, (a, b) => {
-        let acrew = crew.find(f => f.symbol === a.symbol);
-        let bcrew = crew.find(f => f.symbol === b.symbol);
-        if (acrew && bcrew) {
-            return ((new Date(bcrew.date_added)).getTime()) - ((new Date(acrew.date_added)).getTime());
-        }
-        return 0;
-    });
+    let variants = normalize(results);
 
     measureGreatness(variants, 'variant');
 
