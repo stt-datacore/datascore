@@ -444,13 +444,13 @@ export function score() {
     const dateGradient = (() => {
         const Epoch = (new Date("2016-01-01T00:00:00Z")).getTime();
         const output = [] as RarityScore[];
-        const day = (1000 * 60 * 60 * 24);
+        const week = (1000 * 60 * 60 * 24 * 7);
         origCrew.forEach((c) => {
             let d = new Date(c.date_added);
             if (c.preview) d = new Date(maxDate);
             output.push({
                 symbol: c.symbol,
-                score: (d.getTime() - Epoch) / day,
+                score: Math.floor((d.getTime() - Epoch) / week),
                 rarity: c.max_rarity
             });
         });
