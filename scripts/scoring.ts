@@ -10,6 +10,7 @@ import { getItemWithBonus } from '../../website/src/utils/itemutils';
 import { calculateMaxBuffs, lookupAMSeatsByTrait } from '../../website/src/utils/voyageutils';
 import { computePotentialColScores, splitCollections } from './cols';
 import { QPowers, scoreQuipment, sortingQuipmentScoring } from './quipment';
+import { normalize as norm } from './normscores';
 import CONFIG from '../../website/src/components/CONFIG';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
@@ -194,16 +195,18 @@ function priRare(crew: CrewMember, roster: CrewMember[]) {
 function traitScoring(roster: CrewMember[]) {
 	roster = [ ...roster ];
 
-    const allowedTraits = [ ... new Set(roster.filter(f => f.in_portal).map(m => m.traits).flat()) ];
-
+    const allowedTraits = [ ... new Set(roster.filter(f => f.in_portal).map(m => m.traits).flat()) ].sort();
 	const traitCount = {} as { [key: string]: number };
-	roster.forEach((crew) => {
-		crew.traits.forEach((trait) => {
-            if (!allowedTraits.includes(trait)) return;
-			traitCount[trait] ??= 0;
-			traitCount[trait]++;
-		});
-	});
+
+    for (let c of roster) {
+        for (let trait of allowedTraits) {
+            if (c.traits.includes(trait)) {
+                traitCount[trait] ??= 0;
+                traitCount[trait]++;
+            }
+        }
+    }
+
 	roster.forEach((crew) => {
 		crew.ranks ??= {} as Ranks;
         crew.ranks.scores ??= {} as RankScoring;
@@ -218,7 +221,7 @@ function traitScoring(roster: CrewMember[]) {
 
 
 function collectionScore(c: CrewMember, collections: Collection[]) {
-    const crewcols = c.collection_ids.map(id => collections.find(f => f.id?.toString() == id?.toString())!).filter(f => f.milestones?.some(ms => ms.buffs?.length))
+    const crewcols = c.collection_ids.map(id => collections.find(f => f.id?.toString() == id?.toString())!);
     let cc = crewcols.length;
     let bu = 0;
     let cr = 0;
@@ -290,26 +293,26 @@ export function score() {
         let c = { max_rarity: idx + 1};
 
         Weights[c.max_rarity] ??= {
-            voyage_plus: 0.15,
-            shuttle_plus: 0.15,
-            gauntlet_plus: 0.15,
-            greatness: 0.5,
+            voyage_plus: 0.05,
+            shuttle_plus: 0.05,
+            gauntlet_plus: 0.05,
+            greatness: 0.1,
             voyage: 3                   + ((c.max_rarity) * (c.max_rarity / 5)),
-            skill_rarity: 3             - (0.2 * (5 - c.max_rarity)),
-            quipment: 1                 + (0.3 * (5 - c.max_rarity)),
-            gauntlet: 1.67              + (0.2 * (5 - c.max_rarity)),
+            skill_rarity: 2.75          - (0.2 * (5 - c.max_rarity)),
+            quipment: 0.95              + (0.3 * (5 - c.max_rarity)),
+            gauntlet: 1.70              + (0.2 * (5 - c.max_rarity)),
             skill_positions: 1.1        - (0.2 * (5 - c.max_rarity)),
             shuttle: 1                  - (0.1 * (5 - c.max_rarity)),
             crit: 0.267,
             am_seating: 0.25            - (0.07 * (5 - c.max_rarity)),
-            collections: 0.45           + (1.5 * (5 - c.max_rarity)),
-            trait: 0.25                 + (0.5 * (5 - c.max_rarity)),
-            potential_cols: 0.17        + (0.17 * (5 - c.max_rarity)),
-            main_cast: 0.20             + (0.1 * (5 - c.max_rarity)),
-            velocity: 0.15,
-            ship: 0.25                  + (0.65 * (5 - c.max_rarity)),
-            tertiary_rarity: 0.1,
-            primary_rarity: 0.05,
+            collections: 0.5            + (1.5 * (5 - c.max_rarity)),
+            trait: 0.35                 + (0.5 * (5 - c.max_rarity)),
+            potential_cols: 0.05        + (0.17 * (5 - c.max_rarity)),
+            main_cast: 0.1              + (0.1 * (5 - c.max_rarity)),
+            velocity: 0.13,
+            ship: 0.275                 + (0.65 * (5 - c.max_rarity)),
+            tertiary_rarity: 0.01,
+            primary_rarity: 0.01,
             variant: 0.04               + (0.02 * (5 - c.max_rarity)),
             voyage_plus_weights: {
                 voyage: 1,
@@ -375,40 +378,16 @@ export function score() {
     }
 
     function normalize(results: RarityScore[], inverse?: boolean, min_balance?: boolean, not_crew?: boolean, base = 100, tie_breaker?: <T extends { symbol: string }>(a: T, b: T) => number) {
-        base ??= 100;
-        results = results.slice();
-        results.sort((a, b) => b.score - a.score);
-        let max = results[0].score;
-        let min = min_balance ? (results[results.length - 1].score) : 0;
-        max -= min;
-        for (let r of results) {
-            if (inverse) {
-                r.score = Number((((1 - (r.score - min) / max)) * base).toFixed(4));
+        return norm(results, inverse, min_balance, not_crew, base, (a, b) => {
+            let r = 0;
+            if (tie_breaker) {
+                r = tie_breaker(a, b);
             }
-            else {
-                r.score = Number((((r.score - min) / max) * base).toFixed(4));
-            }
-        }
-
-        results.sort((a, b) => {
-            let r = b.score - a.score;
-            if (!r) {
-                if (tie_breaker) {
-                    r = tie_breaker(a, b);
-                }
-                if (!r && !not_crew) {
-                    if (crewNames[a.symbol] && crewNames[b.symbol]) {
-                        r = crewNames[a.symbol].localeCompare(b.symbol);
-                    }
-                    else {
-                        return a.symbol.localeCompare(b.symbol);
-                        //console.log(`Missing crew names for ${a.symbol} or ${b.symbol}`)!
-                    }
-                }
+            if (!r && crewNames[a.symbol] && crewNames[b.symbol]) {
+                r = crewNames[a.symbol].localeCompare(crewNames[b.symbol]);
             }
             return r;
         });
-        return results;
     }
 
     function makeResults(mode: 'core' | 'proficiency' | 'all') {
