@@ -1,10 +1,10 @@
-import { CrewMember, QuipmentDetails } from '../../website/src/model/crew';
+import { ComputedSkill, CrewMember, PlayerSkill, QuipmentDetails, QuippedPower } from '../../website/src/model/crew';
 import { BuffStatTable } from '../../website/src/utils/voyageutils';
 import { EquipmentItem } from '../../website/src/model/equipment';
 import { calcQLots } from '../../website/src/utils/equipment';
 import { getPossibleQuipment, ItemWithBonus } from '../../website/src/utils/itemutils';
 import CONFIG from '../../website/src/components/CONFIG';
-import { skillSum } from '../../website/src/utils/crewutils';
+import { applyCrewBuffs, skillSum } from '../../website/src/utils/crewutils';
 
 export interface QPowers extends QuipmentDetails {
     symbol: string;
@@ -307,4 +307,60 @@ export function skillQP(crew: CrewMember, skill: string) {
         return crew.best_quipment.aggregate_by_skill[skill] as number | undefined || 0;
     }
     return 0;
+}
+
+export function getQPPercentage(crew: CrewMember, qp: QuippedPower, skills: PlayerSkill[], mode: 'all' | 'core' | 'proficiency', buffs?: BuffStatTable, pre_buffed?: boolean, no_copy?: boolean) {
+    let comp: ComputedSkill[] = [];
+    if (buffs || pre_buffed) {
+        if (!no_copy) crew = structuredClone(crew);
+        if (buffs && !pre_buffed) applyCrewBuffs(crew, buffs);
+        Object.entries(crew.base_skills).forEach(([key, value]) => {
+            if (mode === 'all') {
+                comp.push(crew[key]);
+            }
+            else if (mode === 'core') {
+                comp.push({
+                    core: crew[key].core,
+                    min: 0,
+                    max: 0,
+                    skill: key
+                });
+            }
+            else if (mode === 'proficiency') {
+                comp.push({
+                    core: 0,
+                    min: crew[key].min,
+                    max: crew[key].max,
+                    skill: key
+                });
+            }
+
+        });
+    }
+    else {
+        Object.entries(crew.base_skills).forEach(([key, value]) => {
+            let obj = {
+                core: 0,
+                min: 0,
+                max: 0,
+                skill: key
+            };
+            comp.push(obj);
+            if (mode !== 'proficiency') {
+                obj.core = crew.base_skills[key].core;
+            }
+            if (mode !== 'core') {
+                obj.max = crew.base_skills[key].range_max;
+                obj.min = crew.base_skills[key].range_min;
+            }
+        });
+    }
+    if (skills?.length) {
+        let qptotal = skills.map(skill => qp.aggregate_by_skill[skill]).reduce((p, n) => p + n, 0);
+        let crtotal = skills.map(skill => skillSum(comp.find(f => f.skill === skill)!)).reduce((p, n) => p + n, 0);
+        return qptotal / crtotal;
+    }
+    else {
+        return null;
+    }
 }
