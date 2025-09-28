@@ -492,13 +492,13 @@ export function score() {
         results = [].slice();
 
         if (!QUIET) console.log(`Scoring ${batch.length > 1 ? 'all' : batch[0]} quipment using sorting method...`);
-        let qpowersV = sortingQuipmentScoring(testcrew, testquipment, maxbuffs);
+        let qpowersV = sortingQuipmentScoring(testcrew, testquipment, maxbuffs, true);
         let qpowers = [] as QPowers[];
         let qpowersP = [] as QPowers[];
 
         if (!QUIET) console.log(`Scoring ${batch.length > 1 ? 'all' : batch[0]} quipment using power method...`);
         for (let c of testcrew) {
-            let data = scoreQuipment(c, testquipment, maxbuffs, batch.length === 1 ? batch[0] : undefined);
+            let data = scoreQuipment(c, testquipment, maxbuffs, batch.length === 1 ? batch[0] : undefined, true);
             qpowers.push(data);
         }
 

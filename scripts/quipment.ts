@@ -15,7 +15,7 @@ export function calcPrice(crew: CrewMember, quipment: EquipmentItem[]): number {
     return possquip.map(q => q.recipe?.list.map(rl => rl.count).reduce((p, n) => p + n, 0) ?? 0).reduce((p, n) => p + n, 0);
 }
 
-export function sortingQuipmentScoring(crew: CrewMember[], quipment: ItemWithBonus[], buffs: BuffStatTable): QPowers[] {
+export function sortingQuipmentScoring(crew: CrewMember[], quipment: ItemWithBonus[], buffs: BuffStatTable, alt?: boolean): QPowers[] {
     const resultindex = {} as { [key:string]: QPowers };
     const indices = {} as {[key:string]: { price: number, unit: number, mode: 'all' | 'proficiency' | 'core', value: string, score: number }[]};
     const modes = ['all', 'proficiency', 'core'] as ('all' | 'proficiency' | 'core')[];
@@ -34,7 +34,7 @@ export function sortingQuipmentScoring(crew: CrewMember[], quipment: ItemWithBon
 
     function addModeScores(mode: 'all' | 'proficiency' | 'core') {
         skills.forEach((skill, index) => {
-            sortCrewByQuipment(crew, false, skill, true, tiebreaker);
+            sortCrewByQuipment(crew, false, skill, true, tiebreaker, alt);
             crew.forEach((c, idx) => {
                 if (!c.best_quipment!.skill_quipment[skill]) return;
                 indices[c.symbol] ??= [];
@@ -48,7 +48,7 @@ export function sortingQuipmentScoring(crew: CrewMember[], quipment: ItemWithBon
             });
         });
         [0, 1, 2].forEach((index) => {
-            sortCrewByQuipment(crew, true, index, true, tiebreaker);
+            sortCrewByQuipment(crew, true, index, true, tiebreaker, alt);
             crew.forEach((c, idx) => {
                 if (c.skill_order.length <= index) return;
                 let skill = c.skill_order[index];
@@ -63,7 +63,7 @@ export function sortingQuipmentScoring(crew: CrewMember[], quipment: ItemWithBon
             });
         });
         [0, 1, 2, 3, 4].forEach((index) => {
-            sortCrewByQuipment(crew, 2, index, true, tiebreaker);
+            sortCrewByQuipment(crew, 2, index, true, tiebreaker, alt);
             crew.forEach((c, idx) => {
                 const price = (() => {
                     if (index === 0) return c.best_quipment_1_2 ? calcPrice(c, Object.values(c.best_quipment_1_2!.skill_quipment).flat()) : 0;
@@ -135,7 +135,7 @@ export function sortingQuipmentScoring(crew: CrewMember[], quipment: ItemWithBon
 }
 
 
-export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs: BuffStatTable, skill_only?: string): QPowers {
+export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs: BuffStatTable, skill_only?: string, alt?: boolean): QPowers {
     crew = {...crew };
     if (skill_only && skill_only in crew.base_skills) crew.skill_order = [skill_only];
 
@@ -152,7 +152,7 @@ export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs
     let ovpower = vpower;
     let pquips = {} as { [key: string]: EquipmentItem[] };
     vpower = [vpower, crew.best_quipment_1_2!, crew.best_quipment_1_3!, crew.best_quipment_2_3!, crew.best_quipment_3!, crew.best_quipment_top!].map(q => {
-        let resp = !q ? 0 : typeof q === 'number' ? q : q.aggregate_power;
+        let resp = !q ? 0 : typeof q === 'number' ? q : (alt ? qpDiff(crew, q) : q.aggregate_power);
         if (resp && !(typeof q === 'number')) {
             pquips[resp] = Object.values(q.skill_quipment).flat();
         }
@@ -172,7 +172,7 @@ export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs
     let bpower = Object.values(crew.best_quipment!.aggregate_by_skill).reduce((p, n) => p > n ? p : n, 0);
     let obpower = bpower;
     bpower = [vpower, crew.best_quipment_1_2!, crew.best_quipment_1_3!, crew.best_quipment_2_3!, crew.best_quipment_3!, crew.best_quipment_top!].map(q => {
-        let resp = !q ? 0 : typeof q === 'number' ? q : q.aggregate_power;
+        let resp = !q ? 0 : typeof q === 'number' ? q : (alt ? qpDiff(crew, q) : q.aggregate_power);
         if (resp && !(typeof q === 'number')) {
             pquips[resp] = Object.values(q.skill_quipment).flat();
         }
@@ -192,7 +192,7 @@ export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs
     let gpower = Object.values(crew.best_quipment!.aggregate_by_skill).reduce((p, n) => p > n ? p : n, 0);
     let ogpower = gpower;
     gpower = [vpower, crew.best_quipment_1_2!, crew.best_quipment_1_3!, crew.best_quipment_2_3!, crew.best_quipment_3!, crew.best_quipment_top!].map(q => {
-        let resp = !q ? 0 : typeof q === 'number' ? q : q.aggregate_power;
+        let resp = !q ? 0 : typeof q === 'number' ? q : (alt ? qpDiff(crew, q) : q.aggregate_power);
         if (resp && !(typeof q === 'number')) {
             pquips[resp] = Object.values(q.skill_quipment).flat();
         }
@@ -211,26 +211,31 @@ export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs
 }
 
 
-export function sortCrewByQuipment(roster: CrewMember[], pstMode: boolean | 2 | 3, index: number | string, reverse?: boolean, tiebreaker?: (a: CrewMember, b: CrewMember) => number) {
+export function sortCrewByQuipment(roster: CrewMember[], pstMode: boolean | 2 | 3, index: number | string, reverse?: boolean, tiebreaker?: (a: CrewMember, b: CrewMember) => number, alt?: boolean) {
 	const mul = reverse ? -1 : 1;
 	if (pstMode === true && typeof index === 'number') {
-		roster.sort((a, b) => mul * skoComp(a, b, index) || (tiebreaker ? (mul * tiebreaker(a, b)) : 0));
+		roster.sort((a, b) => mul * skoComp(a, b, index, alt) || (tiebreaker ? (mul * tiebreaker(a, b)) : 0));
 	}
 	else if (pstMode === 2 && typeof index === 'number') {
-		roster.sort((a, b) => mul * multiComp(a, b, index) || (tiebreaker ? (mul * tiebreaker(a, b)) : 0));
+		roster.sort((a, b) => mul * multiComp(a, b, index, alt) || (tiebreaker ? (mul * tiebreaker(a, b)) : 0));
 	}
 	else if (typeof index === 'string') {
-		roster.sort((a, b) => mul * qpComp(a, b, index) || (tiebreaker ? (mul * tiebreaker(a, b)) : 0));
+		roster.sort((a, b) => mul * qpComp(a, b, index, alt) || (tiebreaker ? (mul * tiebreaker(a, b)) : 0));
 	}
 }
 
-export function qpComp(a: CrewMember, b: CrewMember, skill: string) {
+export function qpComp(a: CrewMember, b: CrewMember, skill: string, alt?: boolean) {
     if (!a.best_quipment!.aggregate_by_skill[skill]) return -1;
     else if (!b.best_quipment!.aggregate_by_skill[skill]) return 1;
-    else return a.best_quipment!.aggregate_by_skill[skill] - b.best_quipment!.aggregate_by_skill[skill];
+    else {
+        if (alt) {
+            return qpDiff(a, a.best_quipment!, [skill] as PlayerSkill[]) - qpDiff(b, b.best_quipment!, [skill] as PlayerSkill[]);
+        }
+        return a.best_quipment!.aggregate_by_skill[skill] - b.best_quipment!.aggregate_by_skill[skill];
+    }
 };
 
-export function skoComp(a: CrewMember, b: CrewMember, skill_idx: number) {
+export function skoComp(a: CrewMember, b: CrewMember, skill_idx: number, alt?: boolean) {
     if (skill_idx >= a.skill_order.length) {
         return -1;
     }
@@ -238,13 +243,19 @@ export function skoComp(a: CrewMember, b: CrewMember, skill_idx: number) {
         return 1;
     }
     else {
+        if (alt) {
+            return qpDiff(a, a.best_quipment!, [a.skill_order[skill_idx]] as PlayerSkill[]);
+        }
         return a.best_quipment!.aggregate_by_skill[a.skill_order[skill_idx]] - b.best_quipment!.aggregate_by_skill[b.skill_order[skill_idx]];
     }
 };
 
-export function multiComp(a: CrewMember, b: CrewMember, combo_id: number) {
+export function multiComp(a: CrewMember, b: CrewMember, combo_id: number, alt?: boolean) {
     if (combo_id === 0) {
         if (a.best_quipment_1_2 && b.best_quipment_1_2) {
+            if (alt) {
+                return qpDiff(a, a.best_quipment_1_2) - qpDiff(b, b.best_quipment_1_2);
+            }
             return a.best_quipment_1_2.aggregate_power - b.best_quipment_1_2.aggregate_power;
         }
         else if (a.best_quipment_1_2) {
@@ -256,6 +267,9 @@ export function multiComp(a: CrewMember, b: CrewMember, combo_id: number) {
     }
     else if (combo_id === 1) {
         if (a.best_quipment_1_3 && b.best_quipment_1_3) {
+            if (alt) {
+                return qpDiff(a, a.best_quipment_1_3) - qpDiff(b, b.best_quipment_1_3);
+            }
             return a.best_quipment_1_3.aggregate_power - b.best_quipment_1_3.aggregate_power;
         }
         else if (a.best_quipment_1_3) {
@@ -267,6 +281,9 @@ export function multiComp(a: CrewMember, b: CrewMember, combo_id: number) {
     }
     else if (combo_id === 2) {
         if (a.best_quipment_2_3 && b.best_quipment_2_3) {
+            if (alt) {
+                return qpDiff(a, a.best_quipment_2_3) - qpDiff(b, b.best_quipment_2_3);
+            }
             return a.best_quipment_2_3.aggregate_power - b.best_quipment_2_3.aggregate_power;
         }
         else if (a.best_quipment_2_3) {
@@ -278,6 +295,9 @@ export function multiComp(a: CrewMember, b: CrewMember, combo_id: number) {
     }
     else if (combo_id === 3) {
         if (a.best_quipment_3 && b.best_quipment_3) {
+            if (alt) {
+                return qpDiff(a, a.best_quipment_3) - qpDiff(b, b.best_quipment_3);
+            }
             return a.best_quipment_3.aggregate_power - b.best_quipment_3.aggregate_power;
         }
         else if (a.best_quipment_3) {
@@ -289,6 +309,9 @@ export function multiComp(a: CrewMember, b: CrewMember, combo_id: number) {
     }
     else if (combo_id === 4) {
         if (a.best_quipment_top && b.best_quipment_top) {
+            if (alt) {
+                return qpDiff(a, a.best_quipment_top) - qpDiff(b, b.best_quipment_top);
+            }
             return a.best_quipment_top.aggregate_power - b.best_quipment_top.aggregate_power;
         }
         else if (a.best_quipment_top) {
@@ -309,10 +332,11 @@ export function skillQP(crew: CrewMember, skill: string) {
     return 0;
 }
 
-export function getQPPercentage(crew: CrewMember, qp: QuippedPower, skills: PlayerSkill[], mode: 'all' | 'core' | 'proficiency', buffs?: BuffStatTable, pre_buffed?: boolean, no_copy?: boolean) {
+export function qpDiff(crew: CrewMember, qp: QuippedPower, skills?: PlayerSkill[], mode: 'all' | 'core' | 'proficiency' = 'all', buffs?: BuffStatTable, pre_buffed = true, no_copy = true) {
     let comp: ComputedSkill[] = [];
+    if (!skills) skills = Object.keys(qp.aggregate_by_skill) as PlayerSkill[];
     if (buffs || pre_buffed) {
-        if (!no_copy) crew = structuredClone(crew);
+        if (!no_copy && buffs && !pre_buffed) crew = structuredClone(crew);
         if (buffs && !pre_buffed) applyCrewBuffs(crew, buffs);
         Object.entries(crew.base_skills).forEach(([key, value]) => {
             if (mode === 'all') {
@@ -361,6 +385,6 @@ export function getQPPercentage(crew: CrewMember, qp: QuippedPower, skills: Play
         return qptotal / crtotal;
     }
     else {
-        return null;
+        return 0;
     }
 }
