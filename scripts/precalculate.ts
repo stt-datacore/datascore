@@ -52,7 +52,7 @@ let crewlist = JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8'), (
 		return new Date(value);
 	}
 	return value;
-}) as (CrewMember & { _comboIds?: string[][] }) [];
+}) as (CrewMember & { _comboIds?: string[][], _comboIdsLater?: string[][] }) [];
 
 let items = JSON.parse(fs.readFileSync(STATIC_PATH + 'items.json', 'utf-8')) as EquipmentItem[];
 let skill_bufs = JSON.parse(fs.readFileSync(STATIC_PATH + 'skill_bufs.json', 'utf-8'));
@@ -467,6 +467,15 @@ function main() {
 		}
 	}
 
+	const isSuperset = (test: any[], existing: any[]) =>
+		existing.some(
+			(subset) => test.length > subset.length && subset.every(
+				(subtrait: any) => test.some(
+					(testtrait) => testtrait === subtrait
+				)
+			)
+		);
+
 	// Calculate optimised polestars
 	let polestarCombos = {} as { [key:string]: { count: number, crew: string[], polestars: string[] }};
 	for (let crew of crewlist) {
@@ -503,15 +512,6 @@ function main() {
 		crew._comboIds = comboIds;	// Attach as temp property
 	}
 
-	const isSuperset = (test: any[], existing: any[]) =>
-		existing.some(
-			(subset) => test.length > subset.length && subset.every(
-				(subtrait: any) => test.some(
-					(testtrait) => testtrait === subtrait
-				)
-			)
-		);
-
 	for (let crew of crewlist) {
 		if (!crew.in_portal) continue;
 		let uniqueCombos = [] as any[];
@@ -526,6 +526,56 @@ function main() {
 		});
 		crew.unique_polestar_combos = uniqueCombos;
 		delete crew._comboIds;	// Don't need it anymore
+	}
+
+	// Calculate polestars later
+	let polestarsLater = {} as { [key:string]: { count: number, crew: string[], polestars: string[] }};
+	for (let crew of crewlist) {
+		let polestars = crew.traits.slice();
+		polestars.push('crew_max_rarity_'+crew.max_rarity);
+		for (let skill in crew.base_skills) {
+			if (crew.base_skills[skill]) polestars.push(skill);
+		}
+		let onePolestarCombos = polestars.slice().map((pol) => [pol]);
+
+		let twoPolestarCombos = getPermutations<string, string>(polestars, 2);
+		let threePolestarCombos = getPermutations<string, string>(polestars, 3);
+		let fourPolestarCombos = getPermutations<string, string>(polestars, 4);
+
+		let crewPolestarCombos = ([] as string[][]).concat(onePolestarCombos).concat(twoPolestarCombos).concat(threePolestarCombos).concat(fourPolestarCombos);
+		let comboIds = [] as string[][];	// Potential list of combos to check later
+		for (let combo of crewPolestarCombos) {
+			let sorted = combo.sort();
+			let combokey = sorted.join()
+			if (!polestarsLater[combokey]) {
+				polestarsLater[combokey] = {
+					count: 0,
+					crew: [],
+					polestars: sorted,
+				}
+				// Only add new combos to list; if it already exists in polestarCombos,
+				//	its count is > 1 and is of no use to us here
+				comboIds.push(sorted);
+			}
+			polestarsLater[combokey].count = polestarsLater[combokey].count + 1;
+			polestarsLater[combokey].crew.push(crew.symbol);
+		}
+		crew._comboIdsLater = comboIds;	// Attach as temp property
+	}
+
+	for (let crew of crewlist) {
+		let uniqueCombos = [] as any[];
+		// Now double check a crew's list of combos to find counts that are still 1
+		crew._comboIdsLater?.forEach((pc) => {
+			let pcj = pc.join();
+			if (polestarsLater[pcj].count === 1) {
+				// Ignore supersets of already perfect subsets
+				if (!isSuperset(pc, uniqueCombos))
+					uniqueCombos.push(polestarsLater[pcj].polestars);
+			}
+		});
+		crew.unique_polestar_combos_later = uniqueCombos;
+		delete crew._comboIdsLater;	// Don't need it anymore
 	}
 
 	// Sory by date added
