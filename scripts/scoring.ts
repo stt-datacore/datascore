@@ -342,8 +342,6 @@ export function score() {
             ship: 0.275                 + (0.65 * (5 - c.max_rarity)),
             am_seating: 0.25            - (0.07 * (5 - c.max_rarity)),
             greatness: 0.2,
-            sko_ambivalent: 0.15        - (0.02 * (5 - c.max_rarity)),
-            sko_absolute: 0.10          - (0.02 * (5 - c.max_rarity)),
             velocity: 0.09              - (0.02 * (5 - c.max_rarity)),
             potential_cols: 0.1         + (0.17 * (5 - c.max_rarity)),
             main_cast: 0.1              + (0.1 * (5 - c.max_rarity)),
@@ -352,6 +350,8 @@ export function score() {
             voyage_plus: 0.05,
             shuttle_plus: 0.05,
             gauntlet_plus: 0.05,
+            sko_ambivalent: 0.05        - (0.005 * (5 - c.max_rarity)),
+            sko_absolute: 0.025         - (0.005 * (5 - c.max_rarity)),
             tertiary_rarity: 0.01,
             primary_rarity: 0.01,
             voyage_plus_weights: {
