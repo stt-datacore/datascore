@@ -10,7 +10,7 @@ import { getItemWithBonus } from '../../website/src/utils/itemutils';
 import { calculateMaxBuffs, lookupAMSeatsByTrait } from '../../website/src/utils/voyageutils';
 import { computePotentialColScores, splitCollections } from './cols';
 import { QPowers, scoreQuipment, sortingQuipmentScoring } from './quipment';
-import { normalize as norm } from './normscores';
+import { RarityScore, normalize as norm } from './normscores';
 import CONFIG from '../../website/src/components/CONFIG';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
@@ -192,6 +192,47 @@ function priRare(crew: CrewMember, roster: CrewMember[]) {
     return peers.length / roster.length;
 }
 
+function skostr(crew: CrewMember, amb?: boolean) {
+    let sko = crew.skill_order;
+    if (sko.length === 1) return `${sko[0]},${crew.max_rarity}`;
+    let a = sko.slice(0, 2);
+    if (amb) a.sort();
+    let str = a.join(",");
+    if (sko.length === 3) str += `,${sko[2]},${crew.max_rarity}`;
+    else str += `,${crew.max_rarity}`;
+    return str;
+}
+
+function absStrength(roster: CrewMember[]) {
+    const buckets = {} as {[key:string]: RarityScore[]};
+    for (let c of roster) {
+        let bkey = skostr(c);
+        buckets[bkey] ??= [];
+        buckets[bkey].push({
+            rarity: c.max_rarity,
+            symbol: c.symbol,
+            score: skillSum(Object.keys(CONFIG.SKILLS).map(skill => c[skill] as ComputedSkill || { core: 0, max: 0, min: 0 }))
+        });
+    }
+    Object.values(buckets).forEach(bucket => norm(bucket));
+    return buckets;
+}
+
+function ambStrength(roster: CrewMember[]) {
+    const buckets = {} as {[key:string]: RarityScore[]};
+    for (let c of roster) {
+        let bkey = skostr(c, true);
+        buckets[bkey] ??= [];
+        buckets[bkey].push({
+            rarity: c.max_rarity,
+            symbol: c.symbol,
+            score: skillSum(Object.keys(CONFIG.SKILLS).map(skill => c[skill] as ComputedSkill || { core: 0, max: 0, min: 0 }))
+        });
+    }
+    Object.values(buckets).forEach(bucket => norm(bucket));
+    return buckets;
+}
+
 function traitScoring(roster: CrewMember[]) {
 	roster = [ ...roster ];
 
@@ -233,8 +274,6 @@ function collectionScore(c: CrewMember, collections: Collection[]) {
     }
     return (bu * 3) + (cr * 2) + (cc * 1);
 }
-
-type RarityScore = { symbol: string, score: number, rarity: number, data?: any, greatness?: number, greatness_details?: GreatnessDetails };
 
 export function score() {
     const Weights: {[key:string]: ConstituentWeights} = {};
@@ -291,7 +330,6 @@ export function score() {
 
     CONFIG.RARITIES.forEach((data, idx) => {
         let c = { max_rarity: idx + 1};
-
         Weights[c.max_rarity] ??= {
             voyage: 3                   + ((c.max_rarity) * (c.max_rarity / 5)),
             skill_rarity: 2.75          - (0.2 * (5 - c.max_rarity)),
@@ -304,7 +342,9 @@ export function score() {
             ship: 0.275                 + (0.65 * (5 - c.max_rarity)),
             am_seating: 0.25            - (0.07 * (5 - c.max_rarity)),
             greatness: 0.2,
-            velocity: 0.13,
+            sko_ambivalent: 0.15        - (0.02 * (5 - c.max_rarity)),
+            sko_absolute: 0.10          - (0.02 * (5 - c.max_rarity)),
+            velocity: 0.09              - (0.02 * (5 - c.max_rarity)),
             potential_cols: 0.1         + (0.17 * (5 - c.max_rarity)),
             main_cast: 0.1              + (0.1 * (5 - c.max_rarity)),
             variant: 0.08               + (0.02 * (5 - c.max_rarity)),
@@ -340,6 +380,7 @@ export function score() {
     function measureGreatness(results: RarityScore[], name: string) {
         for (let rarity = 1; rarity <= 5; rarity++) {
             let workset = results.filter(f => f.rarity === rarity);
+            if (!workset.length) continue;
             let distrs = getEvenDistributions(workset);
             distrs.forEach(d => d.score = distrs.length - d.score);
             workset.forEach((item, idx) => {
@@ -354,14 +395,14 @@ export function score() {
             });
 
             workset.sort((a, b) => a.greatness! - b.greatness!);
-            let min = workset[0].greatness!;
+            let min = workset[0].greatness || 0;
 
             if (min < 0) {
                 workset.forEach(ws => ws.greatness! -= min);
                 workset.sort((a, b) => a.greatness! - b.greatness!);
             }
 
-            let max = workset[workset.length - 1].greatness!;
+            let max = workset[workset.length - 1].greatness || 100;
 
             for (let ws of workset) {
                 ws.greatness = Number(((1 - (ws.greatness! / max)) * 100).toFixed(4));
@@ -441,23 +482,37 @@ export function score() {
     if (!QUIET) console.log("Scoring crew...");
 
     if (!QUIET) console.log("Scoring voyages...");
-    let results = makeResults('all')
+    let results = makeResults('all');
     let voyage = results;
     if (DEBUG) console.log("Voyage")
     if (DEBUG) console.log(voyage.slice(0, 20));
 
     if (!QUIET) console.log("Scoring gauntlet...");
-    results = makeResults('proficiency')
+    results = makeResults('proficiency');
     let gauntlet = results;
     if (DEBUG) console.log("Gauntlet")
     if (DEBUG) console.log(gauntlet.slice(0, 20));
 
     if (!QUIET) console.log("Scoring shuttle/core...");
-    results = makeResults('core')
+    results = makeResults('core');
     let shuttle = results;
     if (DEBUG) console.log("Shuttle")
     if (DEBUG) console.log(shuttle.slice(0, 20));
     results = [].slice();
+
+    if (!QUIET) console.log("Scoring in-skill-order rank (absolute)...");
+
+    const skoabs = absStrength(crew);
+    Object.values(skoabs).forEach((bucket) => {
+        measureGreatness(bucket, 'sko_absolute');
+    });
+
+    if (!QUIET) console.log("Scoring in-skill-order rank (dual-primary)...");
+
+    const skoamb = ambStrength(crew);
+    Object.values(skoamb).forEach((bucket) => {
+        measureGreatness(bucket, 'sko_ambivalent');
+    });
 
     if (!QUIET) console.log("Scoring FBB traits...");
     traitScoring(crew);
@@ -924,6 +979,15 @@ export function score() {
     for (let c of origCrew) {
         c.ranks.scores.greatness_details = greatStash[c.symbol] ?? [].slice();
 
+        let abskey = skostr(c);
+        let ambkey = skostr(c, true);
+
+        let i_abs_n = skoabs[abskey].findIndex(f => f.symbol === c.symbol);
+        let abs_n = skoabs[abskey][i_abs_n].score;
+
+        let i_amb_n = skoamb[ambkey].findIndex(f => f.symbol === c.symbol);
+        let amb_n = skoamb[ambkey][i_amb_n].score;
+
         let gauntlet_n = gauntlet.find(f => f.symbol === c.symbol)!.score;
         let voyage_n = voyage.find(f => f.symbol === c.symbol)!.score;
         let i_core_n = shuttle.findIndex(f => f.symbol === c.symbol);
@@ -1045,6 +1109,12 @@ export function score() {
         c.ranks.scores.shuttle_plus = splus_n;
         c.ranks.scores.shuttle_plus_rank = i_splus_n + 1;
 
+        c.ranks.sko_absolute_rank = i_abs_n + 1;
+        c.ranks.scores.sko_absolute = abs_n;
+
+        c.ranks.sko_ambivalent_rank = i_amb_n + 1;
+        c.ranks.scores.sko_ambivalent = amb_n;
+
         let ship_n = c.ranks.scores.ship.overall;
         c.ranks.ship_rank = c.ranks.scores.ship.overall_rank;
 
@@ -1095,6 +1165,9 @@ export function score() {
         pri_rare_n *= weight.primary_rarity;
         variant_n *= weight.variant;
 
+        abs_n *= weight.sko_absolute;
+        amb_n *= weight.sko_ambivalent;
+
         let scores = [
             greatness_n,
             amseat_n,
@@ -1116,7 +1189,9 @@ export function score() {
             skpos_n,
             gplus_n,
             vplus_n,
-            splus_n
+            splus_n,
+            abs_n,
+            amb_n
         ];
 
         results.push({
