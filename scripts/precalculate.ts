@@ -4,9 +4,10 @@ import ExcelJS from 'exceljs';
 
 import { EquipmentItem, EquipmentItemSource, IDemand } from '../../website/src/model/equipment';
 import { BaseSkills, ComputedSkill, CrewMember, EquipmentSlot, QuipmentScores, Ranks, Skill, SkillQuipmentScores } from '../../website/src/model/crew';
-import { Mission } from '../../website/src/model/missions';
+import { Mission, ProtoMission } from '../../website/src/model/missions';
 import { BattleStations, Schematics } from '../../website/src/model/ship';
 import { calcFuses } from './calcfuse';
+import { ContinuumMission } from '../../website/src/model/continuum';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 
@@ -925,6 +926,13 @@ function generateMissions() {
 	let disputes = JSON.parse(fs.readFileSync(STATIC_PATH + 'disputes.json', 'utf-8'));
 	let missionsfull = JSON.parse(fs.readFileSync(STATIC_PATH + 'missionsfull.json', 'utf-8')) as Mission[];
 	let cadet = JSON.parse(fs.readFileSync(STATIC_PATH + 'cadet.txt', 'utf-8')) as Mission[];
+	let continuums = JSON.parse(fs.readFileSync(STATIC_PATH + 'continuum_missions.json', 'utf-8')) as ContinuumMission[];
+	let currmission = undefined as ContinuumMission | undefined;
+
+	if (continuums?.length) {
+		let id = continuums[continuums.length -1].id;
+		currmission = JSON.parse(fs.readFileSync(`${STATIC_PATH}continuum/${id}.json`, 'utf-8'));
+	}
 
 	let episodes = [] as Mission[];
 	for (let mission of missionsfull) {
@@ -956,6 +964,15 @@ function generateMissions() {
 	fs.writeFileSync(STATIC_PATH + 'episodes.json', JSON.stringify(episodes));
 
 	postProcessCadetItems(items, cadet);
+	if (currmission) {
+		const sources = buildQBitSources(currmission);
+		let icount = 0;
+		items.filter(item => item.type === 15).forEach(item => {
+			item.item_sources = sources[item.symbol] || [];
+			icount++;
+		});
+		console.log(`Calculated ${icount} qbit mission sources.`);
+	}
 	fs.writeFileSync(STATIC_PATH + 'items.json', JSON.stringify(items));
 }
 
@@ -1170,13 +1187,50 @@ function postProcessQuipmentScores(crew: CrewMember[], items: EquipmentItem[]) {
 	});
 }
 
-function postProcessCadetItems(items: EquipmentItem[], cadet: Mission[]): void {
+function buildQBitSources(mission: ContinuumMission) {
+	const qbit_sources = {} as {[key:string]: EquipmentItemSource[]};
+	let q = 0;
+	for (let quest of mission.quests!) {
+		for (let m = 0; m < 3; m++) {
+			let qrew = quest.mastery_levels![m].jackpots?.map(j => j.reward).flat() ?? [];
+			for (let r of qrew) {
+				qbit_sources[r.symbol!] ??= [];
+				let mx = 1;
+				let qitem = {
+					type: 5,
+					mastery: m,
+					name: quest.name,
+					energy_quotient: 1,
+					chance_grade: 5 * mx,
+					mission_symbol: quest.symbol,
+					cost: 1,
+					avg_cost: 1,
+					continuum: true,
+					quantity: r.quantity
+				} as EquipmentItemSource;
+				let curr = qbit_sources[r.symbol!].find(s => s.name === quest!.name && s.mastery === m && s.continuum);
+				if (!curr) {
+					qbit_sources[r.symbol!].push(qitem);
+				}
+				else {
+					curr.quantity! += r.quantity;
+				}
+			}
+		}
+
+		q++;
+	}
+	return qbit_sources;
+}
+
+
+function postProcessCadetItems(items: EquipmentItem[], cadet: ProtoMission[]): void {
 	const cadetforitem = cadet.filter(f => f.cadet);
 
 	if (cadetforitem?.length) {
 		for(const item of items) {
 			for (let ep of cadetforitem) {
-				let quests = ep.quests.filter(q => q.quest_type === 'ConflictQuest' && q.mastery_levels?.some(ml => ml.rewards?.some(r => r.potential_rewards?.some(px => px.symbol === item.symbol))));
+				let quests = ep.quests?.filter(q => q.quest_type === 'ConflictQuest' && q.mastery_levels?.some(ml => ml.rewards?.some(r => r.potential_rewards?.some(px => px.symbol === item.symbol))));
 				if (quests?.length) {
 					for (let quest of quests) {
 						if (quest.mastery_levels?.length) {
