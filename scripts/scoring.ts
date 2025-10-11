@@ -1327,7 +1327,10 @@ export function score() {
     else {
         console.log(`Not writing a change log.`);
     }
-
+    if (!QUIET) {
+        	console.log(`Write sync timestamp file.`);
+    }
+    fs.writeFileSync(`${STATIC_PATH}sync_timestamp.txt`, `${(new Date().toISOString())}\n`);
     if (!QUIET) console.log("Done.");
 }
 
