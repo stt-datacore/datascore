@@ -967,9 +967,14 @@ function generateMissions() {
 	if (currmission) {
 		const sources = buildQBitSources(currmission);
 		let icount = 0;
-		items.filter(item => item.type === 15).forEach(item => {
-			item.item_sources = sources[item.symbol] || [];
-			icount++;
+		items.forEach(item => {
+			if (sources[item.symbol]?.length) {
+				item.item_sources = sources[item.symbol];
+				icount++;
+			}
+			else {
+				item.item_sources ??= [].slice();
+			}
 		});
 		console.log(`Calculated ${icount} qbit mission sources.`);
 	}
