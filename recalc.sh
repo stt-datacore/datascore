@@ -1,8 +1,8 @@
 #!/bin/bash
-cd /app/website
+cd ../website
 git checkout master
 git pull --no-rebase
-cd /app/datascore
+cd ../datascore
 npm run precalculate
 npm run shipcalc-fresh
 node build/datascore/scripts/scoring
