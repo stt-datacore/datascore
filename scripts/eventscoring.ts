@@ -18,7 +18,7 @@ interface EventScoring {
 
 
 const series = ['discovery', 'voyager', 'enterprise', 'stt originals', 'deep space 9', 'deep space nine', 'next generation', 'lower decks', 'strange new worlds'];
-const short = ['dsc', 'voy', 'ent', 'original', 'ds9', 'ds9', 'tng', 'low', 'snw'];
+const short = ['dsc', 'voy', 'ent', 'original', 'ds9', 'ds9', 'tng', 'low', 'snw', 'sfa'];
 
 export function getEventBonusTrait(event: GameEvent, crew: CrewMember[], trait_names: TraitNames) {
     let keys = Object.keys(trait_names);

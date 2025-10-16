@@ -28,6 +28,7 @@ interface MainCast {
     dsc: string[];
     snw: string[];
     low: string[];
+    sfa: string[];
 }
 
 function normalizeQPowers(qpowers: QPowers[]) {

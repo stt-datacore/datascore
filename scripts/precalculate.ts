@@ -857,6 +857,10 @@ function updateExcelSheet() {
 			return 'Very Short Treks';
 		}
 
+		if (short === 'sfa') {
+			return 'Starfleet Academy';
+		}
+
 		if (short === 'original') {
 			return 'Star Trek Timelines Originals';
 		}
