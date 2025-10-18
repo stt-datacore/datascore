@@ -1,10 +1,10 @@
 
 import * as fs from 'fs';
-import { GameEvent } from '../../website/src/model/player';
 import { CrewMember } from '../../website/src/model/crew';
+import { GameEvent } from '../../website/src/model/player';
+import { TraitNames, TranslationSet } from '../../website/src/model/traits';
 import { getVariantTraits } from '../../website/src/utils/crewutils';
 import { getEventData } from '../../website/src/utils/events';
-import { TraitNames, TranslationSet } from '../../website/src/model/traits';
 
 const DEBUG = process.argv.includes("--debug");
 
@@ -16,8 +16,7 @@ interface EventScoring {
     score: number;
 }
 
-
-const series = ['discovery', 'voyager', 'enterprise', 'stt originals', 'deep space 9', 'deep space nine', 'next generation', 'lower decks', 'strange new worlds'];
+const series = ['discovery', 'voyager', 'enterprise', 'stt originals', 'deep space 9', 'deep space nine', 'next generation', 'lower decks', 'strange new worlds', 'starfleet academy'];
 const short = ['dsc', 'voy', 'ent', 'original', 'ds9', 'ds9', 'tng', 'low', 'snw', 'sfa'];
 
 export function getEventBonusTrait(event: GameEvent, crew: CrewMember[], trait_names: TraitNames) {

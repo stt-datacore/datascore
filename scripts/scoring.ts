@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { ConstituentWeights, ComputedSkill, CrewMember, QuipmentDetails, GreatnessDetails, Ranks, RankScoring, Skill } from '../../website/src/model/crew';
 import { EquipmentItem } from '../../website/src/model/equipment';
-import { Collection } from '../../website/src/model/game-elements';
+import { CryoCollection as Collection } from '../../website/src/model/player';
 import { Gauntlet } from '../../website/src/model/gauntlets';
 import { TraitNames } from '../../website/src/model/traits';
 import { getAllCrewRewards, getAllStatBuffs } from '../../website/src/utils/collectionutils';

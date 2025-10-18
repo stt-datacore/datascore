@@ -1,6 +1,6 @@
 import { potentialCols } from "../../website/src/components/stats/utils";
 import { CrewMember } from "../../website/src/model/crew";
-import { Collection } from "../../website/src/model/game-elements";
+import { CryoCollection as Collection } from "../../website/src/model/player";
 import { TraitNames } from "../../website/src/model/traits";
 
 type PColType = { trait: string, count: number, distance: number };
