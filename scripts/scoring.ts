@@ -1,11 +1,12 @@
 import fs from 'fs';
 import { ConstituentWeights, ComputedSkill, CrewMember, QuipmentDetails, GreatnessDetails, Ranks, RankScoring, Skill } from '../../website/src/model/crew';
 import { EquipmentItem } from '../../website/src/model/equipment';
-import { CryoCollection as Collection } from '../../website/src/model/player';
+import { CryoCollection as Collection, PlayerCrew } from '../../website/src/model/player';
 import { Gauntlet } from '../../website/src/model/gauntlets';
 import { TraitNames } from '../../website/src/model/traits';
 import { getAllCrewRewards, getAllStatBuffs } from '../../website/src/utils/collectionutils';
 import { applyCrewBuffs, getSkillOrderScore, getSkillOrderStats, getVariantTraits, numberToGrade, SkillRarityReport, skillSum } from '../../website/src/utils/crewutils';
+import { getElevatedBuckets } from '../../website/src/utils/gauntlet';
 import { getItemWithBonus } from '../../website/src/utils/itemutils';
 import { calculateMaxBuffs, lookupAMSeatsByTrait } from '../../website/src/utils/voyageutils';
 import { computePotentialColScores, splitCollections } from './cols';
@@ -60,19 +61,10 @@ function normalizeQPowers(qpowers: QPowers[]) {
 }
 
 function elacrit(gauntlets: Gauntlet[], crew: CrewMember) {
-    let ec = 0;
-    for (let g of gauntlets) {
-        if (!g.contest_data) continue;
-        let f = crew.traits.filter(f => g.contest_data!.traits.includes(f))
-        if (f.length === 3) ec += 65;
-        else if (f.length === 2) ec += 45;
-        else if (f.length === 1) ec += 25;
-        else if (f.length === 0) ec += 5;
-        if (crew.skill_order.includes(g.contest_data!.featured_skill)) {
-            ec += 5;
-        }
-    }
-    return ec;
+    let buckets = getElevatedBuckets(crew as PlayerCrew, gauntlets);
+    return buckets.map(bucket => {
+        return bucket.count * bucket.crit;
+    }).reduce((p, n) => p + n, 0);
 }
 
 function velocity(crew: CrewMember, roster: CrewMember[]) {
