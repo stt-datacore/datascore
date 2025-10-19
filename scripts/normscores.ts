@@ -2,7 +2,7 @@ import { GreatnessDetails } from "../../website/src/model/crew";
 
 export type RarityScore = { symbol: string, score: number, rarity: number, data?: any, greatness?: number, greatness_details?: GreatnessDetails };
 
-export function normalize(results: RarityScore[], inverse?: boolean, min_balance?: boolean, not_crew?: boolean, base = 100, tie_breaker?: <T extends { symbol: string }>(a: T, b: T) => number) {
+export function normalize<T extends { symbol: string, score: number }>(results: T[], inverse?: boolean, min_balance?: boolean, not_crew?: boolean, base = 100, tie_breaker?: <T extends { symbol: string }>(a: T, b: T) => number) {
         base ??= 100;
         results = results.slice();
         results.sort((a, b) => b.score - a.score);

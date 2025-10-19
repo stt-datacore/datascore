@@ -5,6 +5,8 @@ import { GameEvent } from '../../website/src/model/player';
 import { TraitNames, TranslationSet } from '../../website/src/model/traits';
 import { getVariantTraits } from '../../website/src/utils/crewutils';
 import { getEventData } from '../../website/src/utils/events';
+import { EventInstance } from '../../website/src/model/events';
+import { normalize } from './normscores';
 
 const DEBUG = process.argv.includes("--debug");
 
@@ -78,12 +80,16 @@ export function getEventBonusTrait(event: GameEvent, crew: CrewMember[], trait_n
 export function eventScoring() {
     const inputCrew = JSON.parse(fs.readFileSync(`${STATIC_PATH}crew.json`, 'utf-8')) as CrewMember[];
     const translations = JSON.parse(fs.readFileSync(`${STATIC_PATH}translation_en.json`, 'utf-8')) as TranslationSet;
-
+    const instances = JSON.parse(fs.readFileSync(`${STATIC_PATH}event_instances.json`, 'utf-8')) as EventInstance[];
     const publicTraits = [...new Set(inputCrew.map(c => c.traits).flat())];
 
     const featured_crew = {} as {[key: string]: number };
     const bonus_traits = {} as {[key: string]: number };
     const variant_traits = {} as {[key: string]: number };
+
+    const bonus_latest = {} as {[key: string]: Date };
+    const variant_latest = {} as {[key: string]: Date };
+    const crew_latest = {} as {[key: string]: Date };
 
     const crew_score = {} as {[key: string]: number };
     const variant_score = {} as {[key: string]: number };
@@ -102,23 +108,41 @@ export function eventScoring() {
         const eventData = getEventData(event, inputCrew);
 
         if (eventData) {
+            const inst = instances.find(event => event.instance_id === event.instance_id)!;
+            const date = new Date((inst as any).event_date);
             for (let fc of eventData.featured) {
                 featured_crew[fc] ??= 0;
                 featured_crew[fc] += 1;
+                crew_latest[fc] ??= date;
+                if (crew_latest[fc].getTime() < date.getTime()) {
+                    crew_latest[fc] = date;
+                }
             }
             for (let fc of eventData.bonus) {
                 crew_score[fc] ??= 0;
                 crew_score[fc] += 1;
+                crew_latest[fc] ??= date;
+                if (crew_latest[fc].getTime() < date.getTime()) {
+                    crew_latest[fc] = date;
+                }
             }
             if (eventData.activeContent?.bonus_traits?.length) {
                 for (let bc of eventData.activeContent.bonus_traits) {
                     if (variant_ref[bc]) {
                         variant_traits[bc] ??= 0;
                         variant_traits[bc] += 1;
+                        variant_latest[bc] ??= date;
+                        if (variant_latest[bc].getTime() < date.getTime()) {
+                            variant_latest[bc] = date;
+                        }
                     }
                     else if (publicTraits.includes(bc)) {
                         bonus_traits[bc] ??= 0;
                         bonus_traits[bc] += 1;
+                        bonus_latest[bc] ??= date;
+                        if (bonus_latest[bc].getTime() < date.getTime()) {
+                            bonus_latest[bc] = date;
+                        }
                     }
                 }
             }
@@ -162,7 +186,8 @@ export function eventScoring() {
     let crewobj = Object.entries(crew_score).map(([symbol, score]) => ({
         type: 'crew',
         symbol,
-        score
+        score,
+        latest: crew_latest[symbol]
     } as EventScoring));
 
     crewobj.sort((a, b) => b.score - a.score);
@@ -170,7 +195,8 @@ export function eventScoring() {
     let traitobj = Object.entries(bonus_traits).map(([symbol, score]) => ({
         type: 'trait',
         symbol,
-        score
+        score,
+        latest: bonus_latest[symbol]
     } as EventScoring));
 
     traitobj.sort((a, b) => b.score - a.score);
@@ -178,7 +204,8 @@ export function eventScoring() {
     let variantobj = Object.entries(variant_score).map(([symbol, score]) => ({
         type: 'variant',
         symbol,
-        score
+        score,
+        latest: variant_latest[symbol]
     } as EventScoring));
 
     variantobj.sort((a, b) => b.score - a.score);
@@ -191,7 +218,9 @@ export function eventScoring() {
 
     if (DEBUG) console.log(`Variant Event Scores`);
     if (DEBUG) console.log(variantobj.slice(0, 20));
-
+    normalize(crewobj);
+    normalize(variantobj);
+    normalize(traitobj);
     return {
         crew: crewobj,
         variants: variantobj,
