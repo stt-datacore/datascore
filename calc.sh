@@ -10,10 +10,13 @@ npm run shipcalc
 node build/datascore/scripts/scoring
 npm run eventstats
 zip -X ./battle.zip ./battle_run_cache.json && mv ./battle.zip ../scripts/data
-cd ../scripts
-git commit . -m "Re-Calculation"
-git push
-cd ../website
-git commit . -m "Re-Calculation"
-git push
-cd ../datascore
+
+if [ "$1" == "--sync" ]; then
+    cd ../scripts
+    git commit . -m "Re-Calculation"
+    git push
+    cd ../website
+    git commit . -m "Re-Calculation"
+    git push
+    cd ../datascore
+fi
