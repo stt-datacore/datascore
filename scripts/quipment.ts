@@ -1,7 +1,7 @@
 import { ComputedSkill, CrewMember, PlayerSkill, QuipmentDetails, QuippedPower } from '../../website/src/model/crew';
 import { BuffStatTable } from '../../website/src/utils/voyageutils';
 import { EquipmentItem } from '../../website/src/model/equipment';
-import { calcQLots } from '../../website/src/utils/equipment';
+import { calcQLots, estimateChronitonCost } from '../../website/src/utils/equipment';
 import { getPossibleQuipment, ItemWithBonus } from '../../website/src/utils/itemutils';
 import CONFIG from '../../website/src/components/CONFIG';
 import { applyCrewBuffs, skillSum } from '../../website/src/utils/crewutils';
@@ -10,12 +10,28 @@ export interface QPowers extends QuipmentDetails {
     symbol: string;
 }
 
-export function calcPrice(crew: CrewMember, quipment: EquipmentItem[]): number {
+const price_cache = {} as {[key:string]: number}
+
+export function calcPrice(crew: CrewMember, quipment: EquipmentItem[], items: EquipmentItem[]): number {
     let possquip = getPossibleQuipment(crew, quipment);
-    return possquip.map(q => q.recipe?.list.map(rl => rl.count).reduce((p, n) => p + n, 0) ?? 0).reduce((p, n) => p + n, 0);
+    return (
+        possquip.map(q => {
+                if (price_cache[q.symbol]) return price_cache[q.symbol];
+                let r = q.recipe?.list.map(rl => {
+                    let item = items.find(f => f.symbol === rl.symbol);
+                    if (!item) return rl.count;
+                    if (item.type === 15) return rl.count;
+                    return estimateChronitonCost(item) * rl.count;
+                })
+                .reduce((p, n) => p + n, 0) ?? 0;
+                price_cache[q.symbol] = r;
+                return r;
+            })
+            .reduce((p, n) => p + n, 0)
+    );
 }
 
-export function sortingQuipmentScoring(crew: CrewMember[], quipment: ItemWithBonus[], buffs: BuffStatTable, alt?: boolean): QPowers[] {
+export function sortingQuipmentScoring(crew: CrewMember[], quipment: ItemWithBonus[], items: EquipmentItem[], buffs: BuffStatTable, alt?: boolean): QPowers[] {
     const resultindex = {} as { [key:string]: QPowers };
     const indices = {} as {[key:string]: { price: number, unit: number, mode: 'all' | 'proficiency' | 'core', value: string, score: number }[]};
     const modes = ['all', 'proficiency', 'core'] as ('all' | 'proficiency' | 'core')[];
@@ -39,7 +55,7 @@ export function sortingQuipmentScoring(crew: CrewMember[], quipment: ItemWithBon
                 if (!c.best_quipment!.skill_quipment[skill]) return;
                 indices[c.symbol] ??= [];
                 indices[c.symbol].push({
-                    price: calcPrice(c, c.best_quipment!.skill_quipment[skill]),
+                    price: calcPrice(c, c.best_quipment!.skill_quipment[skill], items),
                     unit: index,
                     mode,
                     value: skill,
@@ -54,7 +70,7 @@ export function sortingQuipmentScoring(crew: CrewMember[], quipment: ItemWithBon
                 let skill = c.skill_order[index];
                 indices[c.symbol] ??= [];
                 indices[c.symbol].push({
-                    price: calcPrice(c, c.best_quipment!.skill_quipment[skill]),
+                    price: calcPrice(c, c.best_quipment!.skill_quipment[skill], items),
                     unit: index,
                     mode,
                     value: `sko`,
@@ -66,11 +82,11 @@ export function sortingQuipmentScoring(crew: CrewMember[], quipment: ItemWithBon
             sortCrewByQuipment(crew, 2, index, true, tiebreaker, alt);
             crew.forEach((c, idx) => {
                 const price = (() => {
-                    if (index === 0) return c.best_quipment_1_2 ? calcPrice(c, Object.values(c.best_quipment_1_2!.skill_quipment).flat()) : 0;
-                    else if (index === 1) return c.best_quipment_1_3 ? calcPrice(c, Object.values(c.best_quipment_1_3!.skill_quipment).flat()) : 0;
-                    else if (index === 2) return c.best_quipment_2_3 ? calcPrice(c, Object.values(c.best_quipment_2_3!.skill_quipment).flat()) : 0;
-                    else if (index === 3) return c.best_quipment_3 ? calcPrice(c, Object.values(c.best_quipment_3!.skill_quipment).flat()) : 0;
-                    else if (index === 4) return c.best_quipment_top ? calcPrice(c, Object.values(c.best_quipment_top!.skill_quipment).flat()) : 0;
+                    if (index === 0) return c.best_quipment_1_2 ? calcPrice(c, Object.values(c.best_quipment_1_2!.skill_quipment).flat(), items) : 0;
+                    else if (index === 1) return c.best_quipment_1_3 ? calcPrice(c, Object.values(c.best_quipment_1_3!.skill_quipment).flat(), items) : 0;
+                    else if (index === 2) return c.best_quipment_2_3 ? calcPrice(c, Object.values(c.best_quipment_2_3!.skill_quipment).flat(), items) : 0;
+                    else if (index === 3) return c.best_quipment_3 ? calcPrice(c, Object.values(c.best_quipment_3!.skill_quipment).flat(), items) : 0;
+                    else if (index === 4) return c.best_quipment_top ? calcPrice(c, Object.values(c.best_quipment_top!.skill_quipment).flat(), items) : 0;
                     return 0;
                 })();
 
@@ -135,7 +151,7 @@ export function sortingQuipmentScoring(crew: CrewMember[], quipment: ItemWithBon
 }
 
 
-export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs: BuffStatTable, skill_only?: string, alt?: boolean): QPowers {
+export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], items: EquipmentItem[], buffs: BuffStatTable, skill_only?: string, alt?: boolean): QPowers {
     crew = {...crew };
     if (skill_only && skill_only in crew.base_skills) crew.skill_order = [skill_only];
 
@@ -145,7 +161,7 @@ export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs
     // Aggregate:
     let qpower = Object.values(crew.best_quipment!.aggregate_by_skill).reduce((p, n) => p + n, 0);
     let possquip = getPossibleQuipment(crew, Object.values(crew.best_quipment!.skill_quipment).flat() || []);
-    let qprice = possquip.map(q => q.recipe?.list.map(rl => rl.count).reduce((p, n) => p + n, 0) ?? 0).reduce((p, n) => p + n, 0);
+    let qprice = calcPrice(crew, possquip, items);
 
     // Voyage:
     let vpower = Object.values(crew.best_quipment!.aggregate_by_skill).reduce((p, n) => p > n ? p : n, 0);
@@ -165,7 +181,7 @@ export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs
     else {
         possquip = getPossibleQuipment(crew, pquips[vpower] || []);
     }
-    let vprice = possquip.map(q => q.recipe?.list.map(rl => rl.count).reduce((p, n) => p + n, 0) ?? 0).reduce((p, n) => p + n, 0);
+    let vprice = calcPrice(crew, possquip, items);
 
     // Base:
     calcQLots(crew, quipment, buffs, true, undefined, 'core');
@@ -185,7 +201,7 @@ export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs
     else {
         possquip = getPossibleQuipment(crew, pquips[bpower] || []);
     }
-    let bprice = possquip.map(q => q.recipe?.list.map(rl => rl.count).reduce((p, n) => p + n, 0) ?? 0).reduce((p, n) => p + n, 0);
+    let bprice = calcPrice(crew, possquip, items);
 
     // Proficiency:
     calcQLots(crew, quipment, buffs, true, undefined, 'proficiency');
@@ -205,7 +221,7 @@ export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], buffs
     else {
         possquip = getPossibleQuipment(crew, pquips[gpower] || []);
     }
-    let gprice = possquip.map(q => q.recipe?.list.map(rl => rl.count).reduce((p, n) => p + n, 0) ?? 0).reduce((p, n) => p + n, 0);
+    let gprice = calcPrice(crew, possquip, items);
 
     return { qpower, vpower, bpower, gpower, avg: 0, symbol: crew.symbol, qprice, vprice, bprice, gprice };
 }

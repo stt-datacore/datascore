@@ -276,17 +276,18 @@ export function score() {
     const maincast = JSON.parse(fs.readFileSync(STATIC_PATH + 'maincast.json', 'utf-8')) as MainCast;
     const items = JSON.parse(fs.readFileSync(STATIC_PATH + 'items.json', 'utf-8')) as EquipmentItem[];
     const quipment = items.filter(f => f.type === 14).map(item => getItemWithBonus(item));
-    items.length = 0;
+    // items.length = 0;
 
     const gauntlets = (() => {
         let gs = JSON.parse(fs.readFileSync(STATIC_PATH + 'gauntlets.json', 'utf-8')) as Gauntlet[]
-        let ghash = {} as {[key:string]: Gauntlet};
-        for (let g of gs) {
-            if (!g.contest_data) continue;
-            let hash = g.contest_data.featured_skill + "_" + g.contest_data.traits.join("_");
-            ghash[hash] = g
-        }
-        return Object.values(ghash);
+        return gs;
+        // let ghash = {} as {[key:string]: Gauntlet};
+        // for (let g of gs) {
+        //     if (!g.contest_data) continue;
+        //     let hash = g.contest_data.featured_skill + "_" + g.contest_data.traits.join("_");
+        //     ghash[hash] = g
+        // }
+        // return Object.values(ghash);
     })();
 
     const collections = JSON.parse(fs.readFileSync(STATIC_PATH + 'collections.json', 'utf-8')) as Collection[];
@@ -540,13 +541,13 @@ export function score() {
         results = [].slice();
 
         if (!QUIET) console.log(`Scoring ${batch.length > 1 ? 'all' : batch[0]} quipment using sorting method...`);
-        let qpowersV = sortingQuipmentScoring(testcrew, testquipment, maxbuffs, true);
+        let qpowersV = sortingQuipmentScoring(testcrew, testquipment, items, maxbuffs, true);
         let qpowers = [] as QPowers[];
         let qpowersP = [] as QPowers[];
 
         if (!QUIET) console.log(`Scoring ${batch.length > 1 ? 'all' : batch[0]} quipment using power method...`);
         for (let c of testcrew) {
-            let data = scoreQuipment(c, testquipment, maxbuffs, batch.length === 1 ? batch[0] : undefined, true);
+            let data = scoreQuipment(c, testquipment, items, maxbuffs, batch.length === 1 ? batch[0] : undefined, true);
             qpowers.push(data);
         }
 
