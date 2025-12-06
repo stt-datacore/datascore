@@ -129,18 +129,22 @@ export function sortingQuipmentScoring(crew: CrewMember[], quipment: ItemWithBon
         }
     }
     const c = powermaps.length;
-    for (let i = 0; i < c; i++) {
-        let power = powermaps[i];
-        let price = pricemaps[i];
-        for (let j = 0; j < c; j++) {
-            let mode = modes[j];
-            let data = indices[c].filter(f => f.mode === mode);
-            for (let c of crew_syms) {
-                let score = data.map(d => d.score).reduce((p, n) => p + n, 0) / data.length;
-                let avgprc = data.map(d => d.price).reduce((p, n) => p + n, 0) / data.length;
-                resultindex[c][power] = Number(((1 - (score / total))* 100).toFixed(2));
-                resultindex[c][price] = Number(((1 - (avgprc / total))* 100).toFixed(2));
+    for (let sym of crew_syms) {
+        for (let i = 0; i < c; i++) {
+            let power = powermaps[i];
+            let price = pricemaps[i];
+            let score = 0;
+            let avgprc = 0;
+            for (let j = 0; j < c; j++) {
+                let mode = modes[j];
+                let data = indices[c].filter(f => f.mode === mode);
+                score += data.map(d => d.score).reduce((p, n) => p + n, 0) / data.length;
+                avgprc += data.map(d => d.price).reduce((p, n) => p + n, 0) / data.length;
             }
+            score /= c;
+            avgprc /= c;
+            resultindex[sym][power] += Number(((1 - (score / total)) * 100).toFixed(2));
+            resultindex[sym][price] += Number((((avgprc / total)) * 100).toFixed(2));
         }
     }
     for (let c of crew_syms) {
