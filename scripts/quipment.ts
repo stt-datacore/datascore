@@ -5,6 +5,7 @@ import { calcQLots, estimateChronitonCost } from '../../website/src/utils/equipm
 import { getPossibleQuipment, ItemWithBonus } from '../../website/src/utils/itemutils';
 import CONFIG from '../../website/src/components/CONFIG';
 import { applyCrewBuffs, skillSum } from '../../website/src/utils/crewutils';
+import { normalize } from './normscores';
 
 export interface QPowers extends QuipmentDetails {
     symbol: string;
@@ -21,6 +22,7 @@ export function calcPrice(crew: CrewMember, quipment: EquipmentItem[], items: Eq
                     let item = items.find(f => f.symbol === rl.symbol);
                     if (!item) return rl.count;
                     if (item.type === 15) return rl.count;
+                    if (item.factionOnly) return 10; // effort reflected here
                     return (estimateChronitonCost(item) * rl.count) || rl.count;
                 })
                 .reduce((p, n) => p + n, 0) ?? 0;
@@ -126,6 +128,7 @@ export function sortingQuipmentScoring(crew: CrewMember[], quipment: ItemWithBon
             gprice: 0
         }
     }
+
     const c = powermaps.length;
     for (let i = 0; i < c; i++) {
         let power = powermaps[i];
@@ -174,7 +177,7 @@ export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], items
         }
         return resp;
     }).reduce((p, n) => p > n ? p : n, 0);
-    if (vpower === ovpower) {
+    if (vpower === ovpower || !pquips[vpower]) {
         price_key = Object.keys(crew.best_quipment!.aggregate_by_skill).find(f => crew.best_quipment!.aggregate_by_skill[f] === vpower)!
         possquip = getPossibleQuipment(crew, crew.best_quipment!.skill_quipment[price_key] || []);
     }
@@ -182,7 +185,7 @@ export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], items
         possquip = getPossibleQuipment(crew, pquips[vpower] || []);
     }
     let vprice = calcPrice(crew, possquip, items);
-
+    pquips = {};
     // Base:
     calcQLots(crew, quipment, buffs, true, undefined, 'core');
     let bpower = Object.values(crew.best_quipment!.aggregate_by_skill).reduce((p, n) => p > n ? p : n, 0);
@@ -194,7 +197,7 @@ export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], items
         }
         return resp;
     }).reduce((p, n) => p > n ? p : n, 0);
-    if (bpower === obpower) {
+    if (bpower === obpower || !pquips[bpower]) {
         price_key = Object.keys(crew.best_quipment!.aggregate_by_skill).find(f => crew.best_quipment!.aggregate_by_skill[f] === bpower)!
         possquip = getPossibleQuipment(crew, crew.best_quipment!.skill_quipment[price_key] || []);
     }
@@ -202,7 +205,7 @@ export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], items
         possquip = getPossibleQuipment(crew, pquips[bpower] || []);
     }
     let bprice = calcPrice(crew, possquip, items);
-
+    pquips = {};
     // Proficiency:
     calcQLots(crew, quipment, buffs, true, undefined, 'proficiency');
     let gpower = Object.values(crew.best_quipment!.aggregate_by_skill).reduce((p, n) => p > n ? p : n, 0);
@@ -214,14 +217,16 @@ export function scoreQuipment(crew: CrewMember, quipment: ItemWithBonus[], items
         }
         return resp;
     }).reduce((p, n) => p > n ? p : n, 0);
-    if (gpower === ogpower) {
+    if (gpower === ogpower || !pquips[gpower]) {
         price_key = Object.keys(crew.best_quipment!.aggregate_by_skill).find(f => crew.best_quipment!.aggregate_by_skill[f] === gpower)!
         possquip = getPossibleQuipment(crew, crew.best_quipment!.skill_quipment[price_key] || []);
     }
     else {
         possquip = getPossibleQuipment(crew, pquips[gpower] || []);
     }
+
     let gprice = calcPrice(crew, possquip, items);
+    pquips = {};
 
     return { qpower, vpower, bpower, gpower, avg: 0, symbol: crew.symbol, qprice, vprice, bprice, gprice };
 }
@@ -404,3 +409,20 @@ export function qpDiff(crew: CrewMember, qp: QuippedPower, skills?: PlayerSkill[
         return 0;
     }
 }
+
+// export function normalizeQPowers(qpowers: QPowers[]) {
+//     let keys = ['qpower', 'vpower', 'bpower', 'gpower', 'qprice', 'vprice', 'bprice', 'gprice'];
+//     for (let key of keys) {
+//         let sortable = qpowers.map(m => {
+//             return {
+//                 symbol: m.symbol,
+//                 score: m[key] as number
+//             }
+//         });
+//         normalize(sortable, key.endsWith('price'));
+//         qpowers.forEach(m => {
+//             let res = sortable.find(f => f.symbol === m.symbol)!;
+//             m[key] = res.score;
+//         });
+//     }
+// }
