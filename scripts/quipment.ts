@@ -137,7 +137,7 @@ export function sortingQuipmentScoring(crew: CrewMember[], quipment: ItemWithBon
             let avgprc = 0;
             for (let j = 0; j < c; j++) {
                 let mode = modes[j];
-                let data = indices[c].filter(f => f.mode === mode);
+                let data = indices[sym].filter(f => f.mode === mode);
                 score += data.map(d => d.score).reduce((p, n) => p + n, 0) / data.length;
                 avgprc += data.map(d => d.price).reduce((p, n) => p + n, 0) / data.length;
             }
