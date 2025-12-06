@@ -21,7 +21,7 @@ export function calcPrice(crew: CrewMember, quipment: EquipmentItem[], items: Eq
                     let item = items.find(f => f.symbol === rl.symbol);
                     if (!item) return rl.count;
                     if (item.type === 15) return rl.count;
-                    return estimateChronitonCost(item) * rl.count;
+                    return (estimateChronitonCost(item) * rl.count) || rl.count;
                 })
                 .reduce((p, n) => p + n, 0) ?? 0;
                 price_cache[q.symbol] = r;
