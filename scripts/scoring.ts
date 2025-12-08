@@ -280,14 +280,14 @@ export function score() {
 
     const gauntlets = (() => {
         let gs = JSON.parse(fs.readFileSync(STATIC_PATH + 'gauntlets.json', 'utf-8')) as Gauntlet[]
-        return gs;
-        // let ghash = {} as {[key:string]: Gauntlet};
-        // for (let g of gs) {
-        //     if (!g.contest_data) continue;
-        //     let hash = g.contest_data.featured_skill + "_" + g.contest_data.traits.join("_");
-        //     ghash[hash] = g
-        // }
-        // return Object.values(ghash);
+        // return gs;
+        let ghash = {} as {[key:string]: Gauntlet};
+        for (let g of gs) {
+            if (!g.contest_data) continue;
+            let hash = g.contest_data.featured_skill + "_" + g.contest_data.traits.join("_");
+            ghash[hash] = g
+        }
+        return Object.values(ghash);
     })();
 
     const collections = JSON.parse(fs.readFileSync(STATIC_PATH + 'collections.json', 'utf-8')) as Collection[];
