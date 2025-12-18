@@ -9,7 +9,7 @@ import { applyCrewBuffs, getSkillOrderScore, getSkillOrderStats, getVariantTrait
 import { getElevatedBuckets } from '../../website/src/utils/gauntlet';
 import { getItemWithBonus } from '../../website/src/utils/itemutils';
 import { calculateMaxBuffs, lookupAMSeatsByTrait } from '../../website/src/utils/voyageutils';
-import { computePotentialColScores, splitCollections } from './cols';
+import { computePotentialColScores, scoreCollections, splitCollections } from './cols';
 import { QPowers, scoreQuipment, sortingQuipmentScoring } from './quipment';
 import { RarityScore, normalize as norm } from './normscores';
 import CONFIG from '../../website/src/components/CONFIG';
@@ -590,7 +590,7 @@ export function score() {
 
     results = [].slice();
 
-    if (!QUIET) console.log("Scoring collections...");
+    if (!QUIET) console.log("Scoring crew collections...");
 
     for (let c of crew) {
         results.push({
@@ -1290,6 +1290,11 @@ export function score() {
     if (DEBUG) console.log(`Results: ${results.length}`);
     if (!QUIET) console.log("Writing crew.json...");
     fs.writeFileSync(STATIC_PATH + 'crew.json', JSON.stringify(origCrew));
+
+    if (!QUIET) console.log("Scoring STT Collections...");
+    const collist = JSON.parse(fs.readFileSync(STATIC_PATH + "collections.json", 'utf-8')) as Collection[];
+    scoreCollections(collist, origCrew);
+    fs.writeFileSync(STATIC_PATH + "collections.json", JSON.stringify(collist));
 
     if (!QUIET) console.log("Updating crew CSV...");
     updateCrewCsv(crewCSV, origCrew, collections);

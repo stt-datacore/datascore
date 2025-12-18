@@ -1,4 +1,6 @@
+import { cp } from "node:fs";
 import { potentialCols } from "../../website/src/components/stats/utils";
+import { CollectionScore } from "../../website/src/model/collections";
 import { CrewMember } from "../../website/src/model/crew";
 import { CryoCollection as Collection } from "../../website/src/model/player";
 import { TraitNames } from "../../website/src/model/traits";
@@ -56,4 +58,77 @@ export function splitCollections(cols: Collection[]) {
         }
     }
     return { vanity, statBoosting, crewCols };
+}
+
+
+export function scoreCollection(col: Collection, allcrew: CrewMember[]) {
+    const colscore: CollectionScore = {
+        score: 0,
+        details: {
+            portal: 0,
+            non_portal: 0,
+            average_rarity: 0,
+            average_datascore: 0,
+            average_nonportal_datascore: 0,
+            average_portal_datascore: 0,
+            loot_score: 0,
+            difficulty: 0,
+            rarity_datascores: {}
+        }
+    }
+    if (col.crew) {
+        const colcrew = col.crew;
+        let crew = allcrew.filter(f => colcrew.includes(f.symbol));
+        if (crew.length) {
+            let portal = crew.filter(f => !!f.unique_polestar_combos?.length);
+            let nonportal = crew.filter(f => !f.unique_polestar_combos?.length);
+            colscore.details.non_portal = nonportal.length;
+            colscore.details.portal = portal.length;
+            colscore.details.average_rarity = crew.map(c => c.max_rarity).reduce((p, n) => p + n, 0) / crew.length;
+            colscore.details.average_datascore = crew.map(c => c.ranks.scores.overall).reduce((p, n) => p + n, 0) / crew.length;
+            if (nonportal.length)
+                colscore.details.average_nonportal_datascore = nonportal.map(c => c.ranks.scores.overall).reduce((p, n) => p + n, 0) / nonportal.length;
+            if (portal.length)
+                colscore.details.average_portal_datascore = portal.map(c => c.ranks.scores.overall).reduce((p, n) => p + n, 0) / portal.length;
+            for (let rarity = 1; rarity <= 5; rarity++) {
+                let rarecrew = crew.filter(f => f.max_rarity === rarity);
+                if (rarecrew.length) {
+                    colscore.details.rarity_datascores[rarity] = rarecrew.map(c => c.ranks.scores.overall).reduce((p, n) => p + n, 0) / rarecrew.length;
+                }
+            }
+            let loot = col.milestones!.map(ms => (ms.buffs?.map(b => 5 * 3)?.reduce((p, n) => p + n, 0) ?? 0) + (ms.rewards?.map(r => r.rarity * (r.type === 1 ? 2 : 0.1))?.reduce((p, n) => p + n, 0) ?? 0));
+            colscore.details.loot_score = loot.reduce((p, n) => p + n, 0);
+
+            let diff = col.milestones!.map(ms => ms.goal).reduce((p, n) => p + n, 0);
+            diff *= colscore.details.average_rarity;
+
+            colscore.details.difficulty = diff * ((1 + nonportal.length) / (1 + portal.length));
+        }
+        const {
+            loot_score: ls,
+            difficulty: diff
+        } = colscore.details;
+
+        colscore.score = ls / diff;
+    }
+    col.score = colscore;
+    return colscore;
+}
+
+export function scoreCollections(cols: Collection[], allcrew: CrewMember[]) {
+    if (!cols.length) return;
+    const scores = cols.map(col => scoreCollection(col, allcrew));
+    scores.sort((a, b) => b.score - a.score);
+    let high = scores[0].score;
+    for (let sc of scores) {
+        sc.score = Number((((sc.score / high)) * 100).toFixed(4));
+    }
+
+    // Debug code
+    let ncol = [...cols];
+    ncol.sort((a, b) => b.score!.score - a.score!.score);
+    for (let c of ncol) {
+        console.log(`${c.name.padEnd(40)}`, `Score: ${c.score!.score}`.padEnd(15), `Difficulty: ${c.score!.details.difficulty.toFixed(4)}, `.padEnd(25), `Loot: ${c.score!.details.loot_score.toFixed(4)}`);
+
+    }
 }
