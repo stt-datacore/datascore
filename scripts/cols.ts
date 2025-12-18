@@ -125,10 +125,10 @@ export function scoreCollections(cols: Collection[], allcrew: CrewMember[]) {
     }
 
     // Debug code
-    let ncol = [...cols];
-    ncol.sort((a, b) => b.score!.score - a.score!.score);
-    for (let c of ncol) {
-        console.log(`${c.name.padEnd(40)}`, `Score: ${c.score!.score}`.padEnd(15), `Difficulty: ${c.score!.details.difficulty.toFixed(4)}, `.padEnd(25), `Loot: ${c.score!.details.loot_score.toFixed(4)}`);
+    // let ncol = [...cols];
+    // ncol.sort((a, b) => b.score!.score - a.score!.score);
+    // for (let c of ncol) {
+    //     console.log(`${c.name.padEnd(40)}`, `Score: ${c.score!.score}`.padEnd(15), `Difficulty: ${c.score!.details.difficulty.toFixed(4)}, `.padEnd(25), `Loot: ${c.score!.details.loot_score.toFixed(4)}`);
 
-    }
+    // }
 }
