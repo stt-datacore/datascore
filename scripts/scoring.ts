@@ -1294,6 +1294,7 @@ export function score() {
     if (!QUIET) console.log("Scoring STT Collections...");
     const collist = JSON.parse(fs.readFileSync(STATIC_PATH + "collections.json", 'utf-8')) as Collection[];
     scoreCollections(collist, origCrew);
+    if (!QUIET) console.log("Writing collections.json...");
     fs.writeFileSync(STATIC_PATH + "collections.json", JSON.stringify(collist));
 
     if (!QUIET) console.log("Updating crew CSV...");

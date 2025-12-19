@@ -124,6 +124,24 @@ export function scoreCollections(cols: Collection[], allcrew: CrewMember[]) {
         sc.score = Number((((sc.score / high)) * 100).toFixed(4));
     }
 
+    function normDeets(field: string, minus?: boolean) {
+        scores.sort((a, b) => b.details[field] - a.details[field]);
+        let high = scores[0].details[field] as number;
+        for (let sc of scores) {
+            let val = sc.details[field] as number;
+            if (minus) {
+                val = Number(((1 - (val / high)) * 100).toFixed(4));
+            }
+            else {
+                val = Number((((val / high)) * 100).toFixed(4));
+            }
+            sc.details[field] = val;
+        }
+    }
+
+    normDeets('loot_score');
+    normDeets('difficulty', true);
+
     // Debug code
     // let ncol = [...cols];
     // ncol.sort((a, b) => b.score!.score - a.score!.score);
