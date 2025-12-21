@@ -11,6 +11,8 @@ import { ContinuumMission } from '../../website/src/model/continuum';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 
+const NeverPortal = ['BossBattle', 'Voyage','Gauntlet','HonorHall','Fuse','Faction', 'Achievement', 'Collections'];
+
 function getPermutations<T, U>(array: T[], size: number, count?: bigint, count_only?: boolean, start_idx?: bigint, check?: (set: T[]) => U[] | false) {
     var current_iter = 0n;
     const mmin = start_idx ?? 0n;
@@ -532,6 +534,7 @@ function main() {
 	// Calculate polestars later
 	let polestarsLater = {} as { [key:string]: { count: number, crew: string[], polestars: string[] }};
 	for (let crew of crewlist) {
+		if (NeverPortal.includes(crew.obtained)) continue;
 		let polestars = crew.traits.slice();
 		polestars.push('crew_max_rarity_'+crew.max_rarity);
 		for (let skill in crew.base_skills) {
