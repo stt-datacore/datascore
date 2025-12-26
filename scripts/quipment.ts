@@ -433,9 +433,9 @@ export function computeQuipmentFrequency() {
     let totalrews = [] as string[];
     for (let c of conts) {
 
-        let rews = Object.values(c.rewards).map((rw: MasteryLoot) => rw.all_loot_entries.map(al => al.potential_rewards.map(pw => pw.symbol)).flat()).flat().filter(f => f !== undefined);
+        let rews = Object.values(c.rewards).map((rw: MasteryLoot) => rw.all_loot_entries.map(al => al.potential_rewards.map(pw => pw.symbol + "++" + pw.quantity)).flat()).flat().filter(f => f !== undefined);
         if (c.quests) {
-            let rms = c.quests.map(quest => quest.mastery_levels?.map(ml => ml.jackpots?.map(jp => jp.reward.map(r => r.symbol)).flat()).flat()).flat().filter(f => f !== undefined);
+            let rms = c.quests.map(quest => quest.mastery_levels?.map(ml => ml.jackpots?.map(jp => jp.reward.map(r => r.symbol + "++" + r.quantity)).flat()).flat()).flat().filter(f => f !== undefined);
             rews = rews.concat(rms);
         }
         totalrews = totalrews.concat(rews);
@@ -443,8 +443,10 @@ export function computeQuipmentFrequency() {
     totalrews.sort();
     const counts = {} as {[key: string]: number};
     for (let r of totalrews) {
-        counts[r] ??= 0;
-        counts[r]++;
+        let [symbol, q] = r.split("++");
+        let quantity = Number(q);
+        counts[symbol] ??= 0;
+        counts[symbol] += quantity;
     }
     const results = Object.entries(counts).map(([symbol, count]) => {
         return {
