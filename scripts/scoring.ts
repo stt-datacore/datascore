@@ -284,6 +284,7 @@ export function score() {
         let ghash = {} as {[key:string]: Gauntlet};
         for (let g of gs) {
             if (!g.contest_data) continue;
+            if ((g as any).sequence_id) continue;
             let hash = g.contest_data.featured_skill + "_" + g.contest_data.traits.join("_");
             ghash[hash] = g
         }
