@@ -285,7 +285,7 @@ export function score() {
         for (let g of gs) {
             if (!g.contest_data) continue;
             if ((g as any).sequence_id) continue;
-            let hash = g.contest_data.featured_skill + "_" + g.contest_data.traits.join("_");
+            let hash = g.contest_data.featured_skill + "_" + g.contest_data.traits.sort().join("_");
             ghash[hash] = g
         }
         return Object.values(ghash);
