@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { ComputedSkill, CrewMember, PlayerSkill, QuipmentDetails, QuippedPower } from '../../website/src/model/crew';
 import { BuffStatTable } from '../../website/src/utils/voyageutils';
 import { EquipmentItem } from '../../website/src/model/equipment';
@@ -6,6 +7,10 @@ import { getPossibleQuipment, ItemWithBonus } from '../../website/src/utils/item
 import CONFIG from '../../website/src/components/CONFIG';
 import { applyCrewBuffs, skillSum } from '../../website/src/utils/crewutils';
 import { normalize } from './normscores';
+import { ContinuumMission, ContinuumRoot, MasteryLoot } from '../../website/src/model/continuum';
+
+const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
+const SCRIPTS_DATA_PATH = `${__dirname}/../../../../scripts/data/`;
 
 export interface QPowers extends QuipmentDetails {
     symbol: string;
@@ -412,6 +417,46 @@ export function qpDiff(crew: CrewMember, qp: QuippedPower, skills?: PlayerSkill[
         return 0;
     }
 }
+
+export function computeQuipmentFrequency() {
+    let contpath = `${STATIC_PATH}/continuum`;
+    const conts = [] as ContinuumMission[];
+    if (fs.existsSync(contpath)) {
+        let files = fs.readdirSync(contpath);
+        for (let file of files) {
+            if (!file.endsWith('.json')) continue;
+            let v = JSON.parse(fs.readFileSync(`${STATIC_PATH}continuum/${file}`, 'utf-8')) as ContinuumMission;
+            conts.push(v);
+        }
+    }
+    conts.sort((a, b) => a.id - b.id);
+    let totalrews = [] as string[];
+    for (let c of conts) {
+
+        let rews = Object.values(c.rewards).map((rw: MasteryLoot) => rw.all_loot_entries.map(al => al.potential_rewards.map(pw => pw.symbol)).flat()).flat().filter(f => f !== undefined);
+        if (c.quests) {
+            let rms = c.quests.map(quest => quest.mastery_levels?.map(ml => ml.jackpots?.map(jp => jp.reward.map(r => r.symbol)).flat()).flat()).flat().filter(f => f !== undefined);
+            rews = rews.concat(rms);
+        }
+        totalrews = totalrews.concat(rews);
+    }
+    totalrews.sort();
+    const counts = {} as {[key: string]: number};
+    for (let r of totalrews) {
+        counts[r] ??= 0;
+        counts[r]++;
+    }
+    const results = Object.entries(counts).map(([symbol, count]) => {
+        return {
+            symbol,
+            frequency: count
+        }
+    });
+    results.sort((a, b) => a.frequency - b.frequency);
+    //for (let res of results) console.log(res);
+    return results;
+}
+
 
 // export function normalizeQPowers(qpowers: QPowers[]) {
 //     let keys = ['qpower', 'vpower', 'bpower', 'gpower', 'qprice', 'vprice', 'bprice', 'gprice'];

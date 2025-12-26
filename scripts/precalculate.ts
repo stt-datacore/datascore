@@ -8,6 +8,7 @@ import { Mission, ProtoMission } from '../../website/src/model/missions';
 import { BattleStations, Schematics } from '../../website/src/model/ship';
 import { calcFuses } from './calcfuse';
 import { ContinuumMission } from '../../website/src/model/continuum';
+import { computeQuipmentFrequency } from './quipment';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 
@@ -985,6 +986,17 @@ function generateMissions() {
 		});
 		console.log(`Calculated ${icount} qbit mission sources.`);
 	}
+	const qpres = computeQuipmentFrequency();
+	for (let res of qpres) {
+		let item = items.find(f => f.symbol === res.symbol);
+		if (item) {
+			item.kwipment_frequency = res.frequency;
+		}
+	}
+	if (qpres.length > 1) {
+		let n = qpres.length - 1;
+		console.log(`Computed quipment occurrences. ${qpres[0].symbol}, ${qpres[0].frequency}; ${qpres[n].symbol}, ${qpres[n].frequency}`);
+	}
 	fs.writeFileSync(STATIC_PATH + 'items.json', JSON.stringify(items));
 }
 
@@ -1274,22 +1286,6 @@ function postProcessCadetItems(items: EquipmentItem[], cadet: ProtoMission[]): v
 				}
 			}
 		}
-	}
-}
-
-function processShips(): void {
-	let ship_schematics = JSON.parse(fs.readFileSync(STATIC_PATH + 'ship_schematics.json', 'utf-8')) as Schematics[];
-	let battle_stations = JSON.parse(fs.readFileSync(STATIC_PATH + 'battle_stations.json', 'utf-8')) as BattleStations[];
-	let data = { ship_schematics, battle_stations };
-	if (data.battle_stations.length && data.ship_schematics.length) {
-		for (let sch of data.ship_schematics) {
-			let battle = data.battle_stations.find(b => b.symbol === sch.ship.symbol);
-			if (battle) {
-				sch.ship.battle_stations = battle.battle_stations;
-			}
-		}
-
-		fs.writeFileSync(STATIC_PATH + "ship_schematics.json", JSON.stringify(data.ship_schematics));
 	}
 }
 
