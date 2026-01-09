@@ -878,11 +878,11 @@ export function processScores(
 
         if (score_mode === 'ship') {
             scorearena = scorearena.sort((a, b) => b.group - a.group).slice(0, 1);
-            scorefbb = scorefbb.sort((a, b) => b.group - a.group).slice(0, 1);
+            scorefbb = scorefbb.sort((a, b) => BossRarities[b.group] - BossRarities[a.group] || b.group - a.group).slice(0, 1);
         }
         else {
             scorearena.sort((a, b) => a.group - b.group);
-            scorefbb.sort((a, b) => a.group - b.group);
+            scorefbb.sort((a, b) => BossRarities[a.group] - BossRarities[b.group] || a.group - b.group);
         }
         score.arena_final = scorearena.map(m => m.final + (m.final / (4 - m.group))).reduce((p, n) => p + n, 0) / scorearena.length;
         score.fbb_final = scorefbb.map(m => m.final + (m.final / (7 - BossRarities[m.group]))).reduce((p, n) => p + n, 0) / scorefbb.length;
