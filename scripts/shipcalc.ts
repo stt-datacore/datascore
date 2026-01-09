@@ -15,6 +15,7 @@ import { makeBuckets } from './ships/util';
 import { CalcRes, ShipCalcConfig } from './ships/paracalc';
 import { score } from './scoring';
 import { createMulitpleShips } from './ships/seating';
+import { keyInPause } from 'readline-sync';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 const LEVEL_PATH = `${__dirname}/../../../../scripts/data/`;
@@ -84,7 +85,9 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
 
     // const boompool = crew.filter(f => f.action.ability?.type === 1 && !f.action.limit && !f.action.ability?.condition).sort((a, b) => b.action.ability!.amount - a.action.ability!.amount || a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount || a.action.cycle_time - b.action.cycle_time);
     // const critpool = crew.filter(f => f.action.ability?.type === 5 && !f.action.limit && !f.action.ability?.condition).sort((a, b) => b.action.ability!.amount - a.action.ability!.amount || a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount || a.action.cycle_time - b.action.cycle_time);
-    const hrpool = crew.filter(f => f.action.ability?.type === 2 && !f.action.limit && !f.action.ability?.condition).sort((a, b) => b.action.ability!.amount - a.action.ability!.amount || a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount || a.action.cycle_time - b.action.cycle_time);
+    const hrpool = crew.filter(f =>
+        (f.action.ability?.type === 2 || (f.action.bonus_type === 1 && (!f.action.ability || [0,2,3].includes(f.action.ability.type)))) && (!f.action.limit && !f.action.ability?.condition))
+            .sort((a, b) => (b.action.ability?.amount ?? 0) - (a.action.ability?.amount ?? 0) || a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount || a.action.cycle_time - b.action.cycle_time);
 
     const crewcategories = {} as { [key: string]: 'defense' | 'offense' }
     const crewcooldowns = {} as { [cooldown: string]: string[] }
@@ -436,18 +439,26 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     console.log("Scoring Offense ...");
     processScores(crew, ships, offs_2, 'offense', arenaruns.length, fbbruns.length);
     console.log("Scoring Defense ...");
-    processScores(crew, ships,defs_2, 'defense', arenaruns.length, fbbruns.length);
+    processScores(crew, ships, defs_2, 'defense', arenaruns.length, fbbruns.length);
     console.log("Scoring Ships ...");
-    processScores(crew, ships,ship_2, 'ship', arenaruns.length, fbbruns.length);
+    processScores(crew, ships, ship_2, 'ship', arenaruns.length, fbbruns.length);
 
     console.log("Mapping best crew to ships...");
 
     let arena_p2 = ships.map(sh => getStaffedShip(origShips, crew, sh, false, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
     arena_p2 = arena_p2.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, false, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
-    let fbb_p2 = ships.map(sh => getStaffedShip(origShips, crew, sh, 2, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
+
+    let fbb_p2 =           ships.map(sh => getStaffedShip(origShips, crew, sh, 2, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
     fbb_p2 = fbb_p2.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, 2, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
-    let fbb_p3 = ships.map(sh => getStaffedShip(origShips, crew, sh, 1, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
-    fbb_p3 = fbb_p2.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, 1, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
+
+    let fbb_p3 = ships.map(sh =>           getStaffedShip(origShips, crew, sh, 1, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
+    fbb_p3 = fbb_p3.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, 1, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
+
+    let fbb_p4 = ships.map(sh =>           getStaffedShip(origShips, crew, sh, 4, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
+    fbb_p4 = fbb_p4.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, 4, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
+
+    let fbb_p5 = ships.map(sh =>           getStaffedShip(origShips, crew, sh, 3, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
+    fbb_p5 = fbb_p5.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, 3, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
 
     fbb_p2 = fbb_p2.map(ship => {
         let result = createMulitpleShips(ship);
@@ -461,12 +472,21 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         return result;
     }).flat();
 
-    allruns.length = ((arena_p2.length * arena_p2.length) * 4) + (fbb_p2.length * 6) + (fbb_p3.length * 6);
+    fbb_p4 = fbb_p4.map(ship => {
+        let result = createMulitpleShips(ship);
+        if (!result) return [ship];
+        return result;
+    }).flat();
 
+    fbb_p5 = fbb_p5.map(ship => {
+        let result = createMulitpleShips(ship);
+        if (!result) return [ship];
+        return result;
+    }).flat();
+
+    allruns.length = ((arena_p2.length * arena_p2.length) * 4) + (fbb_p2.length * AllBosses.length) + (fbb_p3.length * AllBosses.length) + (fbb_p4.length * AllBosses.length);
     runidx = 0;
-
     count = 1;
-
     console.log("Testing ships in Arena battles...");
 
     for (let ship of arena_p2) {
@@ -528,7 +548,25 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     }
 
     for (let ship of fbb_p3) {
-        if (VERBOSE) console.log(`Scoring Max 1-HR FBB on ${ship.name} (${count++} / ${fbb_p2.length})...`);
+        if (VERBOSE) console.log(`Scoring Max 1-HR FBB on ${ship.name} (${count++} / ${fbb_p3.length})...`);
+        let crew = ship.battle_stations!.map(m => m.crew!);
+        let runres = runBattles(current_id, rate, ship, crew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
+
+        runidx = runres.runidx;
+        current_id = runres.current_id;
+    }
+
+    for (let ship of fbb_p4) {
+        if (VERBOSE) console.log(`Scoring Max 2-HR FBB (Evasion Preference) on ${ship.name} (${count++} / ${fbb_p4.length})...`);
+        let crew = ship.battle_stations!.map(m => m.crew!);
+        let runres = runBattles(current_id, rate, ship, crew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
+
+        runidx = runres.runidx;
+        current_id = runres.current_id;
+    }
+
+    for (let ship of fbb_p5) {
+        if (VERBOSE) console.log(`Scoring Max 1-HR FBB (Evasion Preference) on ${ship.name} (${count++} / ${fbb_p5.length})...`);
         let crew = ship.battle_stations!.map(m => m.crew!);
         let runres = runBattles(current_id, rate, ship, crew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
 

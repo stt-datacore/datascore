@@ -212,9 +212,12 @@ export const runBattles = (
                 let newstaff = [...staff];
                 const ignore_defeat_fbb = false; //crewtype === 'offense';
 
-                battle_mode = `fbb_${boss.id - 1}` as BattleMode;
+                let bid = boss.id;
+                if (bid > 6) bid -= 6;
+                battle_mode = `fbb_${bid - 1}` as BattleMode;
+                let isborg = boss.symbol.includes('borg');
                 if (newstaff.length === 1) {
-                    if (c?.action.ability?.type === 2) {
+                    if (c?.action.ability?.type === 2 || (isborg && c?.action.bonus_type === 1 && c.action.ability?.type === 0)) {
                         newstaff.push(c);
                     }
                     else if (crewtype !== 'defense') {
@@ -225,7 +228,15 @@ export const runBattles = (
                                 ff.action.bonus_type !== c?.action.bonus_type ||
                                 ff.action.bonus_amount < c?.action.bonus_amount
                             )
-                        );
+                        )
+                        .filter(ff => {
+                            if (isborg && (c && c.action.bonus_type !== 1)) {
+                                return ff.action.bonus_type === 1;
+                            }
+                            else {
+                                return ff.action.ability?.type === 2;
+                            }
+                        });
                         if (compathr?.length) {
                             let olen = newstaff.length;
                             for (let i = olen; i < ship.battle_stations!.length && i < olen + 2 && i < compathr.length; i++) {
@@ -269,6 +280,9 @@ export const runBattles = (
                             limit: c?.action?.limit ?? 0,
                             reference_battle: !!reference_battle
                         }
+                    }
+                    else {
+                        console.log("Attack could not be created")
                     }
                 }
             });

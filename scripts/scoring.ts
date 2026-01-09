@@ -1321,8 +1321,13 @@ export function score() {
         if (!QUIET) console.log("Writing change_log_digest.json...");
         fs.writeFileSync(digestPath, JSON.stringify(current, null, 4));
         if (change_log.length) {
-            if (!QUIET) console.log(`Writing ${changeFile}...`);
-            fs.writeFileSync(changePath, JSON.stringify(change_log, null, 4));
+            if (old.length !== 0) {
+                if (!QUIET) console.log(`Writing ${changeFile}...`);
+                fs.writeFileSync(changePath, JSON.stringify(change_log, null, 4));
+            }
+            else {
+                if (!QUIET) console.log('Change log digest regenerated. No new changes emitted.');
+            }
         }
     }
     else {

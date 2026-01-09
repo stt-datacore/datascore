@@ -1,3 +1,4 @@
+import CONFIG from "../../../website/src/components/CONFIG";
 import { CrewMember, ShipScores } from "../../../website/src/model/crew";
 import { BattleStation, Ship } from "../../../website/src/model/ship";
 import { DEFENSE_ABILITIES, DEFENSE_ACTIONS, getBosses, getCrewDivisions, getShipDivision, OFFENSE_ABILITIES, OFFENSE_ACTIONS } from "../../../website/src/utils/shiputils";
@@ -277,7 +278,7 @@ export const shipCompatibility = (ship: Ship, crew: CrewMember, used_seats?: str
     return { score: compat, trigger, seat } as ShipCompat;
 }
 
-export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string | Ship, fbb: false | 1 | 2, offs?: Score[], defs?: Score[], c?: CrewMember, no_sort = false, opponent?: Ship, prefer_oppo_time = false, typical_cd = 8) => {
+export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string | Ship, fbb: false | 1 | 2 | 3 | 4, offs?: Score[], defs?: Score[], c?: CrewMember, no_sort = false, opponent?: Ship, prefer_oppo_time = false, typical_cd = 8) => {
     let data = typeof ship === 'string' ? ships.find(f => f.symbol === ship) : ships.find(f => f.symbol === ship.symbol);
     if (!data?.battle_stations?.length) return undefined;
     data = { ...data } as Ship;
@@ -286,7 +287,7 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
     //     console.log("break");
     // }
     let division = getShipDivision(data.rarity);
-    let boss = fbb ? getBosses(data).sort((a, b) => b.id - a.id)[0] : undefined;
+    // let boss = fbb ? getBosses(data).sort((a, b) => b.id - a.id)[0] : undefined;
 
     data.battle_stations = JSON.parse(JSON.stringify(data.battle_stations)) as BattleStation[];
     let dataskills = data.battle_stations.map(m => m.skill).filter(f => !!f);
@@ -331,7 +332,7 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
                 ((!prefer_oppo_time && (!cloak_time || cc.action.initial_cooldown >= cloak_time)) ||
                 (prefer_oppo_time && (!oppo_time || cc.action.initial_cooldown <= oppo_time))) &&
             (
-                (fbb && cc.max_rarity <= boss!.id) ||
+                (fbb) ||
                 (!fbb && getCrewDivisions(cc.max_rarity).includes(division))
             ) &&
             (!cc.action.ability?.condition || conds.includes(cc.action.ability.condition)) &&
@@ -409,6 +410,7 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
     let crit = 0;
     let boom = 0;
     let hr = 0;
+    let evasion_needed = fbb && fbb >= 3;
 
     let bonus_power = 99;
     let bonus_check = -1;
@@ -444,7 +446,9 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
         if (fbb) {
             need_boom = 1;
             need_crit = 1 + (2 - fbb);
+            if (evasion_needed) need_crit-=2;
             need_hr = fbb;
+            if (evasion_needed) need_hr-=2;
         }
         else {
             need_boom = 3;
@@ -469,6 +473,26 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
     }
 
     let ignore_skill = false;
+
+    if (evasion_needed) {
+        filtered.sort((a, b) => {
+            if (
+                (!a.action.ability || (a.action.ability.type === 2 || a.action.ability.type === 3 || a.action.ability.type === 0)) &&
+                (!b.action.ability || (b.action.ability.type === 2 || b.action.ability.type === 3 || b.action.ability.type === 0))
+            ) {
+                let tdiff = (a.action.ability?.type ?? 99) - (b.action.ability?.type ?? 99);
+                if (tdiff) return tdiff;
+                if (a.action.bonus_type === 1 && b.action.bonus_type === 1) {
+                    let ab = a.action.ability?.type === 0 ? a.action.ability.amount : 0;
+                    let bb = b.action.ability?.type === 0 ? b.action.ability.amount : 0;
+                    return (b.action.bonus_amount + bb) - (a.action.bonus_amount + ab);
+                }
+                else if (a.action.bonus_type === 1) return -1;
+                else if (b.action.bonus_type === 1) return 1;
+            }
+            return a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount;
+        });
+    }
 
     for (let pass = 0; pass < 4; pass++) {
         if (pass == 1 || pass == 3) {
@@ -499,6 +523,10 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
                 }
                 else if (f.action.ability?.type === 5 && (crit < need_crit || pass > 1)) {
                     crit++;
+                    return true;
+                }
+                else if (evasion_needed && f.action.ability?.type === 0 && f.action.bonus_type === 1) {
+                    hr++;
                     return true;
                 }
                 else if (f.action.ability?.type === 2 && (hr < need_hr || pass > 1)) {
@@ -912,7 +940,7 @@ export const createScoreData = (config: ScoreDataConfig) => {
                 scores.push(score);
             }
 
-            const div_id = is_fbb ? (run.boss?.id ?? 0) : run.division ?? 0;
+            const div_id = is_fbb ? (run.boss?.rarity ?? 0) : run.division ?? 0;
 
             indexes[item.symbol] ??= {}
             indexes[item.symbol][div_id] ??= [];
