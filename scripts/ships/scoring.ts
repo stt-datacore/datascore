@@ -1,8 +1,12 @@
 import CONFIG from "../../../website/src/components/CONFIG";
 import { BossDetails, CrewMember, ShipScores } from "../../../website/src/model/crew";
 import { BattleStation, Ship } from "../../../website/src/model/ship";
-import { DEFENSE_ABILITIES, DEFENSE_ACTIONS, getBosses, getCrewDivisions, getShipDivision, OFFENSE_ABILITIES, OFFENSE_ACTIONS } from "../../../website/src/utils/shiputils";
+import { AllBosses, DEFENSE_ABILITIES, DEFENSE_ACTIONS, getBosses, getCrewDivisions, getShipDivision, OFFENSE_ABILITIES, OFFENSE_ACTIONS } from "../../../website/src/utils/shiputils";
 
+const BossRarities = {} as {[key:string]: number};
+for (let boss of AllBosses) {
+    BossRarities[boss.id] = boss.rarity;
+}
 export function getMaxTime(crew: CrewMember) {
     if (!crew.action.limit) return 180;
     let t = crew.action.initial_cooldown;
@@ -682,7 +686,6 @@ export function normalizeScores(scores: Score[]) {
                 else {
                     unit.final = Number(((unit.final / fbb_max[unit.group]) * 100).toFixed(4));
                 }
-
             });
         });
     });
@@ -882,7 +885,7 @@ export function processScores(
             scorefbb.sort((a, b) => a.group - b.group);
         }
         score.arena_final = scorearena.map(m => m.final + (m.final / (4 - m.group))).reduce((p, n) => p + n, 0) / scorearena.length;
-        score.fbb_final = scorefbb.map(m => m.final + (m.final / (7 - m.group))).reduce((p, n) => p + n, 0) / scorefbb.length;
+        score.fbb_final = scorefbb.map(m => m.final + (m.final / (7 - BossRarities[m.group]))).reduce((p, n) => p + n, 0) / scorefbb.length;
     }
 
     const overallMap = {} as {[key: string]: string[]};
