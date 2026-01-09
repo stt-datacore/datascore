@@ -12,9 +12,11 @@ if [ "$1" == "--nocommit" ]; then
     exit 0;
 fi
 cd ../scripts
+git add .
 git commit . -m "battle run cache regeneration"
 git push
 cd ../website
+git add .
 git commit . -m "battle run cache regeneration"
 git push
 cd ../datascore

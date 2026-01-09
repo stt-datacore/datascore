@@ -13,9 +13,11 @@ zip -X ./battle.zip ./battle_run_cache.json && mv ./battle.zip ../scripts/data
 
 if [ "$1" == "--sync" ]; then
     cd ../scripts
+    git add .
     git commit . -m "Re-Calculation"
     git push
     cd ../website
+    git add .
     git commit . -m "Re-Calculation"
     git push
     cd ../datascore
