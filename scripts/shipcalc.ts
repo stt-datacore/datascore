@@ -7,7 +7,7 @@ import { Ship, Schematics } from "../../website/src/model/ship";
 import { highestLevel, mergeShips } from "../../website/src/utils/shiputils";
 import { exit } from 'process';
 import { processShips } from './ships/processing';
-import { Score, characterizeCrew, shipnum, getStaffedShip, BattleRunBase, scoreToShipScore, createBlankShipScore, processScores, ScoreDataConfig, createScoreData } from './ships/scoring';
+import { Score, characterizeCrew, shipnum, getStaffedShip, BattleRunBase, scoreToShipScore, createBlankShipScore, processScores, ScoreDataConfig, createScoreData, rankBosses } from './ships/scoring';
 import { AllBosses, getShipDivision } from '../../website/src/utils/shiputils';
 import { runBattles } from './ships/battle';
 import { battleRunsToCache, cacheToBattleRuns, readBattleCache } from './ships/cache';
@@ -731,6 +731,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     const crewFresh = JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8')) as CrewMember[];
     const shipFresh = JSON.parse(fs.readFileSync(STATIC_PATH + 'ship_schematics.json', 'utf-8')) as Schematics[];
 
+    rankBosses(crewRanksOut);
     Object.entries(crewRanksOut).forEach(([symbol, ranks]) => {
         const c = crewFresh.find(f => f.symbol === symbol);
         if (c) {
@@ -738,7 +739,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
             c.ranks.scores.ship = ranks;
         }
     });
-
+    rankBosses(shipRanksOut);
     Object.entries(shipRanksOut).forEach(([symbol, ranks]) => {
         const c = shipFresh.find(f => f.ship.symbol === symbol);
         if (c) {

@@ -1,5 +1,5 @@
 import CONFIG from "../../../website/src/components/CONFIG";
-import { CrewMember, ShipScores } from "../../../website/src/model/crew";
+import { BossDetails, CrewMember, ShipScores } from "../../../website/src/model/crew";
 import { BattleStation, Ship } from "../../../website/src/model/ship";
 import { DEFENSE_ABILITIES, DEFENSE_ACTIONS, getBosses, getCrewDivisions, getShipDivision, OFFENSE_ABILITIES, OFFENSE_ACTIONS } from "../../../website/src/utils/shiputils";
 
@@ -57,7 +57,8 @@ export interface ScoreTotal extends Scoreable {
     max_duration_staff: string[],
     original_indices: number[];
     compat: string[];
-    incompat: string[]
+    incompat: string[];
+    opponent: string;
 }
 
 export interface Score {
@@ -206,7 +207,8 @@ export function addScore(score: Score, type: 'fbb' | 'arena', group: number) {
         max_duration: 0,
         max_duration_ship: '',
         max_duration_staff: [],
-        min_index: 0
+        min_index: 0,
+        opponent: ''
     } as ScoreTotal;
 
     if (type === 'fbb') {
@@ -576,7 +578,7 @@ export function scoreToShipScore(score: Score, kind: 'offense' | 'defense' | 'sh
         score.fbb_final = 0;
     }
 
-    const result = {
+    const result: ShipScores = {
         kind,
         overall: score.overall_final,
         arena: score.arena_final,
@@ -587,6 +589,7 @@ export function scoreToShipScore(score: Score, kind: 'offense' | 'defense' | 'sh
             fbb_crew: {},
             arena_crew: {}
         },
+        boss_details: [],
         overall_rank: score.overall_rank ?? 0,
         arena_rank: score.arena_rank ?? 0,
         fbb_rank: score.fbb_rank ?? 0
@@ -597,13 +600,30 @@ export function scoreToShipScore(score: Score, kind: 'offense' | 'defense' | 'sh
         result.divisions.arena[obj.group] = obj.final;
         result.divisions.arena_crew[obj.group] = obj.max_staff;
     });
-
     score.fbb_data.forEach((obj, idx) => {
         result.divisions.fbb[obj.group] = obj.final;
         result.divisions.fbb_crew[obj.group] = obj.max_staff;
         if (Number.isNaN(obj.final) || obj.final == Infinity) obj.final = 0;
+        if (obj.opponent) {
+            let [oppo, rarity] = obj.opponent.split("++");
+            if (oppo && rarity) {
+                let rare = Number(rarity);
+                let current = result.boss_details.find(f => f.boss === oppo && f.rarity === rare);
+                if (current && current.score < obj.final) {
+                    current.score = obj.final;
+                }
+                else if (!current) {
+                    current = {
+                        boss: oppo,
+                        rarity: Number(rarity),
+                        rank: 0,
+                        score: obj.final
+                    };
+                    result.boss_details.push(current);
+                }
+            }
+        }
     });
-
     return result;
 }
 
@@ -940,7 +960,7 @@ export const createScoreData = (config: ScoreDataConfig) => {
                 scores.push(score);
             }
 
-            const div_id = is_fbb ? (run.boss?.rarity ?? 0) : run.division ?? 0;
+            const div_id = is_fbb ? (run.boss?.id ?? 0) : run.division ?? 0;
 
             indexes[item.symbol] ??= {}
             indexes[item.symbol][div_id] ??= [];
@@ -948,7 +968,12 @@ export const createScoreData = (config: ScoreDataConfig) => {
 
             const scoreset = getScore(score, is_fbb ? 'fbb' : 'arena', div_id);
             scoreset.original_indices.push(z);
-
+            if (is_fbb && run.boss) {
+                scoreset.opponent = `${run.boss.symbol}++${run.boss.rarity}`;
+            }
+            else if (run.opponent) {
+                scoreset.opponent = run.opponent.symbol;
+            }
             if (run.compatibility.score === 1) {
                 if (score_type === 'crew') {
                     scoreset.compat = [...new Set([...scoreset.compat, run.ship.symbol])]
@@ -988,10 +1013,10 @@ export const createScoreData = (config: ScoreDataConfig) => {
                 scoreset.min_damage = run.damage;
                 scoreset.min_ship = run.ship.symbol;
                 if (run.seated?.length) {
-                    scoreset.min_staff = [...run.seated]
+                    scoreset.min_staff = [...run.seated];
                 }
                 else {
-                    scoreset.min_staff = [run.crew.symbol]
+                    scoreset.min_staff = [run.crew.symbol];
                 }
                 scoreset.min_compat = run.compatibility.score;
             }
@@ -1029,6 +1054,41 @@ export const createScoreData = (config: ScoreDataConfig) => {
         if (idx) console.log("Creating FBB ship score sets...");
         scoreRun(runs, !!idx, shipscores, 'ship');
     });
+}
 
+export function rankBosses(data: {[key:string]: ShipScores }) {
+    let scores = Object.values(data).filter(f => f.boss_details?.length);
+    let bossBuckets = {} as {[key:string]: ShipScores[]};
+    for (let score of scores) {
+        score.boss_details.sort((a, b) => b.rarity - a.rarity || a.boss.localeCompare(b.boss));
+        for (let deet of score.boss_details) {
+            let key = `${deet.boss}++${deet.rarity}`;
+            bossBuckets[key] ??= [];
+            bossBuckets[key].push(score);
+        }
+    }
+    Object.entries(bossBuckets).forEach(([boss, scores]) => {
+        let [symbol, r] = boss.split("++");
+        let rarity = Number(r);
+        scores.sort((a, b) => {
+            let aboss = a.boss_details.find(f => f.boss === symbol && f.rarity === rarity);
+            let bboss = b.boss_details.find(f => f.boss === symbol && f.rarity === rarity);
+            if (!aboss && !bboss) return 0;
+            else if (!aboss) return -1;
+            else if (!bboss) return 1;
+            return bboss.score - aboss.score;
+        });
+        let x = 1;
+        for (let score of scores) {
+            let mboss = score.boss_details.find(f => f.boss === symbol && f.rarity === rarity);
+            if (mboss) mboss.rank = x++;
+        }
+    });
+    scores.sort((a, b) => {
+        if (a.boss_details?.length && b.boss_details?.length) {
+            return b.boss_details[0].score - a.boss_details[0].score;
+        }
+        return 0;
+    });
 }
 
