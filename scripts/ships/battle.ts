@@ -203,18 +203,18 @@ export const runBattles = (
     }
 
     if (!no_fbb) {
-
+        // if (ship.symbol === 'borg_sphere_ship') {
+        //     console.log('break here');
+        // }
         // Test FBB
         let bosses = getBosses(ship, c);
         if (bosses?.length) {
-            bosses.sort((a, b) => b.id - a.id);
+            bosses.sort((a, b) => b.rarity - a.rarity);
             bosses.forEach((boss) => {
                 let newstaff = [...staff];
                 const ignore_defeat_fbb = false; //crewtype === 'offense';
 
-                let bid = boss.id;
-                if (bid > 6) bid -= 6;
-                battle_mode = `fbb_${bid - 1}` as BattleMode;
+                battle_mode = `fbb_${boss.id - 1}` as BattleMode;
                 let isborg = boss.symbol.includes('borg');
                 if (newstaff.length === 1) {
                     if (c?.action.ability?.type === 2 || (isborg && c?.action.bonus_type === 1 && c.action.ability?.type === 0)) {
@@ -286,6 +286,10 @@ export const runBattles = (
                     }
                 }
             });
+        }
+        else {
+            //console.log(`No boss found for ${ship.name} _ ${c?.name}`);
+            //process.exit(-1);
         }
     }
 

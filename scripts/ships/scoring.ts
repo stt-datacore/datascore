@@ -293,8 +293,8 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
     //     console.log("break");
     // }
     let division = getShipDivision(data.rarity);
-    // let boss = fbb ? getBosses(data).sort((a, b) => b.id - a.id)[0] : undefined;
-
+    //crew = crew.filter(f => getCrewDivisions(f.max_rarity).includes(division));
+    let boss = fbb ? getBosses(data).sort((a, b) => b.rarity - a.rarity)[0] : undefined;
     data.battle_stations = JSON.parse(JSON.stringify(data.battle_stations)) as BattleStation[];
     let dataskills = data.battle_stations.map(m => m.skill).filter(f => !!f);
     let cloak_time = 0;
@@ -338,7 +338,7 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
                 ((!prefer_oppo_time && (!cloak_time || cc.action.initial_cooldown >= cloak_time)) ||
                 (prefer_oppo_time && (!oppo_time || cc.action.initial_cooldown <= oppo_time))) &&
             (
-                (fbb) ||
+                (fbb && boss && getBosses(data, cc)?.includes(boss)) ||
                 (!fbb && getCrewDivisions(cc.max_rarity).includes(division))
             ) &&
             (!cc.action.ability?.condition || conds.includes(cc.action.ability.condition)) &&
