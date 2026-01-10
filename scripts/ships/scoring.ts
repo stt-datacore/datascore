@@ -1065,29 +1065,28 @@ export function rankBosses(data: {[key:string]: ShipScores }, fullData: CrewMemb
     let bossBuckets = {} as {[key:string]: ShipScores[]};
     let i = 0;
     for (let score of scores) {
-        score.boss_details.sort((a, b) => b.rarity - a.rarity || a.boss.localeCompare(b.boss));
+        score.boss_details.sort((a, b) => b.score - a.score);
         for (let deet of score.boss_details) {
-            let key = `${deet.boss}++${deet.rarity}++${score.kind}`;
+            let key = `${deet.boss}++${score.kind}`;
             bossBuckets[key] ??= [];
             bossBuckets[key].push(score);
         }
         i++;
     }
     Object.entries(bossBuckets).forEach(([boss, scores]) => {
-        let [symbol, bossrare, kind] = boss.split("++");
-        let boss_rarity = Number(bossrare);
+        let [symbol, kind] = boss.split("++");
         scores.sort((a, b) => {
-            let aboss = a.boss_details.find(f => f.boss === symbol && f.rarity === boss_rarity);
-            let bboss = b.boss_details.find(f => f.boss === symbol && f.rarity === boss_rarity);
-            if (!aboss && !bboss) return 0;
-            else if (!aboss) return -1;
-            else if (!bboss) return 1;
-            return bboss.score - aboss.score;
+            let aboss = a.boss_details.find(f => f.boss === symbol)!;
+            let bboss = b.boss_details.find(f => f.boss === symbol)!;
+            return (bboss.score * bboss.rarity) - (aboss.score * aboss.rarity);
         });
         let x = 1;
         for (let score of scores) {
-            let mboss = score.boss_details.find(f => f.boss === symbol && f.rarity === boss_rarity);
-            if (mboss) mboss.rank = x++;
+            let mboss = score.boss_details.filter(f => f.boss === symbol);
+            for (let boss of mboss) {
+                boss.rank = x;
+            }
+            x++;
         }
     });
     scores.sort((a, b) => {
