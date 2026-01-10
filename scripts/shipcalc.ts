@@ -731,7 +731,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     const crewFresh = JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8')) as CrewMember[];
     const shipFresh = JSON.parse(fs.readFileSync(STATIC_PATH + 'ship_schematics.json', 'utf-8')) as Schematics[];
 
-    rankBosses(crewRanksOut);
+    rankBosses(crewRanksOut, crew);
     Object.entries(crewRanksOut).forEach(([symbol, ranks]) => {
         const c = crewFresh.find(f => f.symbol === symbol);
         if (c) {
@@ -739,7 +739,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
             c.ranks.scores.ship = ranks;
         }
     });
-    rankBosses(shipRanksOut);
+    rankBosses(shipRanksOut, ships);
     Object.entries(shipRanksOut).forEach(([symbol, ranks]) => {
         const c = shipFresh.find(f => f.ship.symbol === symbol);
         if (c) {

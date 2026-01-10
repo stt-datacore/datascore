@@ -1059,23 +1059,26 @@ export const createScoreData = (config: ScoreDataConfig) => {
     });
 }
 
-export function rankBosses(data: {[key:string]: ShipScores }) {
+export function rankBosses(data: {[key:string]: ShipScores }, fullData: CrewMember[] | Ship[]) {
     let scores = Object.values(data).filter(f => f.boss_details?.length);
+    let items = Object.keys(data).map(key => fullData.find(f => f.symbol === key)).filter(f => f !== undefined);
     let bossBuckets = {} as {[key:string]: ShipScores[]};
+    let i = 0;
     for (let score of scores) {
         score.boss_details.sort((a, b) => b.rarity - a.rarity || a.boss.localeCompare(b.boss));
         for (let deet of score.boss_details) {
-            let key = `${deet.boss}++${deet.rarity}`;
+            let key = `${deet.boss}++${deet.rarity}++${score.kind}`;
             bossBuckets[key] ??= [];
             bossBuckets[key].push(score);
         }
+        i++;
     }
     Object.entries(bossBuckets).forEach(([boss, scores]) => {
-        let [symbol, r] = boss.split("++");
-        let rarity = Number(r);
+        let [symbol, bossrare, kind] = boss.split("++");
+        let boss_rarity = Number(bossrare);
         scores.sort((a, b) => {
-            let aboss = a.boss_details.find(f => f.boss === symbol && f.rarity === rarity);
-            let bboss = b.boss_details.find(f => f.boss === symbol && f.rarity === rarity);
+            let aboss = a.boss_details.find(f => f.boss === symbol && f.rarity === boss_rarity);
+            let bboss = b.boss_details.find(f => f.boss === symbol && f.rarity === boss_rarity);
             if (!aboss && !bboss) return 0;
             else if (!aboss) return -1;
             else if (!bboss) return 1;
@@ -1083,7 +1086,7 @@ export function rankBosses(data: {[key:string]: ShipScores }) {
         });
         let x = 1;
         for (let score of scores) {
-            let mboss = score.boss_details.find(f => f.boss === symbol && f.rarity === rarity);
+            let mboss = score.boss_details.find(f => f.boss === symbol && f.rarity === boss_rarity);
             if (mboss) mboss.rank = x++;
         }
     });
