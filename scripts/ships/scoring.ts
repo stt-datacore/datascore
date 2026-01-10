@@ -1082,9 +1082,10 @@ export function rankBosses(data: {[key:string]: ShipScores }, fullData: CrewMemb
         });
         let x = 1;
         for (let score of scores) {
-            let mboss = score.boss_details.filter(f => f.boss === symbol);
-            for (let boss of mboss) {
-                boss.rank = x;
+            if (score.kind !== kind) continue;
+            for (let boss of score.boss_details) {
+                if (boss.boss !== symbol) continue;
+                if (!boss.rank) boss.rank = x;
             }
             x++;
         }
