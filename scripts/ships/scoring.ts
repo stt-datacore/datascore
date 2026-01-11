@@ -1105,8 +1105,8 @@ export function rankBosses(data: {[key:string]: ShipScores }, fullData: CrewMemb
                 }
                 score.bosses.push(fboss);
             }
-            fboss.rank += deet.rarity;
-            fboss.score += (deet.score * deet.rarity);
+            fboss.rank++;
+            fboss.score += (deet.score + (deet.score / (7 - BossRarities[deet.rarity])));
         }
         score.bosses.sort((a, b) => b.score - a.score);
         for (let fboss of score.bosses) {
@@ -1123,9 +1123,17 @@ export function rankBosses(data: {[key:string]: ShipScores }, fullData: CrewMemb
                 return bboss.score - aboss.score;
             });
             let c = bscores.length;
+            let max = 0;
             for (let i = 0; i < c; i++) {
                 let bossobj = bscores[i].bosses.find(f => f.boss === boss)!;
                 bossobj.rank = i + 1;
+                if (i === 0) {
+                    max = bossobj.score;
+                    bossobj.score = 100;
+                }
+                else {
+                    bossobj.score = Number(((Number(((bossobj.score / max) * 100)).toFixed(4))));
+                }
             }
         }
     }
