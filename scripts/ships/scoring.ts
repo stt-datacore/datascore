@@ -1063,38 +1063,31 @@ export function rankBosses(data: {[key:string]: ShipScores }, fullData: CrewMemb
     let scores = Object.values(data).filter(f => f.boss_details?.length);
     let items = Object.keys(data).map(key => fullData.find(f => f.symbol === key)).filter(f => f !== undefined);
     let bossBuckets = {} as {[key:string]: ShipScores[]};
-    let i = 0;
     for (let score of scores) {
-        score.boss_details.sort((a, b) => b.score - a.score);
+        score.boss_details.sort((a, b) => (b.score * b.rarity) - (a.score * a.rarity));
         for (let deet of score.boss_details) {
             let key = `${deet.boss}++${score.kind}`;
             bossBuckets[key] ??= [];
-            bossBuckets[key].push(score);
+            if (!bossBuckets[key].includes(score)) {
+                bossBuckets[key].push(score);
+            }
         }
-        i++;
     }
-    Object.entries(bossBuckets).forEach(([boss, scores]) => {
-        let [symbol, kind] = boss.split("++");
-        scores.sort((a, b) => {
+    Object.entries(bossBuckets).forEach(([bosskey, bucket_scores]) => {
+        let [symbol, ] = bosskey.split("++");
+        bucket_scores.sort((a, b) => {
             let aboss = a.boss_details.find(f => f.boss === symbol)!;
             let bboss = b.boss_details.find(f => f.boss === symbol)!;
             return (bboss.score * bboss.rarity) - (aboss.score * aboss.rarity);
         });
-        let x = 1;
-        for (let score of scores) {
-            if (score.kind !== kind) continue;
-            for (let boss of score.boss_details) {
-                if (boss.boss !== symbol) continue;
-                if (!boss.rank) boss.rank = x;
+        let rank_out = 1;
+        for (let bscore of bucket_scores) {
+            for (let deet of bscore.boss_details) {
+                if (deet.boss !== symbol) continue;
+                deet.rank = rank_out;
             }
-            x++;
+            rank_out++;
         }
-    });
-    scores.sort((a, b) => {
-        if (a.boss_details?.length && b.boss_details?.length) {
-            return b.boss_details[0].score - a.boss_details[0].score;
-        }
-        return 0;
     });
 }
 
