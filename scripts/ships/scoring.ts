@@ -1115,7 +1115,7 @@ export function rankBosses(data: {[key:string]: ShipScores }, fullData: CrewMemb
         }
     }
     for (let boss of bosses) {
-        for (let kind of ['offense', 'defense']) {
+        for (let kind of ['offense', 'defense', 'ship']) {
             let bscores = scores.filter(f => f.bosses.some(b => b.boss === boss) && f.kind === kind);
             bscores.sort((a, b) => {
                 let aboss = a.bosses.find(f => f.boss === boss)!;
