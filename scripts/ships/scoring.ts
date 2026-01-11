@@ -2,6 +2,7 @@ import CONFIG from "../../../website/src/components/CONFIG";
 import { BossDetails, CrewMember, ShipScores } from "../../../website/src/model/crew";
 import { BattleStation, Ship } from "../../../website/src/model/ship";
 import { AllBosses, DEFENSE_ABILITIES, DEFENSE_ACTIONS, getBosses, getCrewDivisions, getShipDivision, OFFENSE_ABILITIES, OFFENSE_ACTIONS } from "../../../website/src/utils/shiputils";
+import { normalize } from "../normscores";
 
 const BossRarities = {} as {[key:string]: number};
 for (let boss of AllBosses) {
@@ -594,6 +595,7 @@ export function scoreToShipScore(score: Score, kind: 'offense' | 'defense' | 'sh
             arena_crew: {}
         },
         boss_details: [],
+        bosses: [],
         overall_rank: score.overall_rank ?? 0,
         arena_rank: score.arena_rank ?? 0,
         fbb_rank: score.fbb_rank ?? 0
@@ -1064,21 +1066,24 @@ export function rankBosses(data: {[key:string]: ShipScores }, fullData: CrewMemb
     let items = Object.keys(data).map(key => fullData.find(f => f.symbol === key)).filter(f => f !== undefined);
     let bossBuckets = {} as {[key:string]: ShipScores[]};
     for (let score of scores) {
-        score.boss_details.sort((a, b) => (b.score * b.rarity) - (a.score * a.rarity));
+        score.boss_details.sort((a, b) => b.rarity - a.rarity || b.score - a.score);
         for (let deet of score.boss_details) {
-            let key = `${deet.boss}++${score.kind}`;
+            let key = `${deet.boss}++${score.kind}++${deet.rarity}`;
             bossBuckets[key] ??= [];
             if (!bossBuckets[key].includes(score)) {
                 bossBuckets[key].push(score);
             }
         }
     }
+    let bosses = [] as string[];
     Object.entries(bossBuckets).forEach(([bosskey, bucket_scores]) => {
-        let [symbol, ] = bosskey.split("++");
+        let [symbol, kind, rare] = bosskey.split("++");
+        if (!bosses.includes(symbol)) bosses.push(symbol);
+        let rarity = Number(rare);
         bucket_scores.sort((a, b) => {
-            let aboss = a.boss_details.find(f => f.boss === symbol)!;
-            let bboss = b.boss_details.find(f => f.boss === symbol)!;
-            return (bboss.score * bboss.rarity) - (aboss.score * aboss.rarity);
+            let aboss = a.boss_details.find(f => f.boss === symbol && f.rarity === rarity)!;
+            let bboss = b.boss_details.find(f => f.boss === symbol && f.rarity === rarity)!;
+            return bboss.rarity - aboss.rarity || bboss.score - aboss.score;
         });
         let rank_out = 1;
         for (let bscore of bucket_scores) {
@@ -1089,5 +1094,40 @@ export function rankBosses(data: {[key:string]: ShipScores }, fullData: CrewMemb
             rank_out++;
         }
     });
+    for (let score of scores) {
+        for (let deet of score.boss_details) {
+            let fboss = score.bosses.find(f => f.boss === deet.boss);
+            if (!fboss) {
+                fboss = {
+                    boss: deet.boss,
+                    score: 0,
+                    rank: 0
+                }
+                score.bosses.push(fboss);
+            }
+            fboss.rank += deet.rarity;
+            fboss.score += (deet.score * deet.rarity);
+        }
+        score.bosses.sort((a, b) => b.score - a.score);
+        for (let fboss of score.bosses) {
+            fboss.score /= fboss.rank;
+            fboss.rank = 0;
+        }
+    }
+    for (let boss of bosses) {
+        for (let kind of ['offense', 'defense']) {
+            let bscores = scores.filter(f => f.bosses.some(b => b.boss === boss) && f.kind === kind);
+            bscores.sort((a, b) => {
+                let aboss = a.bosses.find(f => f.boss === boss)!;
+                let bboss = b.bosses.find(f => f.boss === boss)!;
+                return bboss.score - aboss.score;
+            });
+            let c = bscores.length;
+            for (let i = 0; i < c; i++) {
+                let bossobj = bscores[i].bosses.find(f => f.boss === boss)!;
+                bossobj.rank = i + 1;
+            }
+        }
+    }
 }
 
