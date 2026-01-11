@@ -16,7 +16,8 @@ import { CalcRes, ShipCalcConfig } from './ships/paracalc';
 import { score } from './scoring';
 import { createMulitpleShips } from './ships/seating';
 import { keyInPause } from 'readline-sync';
-
+import { AllBuffsCapHash } from '../../website/src/model/player';
+import ship_buff_ref from './ship_buff_ref.json';
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 const LEVEL_PATH = `${__dirname}/../../../../scripts/data/`;
 
@@ -79,7 +80,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     const crew = JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8')) as CrewMember[];
 
     const VERBOSE = process.argv.includes("--verbose") || process.argv.includes("-v");
-
+    console.log("DataScore Ship Scoring\n");
     let newcrew = [] as CrewMember[];
     let newships = [] as Ship[];
 
@@ -111,12 +112,31 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         return typicalcd;
     })();
 
+    const allBuffs = ship_buff_ref as AllBuffsCapHash;
+
+    const shipBuffs = {
+        accuracy: 1,
+        attack: 1,
+        evasion: 1,
+        hull: 1,
+        shields: 1
+    };
+
+    Object.entries(allBuffs).forEach(([buff, value]) => {
+        if (!buff.startsWith("ship_")) return;
+        let [name, type] = buff.split(",");
+        name = name.slice(5);
+        shipBuffs[name] = value;
+    });
+    console.log("Detected Ship Buffs:");
+    console.log(shipBuffs);
+    const iterBuff = Object.entries(shipBuffs);
     const ships = all_ships.map((ship) => {
-        ship.accuracy *= 1.16;
-        ship.attack *= 1.16;
-        ship.evasion *= 1.16;
-        ship.hull *= 1.16;
-        ship.shields *= 1.16;
+        for (let [field, buff] of iterBuff) {
+            if (ship[field] && buff) {
+                ship[field] *= buff;
+            }
+        }
         return ship;
     });
     // const ships = mergeShips(ship_schematics.filter(sc => {
