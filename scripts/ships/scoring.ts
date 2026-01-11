@@ -748,14 +748,14 @@ export function processScores(
         });
     });
 
-    const getLikeScores = (score: Score, mode: 'arena' | 'fbb', group: number, boss?: string) => {
+    const getLikeScores = (score: Score, mode: 'arena' | 'fbb', group: number) => {
         let results = scores.filter(s => {
             if (score.kind != s.kind) return false;
             if (mode === 'arena') {
                 return s.arena_data.some(a => a.group === group);
             }
             else {
-                return s.fbb_data.some(a => a.group === group && a.opponent === boss);
+                return s.fbb_data.some(a => a.group === group);
             }
         });
         return results.map(s => {
@@ -763,7 +763,7 @@ export function processScores(
                 return s.arena_data.find(f => f.group === group)!
             }
             else {
-                return s.fbb_data.find(f => f.group === group && f.opponent === boss)!
+                return s.fbb_data.find(f => f.group === group)!
             }
         });
     }
@@ -778,22 +778,22 @@ export function processScores(
         return scores[0].total_damage;
     }
 
-    const DurMul = 5.25;
-    const DmgMul = 2.75;
+    const DurMul = 5.75;
+    const DmgMul = 2.25;
 
-    const getTopScore = (scores: Scoreable[], mode: 'arena' | 'fbb', boss?: string) => {
+    const getTopScore = (scores: Scoreable[], mode: 'arena' | 'fbb') => {
         if (mode === 'fbb') {
             if (score_mode === 'defense') {
                 let maxdur = getMaxDuration(scores);
                 let maxdmg = getMaxTotalDamage(scores);
-                return scores.filter(ss => ss.opponent === boss).map(ss => ((ss.duration / maxdur) * DurMul) + ((ss.total_damage / maxdmg) * DmgMul)).reduce((p, n) => p > n ? p : n, 0);
+                return scores.map(ss => ((ss.duration / maxdur) * DurMul) + ((ss.total_damage / maxdmg) * DmgMul)).reduce((p, n) => p > n ? p : n, 0);
             }
             else {
                 if (score_mode === 'ship') {
-                    return scores.filter(ss => ss.opponent === boss).map(ss => ss.max_damage).reduce((p, n) => p > n ? p : n, 0);
+                    return scores.map(ss => ss.max_damage).reduce((p, n) => p > n ? p : n, 0);
                 }
                 else {
-                    return scores.filter(ss => ss.opponent === boss).map(ss => ss.total_damage).reduce((p, n) => p > n ? p : n, 0);
+                    return scores.map(ss => ss.total_damage).reduce((p, n) => p > n ? p : n, 0);
                 }
             }
         }
@@ -839,7 +839,7 @@ export function processScores(
         let scorefbb = score.fbb_data.sort((a, b) => b.group - a.group);
 
         let a_groups = scorearena.map(m => m.group);
-        let b_groups = scorefbb.map(m => `${m.group}++${m.opponent}`);
+        let b_groups = scorefbb.map(m => m.group);
 
         for (let ag of a_groups) {
             const raw_score = score.arena_data.find(f => f.group === ag)!;
@@ -860,11 +860,9 @@ export function processScores(
         }
 
         for (let bg of b_groups) {
-            const raw_score = score.fbb_data.find(f => `${f.group}++${f.opponent}` === bg)!;
-            let [gtxt, boss] = bg.split('++');
-            let group = Number(gtxt);
-            const ls_fbb = getLikeScores(score, 'fbb', group, boss);
-            const topscore_fbb = getTopScore(ls_fbb, 'fbb', boss);
+            const raw_score = score.fbb_data.find(f => f.group === bg)!;
+            const ls_fbb = getLikeScores(score, 'fbb', bg);
+            const topscore_fbb = getTopScore(ls_fbb, 'fbb');
             let maxdur = getMaxDuration(ls_fbb);
             let maxdmg = getMaxTotalDamage(ls_fbb);
 
