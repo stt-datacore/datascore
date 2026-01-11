@@ -114,13 +114,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
 
     const allBuffs = ship_buff_ref as AllBuffsCapHash;
 
-    const shipBuffs = {
-        accuracy: 1,
-        attack: 1,
-        evasion: 1,
-        hull: 1,
-        shields: 1
-    };
+    const shipBuffs = {} as {[key:string]:number};
 
     Object.entries(allBuffs).forEach(([buff, value]) => {
         if (!buff.startsWith("ship_")) return;
