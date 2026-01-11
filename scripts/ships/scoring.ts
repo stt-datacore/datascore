@@ -864,7 +864,7 @@ export function processScores(
             let [gtxt, boss] = bg.split('++');
             let group = Number(gtxt);
             const ls_fbb = getLikeScores(score, 'fbb', group, boss);
-            const topscore_fbb = getTopScore(ls_fbb, 'fbb');
+            const topscore_fbb = getTopScore(ls_fbb, 'fbb', boss);
             let maxdur = getMaxDuration(ls_fbb);
             let maxdmg = getMaxTotalDamage(ls_fbb);
 
