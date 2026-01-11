@@ -1106,7 +1106,7 @@ export function rankBosses(data: {[key:string]: ShipScores }, fullData: CrewMemb
                 score.bosses.push(fboss);
             }
             fboss.rank++;
-            fboss.score += (deet.score + (deet.score / (7 - BossRarities[deet.rarity])));
+            fboss.score += (deet.score + (deet.score / (7 - deet.rarity)));
         }
         score.bosses.sort((a, b) => b.score - a.score);
         for (let fboss of score.bosses) {
