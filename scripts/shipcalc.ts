@@ -128,7 +128,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     const ships = all_ships.map((ship) => {
         for (let [field, buff] of iterBuff) {
             if (ship[field] && buff) {
-                ship[field] *= buff;
+                ship[field] *= (1 + buff);
             }
         }
         return ship;
