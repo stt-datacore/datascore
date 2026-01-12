@@ -1,4 +1,5 @@
 import CONFIG from "../../../website/src/components/CONFIG";
+import { BossShip } from "../../../website/src/model/boss";
 import { BossDetails, CrewMember, ShipScores } from "../../../website/src/model/crew";
 import { BattleStation, Ship } from "../../../website/src/model/ship";
 import { AllBosses, DEFENSE_ABILITIES, DEFENSE_ACTIONS, getBosses, getCrewDivisions, getShipDivision, OFFENSE_ABILITIES, OFFENSE_ACTIONS } from "../../../website/src/utils/shiputils";
@@ -91,7 +92,7 @@ export interface Score {
 export interface BattleRunBase {
     crew: any;
     ship: Ship;
-    boss?: Ship;
+    boss?: BossShip;
     division?: number;
     opponent?: Ship;
     damage: number;
@@ -108,7 +109,7 @@ export interface BattleRunBase {
 export interface BattleRun extends BattleRunBase {
     crew: CrewMember;
     ship: Ship;
-    boss?: Ship;
+    boss?: BossShip;
     division?: number;
     opponent?: Ship;
     damage: number;

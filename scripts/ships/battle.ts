@@ -1,3 +1,4 @@
+import { BossShip } from "../../../website/src/model/boss";
 import { CrewMember } from "../../../website/src/model/crew";
 import { BattleMode, Ship } from "../../../website/src/model/ship";
 import { AttackInstant, ComesFrom, ShipWorkerItem } from "../../../website/src/model/worker";
@@ -154,7 +155,7 @@ export const runBattles = (
     hrpool: CrewMember[],
     no_arena = false,
     no_fbb = false,
-    opponent?: Ship,
+    opponent?: Ship | BossShip,
     ignore_passives = false,
     arena_variance = 0.2,
     fbb_variance = 0.2,
@@ -268,7 +269,7 @@ export const runBattles = (
 
                         allruns[runidx++] = {
                             crew: c,
-                            ship: ship,
+                            ship,
                             boss,
                             damage: dmg,
                             duration: time,
