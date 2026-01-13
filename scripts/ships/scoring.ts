@@ -1,7 +1,7 @@
 import CONFIG from "../../../website/src/components/CONFIG";
 import { BossShip } from "../../../website/src/model/boss";
 import { BossDetails, CrewMember, ShipScores } from "../../../website/src/model/crew";
-import { BattleStation, Ship } from "../../../website/src/model/ship";
+import { BattleStation, Ship, ShipAction } from "../../../website/src/model/ship";
 import { AllBosses, DEFENSE_ABILITIES, DEFENSE_ACTIONS, getBosses, getCrewDivisions, getShipDivision, OFFENSE_ABILITIES, OFFENSE_ACTIONS } from "../../../website/src/utils/shiputils";
 import { normalize } from "../normscores";
 
@@ -292,6 +292,12 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
     if (!data?.battle_stations?.length) return undefined;
     data = { ...data } as Ship;
 
+    const actualPower = (a: ShipAction) => {
+        if (a.ability?.type === 0) {
+            return a.bonus_amount + a.ability.amount;
+        }
+        return a.bonus_amount;
+    }
     // if (data.name === 'IKS Bortas') {
     //     console.log("break");
     // }
@@ -367,8 +373,8 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
             if (c && c.symbol === b.symbol) return 1;
 
             if (a.action?.ability?.type === 1 && b.action?.ability?.type === 1) {
-                let amet = (a.action.ability.amount / a.action.initial_cooldown) * a.action.bonus_amount;
-                let bmet = (b.action.ability.amount / b.action.initial_cooldown) * b.action.bonus_amount;
+                let amet = (a.action.ability.amount / a.action.initial_cooldown) * actualPower(a.action);
+                let bmet = (b.action.ability.amount / b.action.initial_cooldown) * actualPower(b.action);
                 return bmet - amet;
             }
             else if (a.action?.ability?.type === 1) {
@@ -386,8 +392,8 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
             }
             if (opponent) {
                 if (a.action.ability && a.action.ability?.type === b.action?.ability?.type) {
-                    let amet = (a.action.ability.amount / a.action.initial_cooldown) * a.action.bonus_amount;
-                    let bmet = (b.action.ability.amount / b.action.initial_cooldown) * b.action.bonus_amount;
+                    let amet = (a.action.ability.amount / a.action.initial_cooldown) * actualPower(a.action);
+                    let bmet = (b.action.ability.amount / b.action.initial_cooldown) * actualPower(b.action);
                     r =  bmet - amet;
                 }
 
@@ -395,13 +401,13 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
                     (a.action.ability?.type ?? 99) - (b.action.ability?.type ?? 99) ||
                     (b.action.ability?.amount ?? 0) - (a.action.ability?.amount ?? 0) ||
                     a.action.bonus_type - b.action.bonus_type ||
-                    b.action.bonus_amount - a.action.bonus_amount;
+                    actualPower(b.action) - actualPower(a.action);
             }
             else {
                 if (!r) r = (a.action.ability?.type ?? 99) - (b.action.ability?.type ?? 99) ||
                     (b.action.ability?.amount ?? 0) - (a.action.ability?.amount ?? 0) ||
                     a.action.bonus_type - b.action.bonus_type ||
-                    b.action.bonus_amount - a.action.bonus_amount ||
+                    actualPower(b.action) - actualPower(a.action) ||
                     a.action.initial_cooldown - b.action.initial_cooldown;
             }
 
@@ -476,7 +482,7 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
             need_crit -= 1;
         }
         if (c.action.bonus_type === 0) {
-            bonus_power = c.action.bonus_amount;
+            bonus_power = actualPower(c.action);
             bonus_check = c.action.bonus_type;
         }
     }
@@ -486,20 +492,18 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
     if (evasion_needed) {
         filtered.sort((a, b) => {
             if (
-                (!a.action.ability || (a.action.ability.type === 2 || a.action.ability.type === 3 || a.action.ability.type === 0)) &&
-                (!b.action.ability || (b.action.ability.type === 2 || b.action.ability.type === 3 || b.action.ability.type === 0))
+                (!a.action.ability || [0, 2, 3].includes(a.action.ability.type)) &&
+                (!b.action.ability || [0, 2, 3].includes(b.action.ability.type))
             ) {
                 let tdiff = (a.action.ability?.type ?? 99) - (b.action.ability?.type ?? 99);
                 if (tdiff) return tdiff;
                 if (a.action.bonus_type === 1 && b.action.bonus_type === 1) {
-                    let ab = a.action.ability?.type === 0 ? a.action.ability.amount : 0;
-                    let bb = b.action.ability?.type === 0 ? b.action.ability.amount : 0;
-                    return (b.action.bonus_amount + bb) - (a.action.bonus_amount + ab);
+                    return (actualPower(b.action) - actualPower(a.action));
                 }
                 else if (a.action.bonus_type === 1) return -1;
                 else if (b.action.bonus_type === 1) return 1;
             }
-            return a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount;
+            return a.action.bonus_type - b.action.bonus_type || actualPower(b.action) - actualPower(a.action);
         });
     }
 
