@@ -802,8 +802,8 @@ export function processScores(
         return scores[0].total_damage;
     }
 
-    const getMinIncomingDamage = (scores: Scoreable[]) => {
-        scores.sort((a, b) => a.total_hit - b.total_hit);
+    const getMaxIncomingDamage = (scores: Scoreable[]) => {
+        scores.sort((a, b) => b.total_hit - a.total_hit);
         return scores[0].total_hit;
     }
 
@@ -816,7 +816,7 @@ export function processScores(
             if (score_mode === 'defense') {
                 let maxdur = getMaxDuration(scores);
                 let maxdmg = getMaxTotalDamage(scores);
-                let minhit = getMinIncomingDamage(scores);
+                let minhit = getMaxIncomingDamage(scores);
                 if (scores[0].opponent.includes('borg')) {
                     return scores.map(ss =>
                             ((ss.duration / maxdur) * DurMul) +
