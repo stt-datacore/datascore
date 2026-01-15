@@ -12,6 +12,9 @@ export interface UpTimeRecord {
 }
 
 export interface ScoringBattleRun extends ShipWorkerItem {
+    opponent_attack: number;
+    opponent_min_attack: number;
+    opponent_max_attack: number;
     opponent: Ship;
     uptimes: UpTimeRecord[];
     action_powers: {[key:string]: ComesFrom[] }
@@ -71,6 +74,10 @@ export const processBattleRun = (id: number, battle_mode: BattleMode, attacks: A
     const attack = Math.ceil(attacks.reduce((p, n) => p + n.attack, 0));
     const min_attack = Math.ceil(attacks.reduce((p, n) => p + n.min_attack, 0));
     const max_attack = Math.ceil(attacks.reduce((p, n) => p + n.max_attack, 0));
+    const oppo_attack = Math.ceil(attacks.reduce((p, n) => p + n.opponent_attack, 0));
+    const oppo_min_attack = Math.ceil(attacks.reduce((p, n) => p + n.opponent_max_attack, 0));
+    const oppo_max_attack = Math.ceil(attacks.reduce((p, n) => p + n.opponent_min_attack, 0));
+
     const battle_time = Math.ceil(attacks.reduce((p, n) => p > n.second ? p : n.second, 0));
 
     let weighted_attack = 0;
@@ -79,6 +86,8 @@ export const processBattleRun = (id: number, battle_mode: BattleMode, attacks: A
 
     let highest_attack = 0;
     let high_attack_second = 0;
+    let oppo_highest_attack = 0;
+    let oppo_high_attack_second = 0;
 
     const actionIdx = {} as {[key:string]: number}
 
@@ -101,6 +110,10 @@ export const processBattleRun = (id: number, battle_mode: BattleMode, attacks: A
             highest_attack = attack.max_attack;
             high_attack_second = attack.second;
         }
+        if (attack.opponent_max_attack > oppo_highest_attack) {
+            oppo_highest_attack = attack.opponent_max_attack;
+            oppo_high_attack_second = attack.second;
+        }
     });
     const uptimes = [] as UpTimeRecord[];
     Object.entries(actionIdx).forEach(([action, uptime]) => {
@@ -121,6 +134,9 @@ export const processBattleRun = (id: number, battle_mode: BattleMode, attacks: A
         attack,
         min_attack,
         max_attack,
+        opponent_attack: oppo_attack,
+        opponent_max_attack: oppo_max_attack,
+        opponent_min_attack: oppo_min_attack,
         battle_time,
         crew: result_crew,
         percentile: 0,
@@ -184,10 +200,12 @@ export const runBattles = (
             if (attack) {
                 let time = attack.battle_time;
                 let dmg = attack.attack; // - fa.attack;
+                let incoming = attack.opponent_attack;
                 allruns[runidx++] = {
                     crew: c,
                     ship: ship,
                     damage: dmg,
+                    incoming,
                     duration: time,
                     type: crewtype,
                     battle: 'arena',
@@ -261,7 +279,7 @@ export const runBattles = (
                     if (attack) {
                         let time = attack.battle_time;
                         let dmg = attack.attack;
-
+                        let incoming = attack.opponent_attack;
                         // if (c?.action.limit) {
                         //     let exp = getMaxTime(c);
                         //     dmg *= (exp / 180);
@@ -272,6 +290,7 @@ export const runBattles = (
                             ship,
                             boss,
                             damage: dmg,
+                            incoming,
                             duration: time,
                             type: crewtype,
                             battle: 'fbb',

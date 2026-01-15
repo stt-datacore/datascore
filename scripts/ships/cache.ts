@@ -4,7 +4,7 @@ import { AllBosses } from '../../../website/src/utils/shiputils';
 import { CrewMember } from '../../../website/src/model/crew';
 import { Ship } from '../../../website/src/model/ship';
 
-export const CACHE_VERSION = 5.93;
+export const CACHE_VERSION = 7.0;
 
 export function readBattleCache(cacheFile: string, purge_outdated = true) {
     let cached = [] as BattleRunCache[];

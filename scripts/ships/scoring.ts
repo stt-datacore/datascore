@@ -39,19 +39,30 @@ export interface Scoreable {
     average_index: number,
     count: number,
     final: number;
+
     max_damage: number,
     min_damage: number,
+    average_damage: number,
+    total_damage: number;
+
     max_compat: number,
     min_compat: number,
     average_compat: number
-    average_damage: number,
+    total_compat: number;
+
+    max_hit: number,
+    min_hit: number,
+    total_hit: number;
+    average_hit: number,
+
     median_index: number,
     min_index: number,
+
     win_count: number,
-    total_damage: number;
+
     duration: number;
     max_duration: number;
-    total_compat: number;
+
     opponent: string;
 }
 
@@ -96,6 +107,7 @@ export interface BattleRunBase {
     division?: number;
     opponent?: Ship;
     damage: number;
+    incoming: number;
     duration: number;
     seated: string[];
     compatibility: ShipCompat,
@@ -135,6 +147,7 @@ export interface BattleRunCache {
     opponent?: string;
     division?: number;
     damage: number;
+    incoming: number;
     duration: number;
     seated: string[];
     compatibility: ShipCompat,
@@ -215,7 +228,11 @@ export function addScore(score: Score, type: 'fbb' | 'arena', group: number) {
         max_duration_ship: '',
         max_duration_staff: [],
         min_index: 0,
-        opponent: ''
+        opponent: '',
+        max_hit: 0,
+        min_hit: 0,
+        average_hit: 0,
+        total_hit: 0
     } as ScoreTotal;
 
     if (type === 'fbb') {
@@ -745,11 +762,13 @@ export function processScores(
         score.arena_data.forEach((data) => {
             data.average_damage = data.total_damage / data.count;
             data.average_compat = data.total_compat / data.count;
+            data.average_hit = data.total_hit / data.count;
         });
 
         score.fbb_data.forEach((data) => {
             data.average_damage = data.total_damage / data.count;
             data.average_compat = data.total_compat / data.count;
+            data.average_hit = data.total_hit / data.count;
         });
     });
 
@@ -783,15 +802,35 @@ export function processScores(
         return scores[0].total_damage;
     }
 
+    const getMinIncomingDamage = (scores: Scoreable[]) => {
+        scores.sort((a, b) => a.total_hit - b.total_hit);
+        return scores[0].total_hit;
+    }
+
     const DurMul = 5.75;
     const DmgMul = 2.25;
+    const HitMul = 5.75;
 
     const getTopScore = (scores: Scoreable[], mode: 'arena' | 'fbb') => {
         if (mode === 'fbb') {
             if (score_mode === 'defense') {
                 let maxdur = getMaxDuration(scores);
                 let maxdmg = getMaxTotalDamage(scores);
-                return scores.map(ss => ((ss.duration / maxdur) * DurMul) + ((ss.total_damage / maxdmg) * DmgMul)).reduce((p, n) => p > n ? p : n, 0);
+                let minhit = getMinIncomingDamage(scores);
+                if (scores[0].opponent.includes('borg')) {
+                    return scores.map(ss =>
+                            ((ss.duration / maxdur) * DurMul) +
+                            ((1 - (ss.total_hit / minhit)) * HitMul)
+                        )
+                        .reduce((p, n) => p > n ? p : n, 0);
+                }
+                else {
+                    return scores.map(ss =>
+                            ((ss.duration / maxdur) * DurMul) +
+                            ((ss.total_damage / maxdmg) * DmgMul)
+                        )
+                        .reduce((p, n) => p > n ? p : n, 0);
+                }
             }
             else {
                 if (score_mode === 'ship') {
@@ -1032,9 +1071,17 @@ export const createScoreData = (config: ScoreDataConfig) => {
                 scoreset.min_compat = run.compatibility.score;
             }
 
+            if (!scoreset.min_hit || run.incoming < scoreset.min_hit) {
+                scoreset.min_hit = run.incoming;
+            }
+            if (!scoreset.max_hit || run.incoming > scoreset.max_hit) {
+                scoreset.max_hit = run.incoming;
+            }
+
             scoreset.total_compat += run.compatibility.score;
             scoreset.duration += run.duration;
             scoreset.total_damage += run.damage;
+            scoreset.total_hit += run.incoming;
             scoreset.count++;
 
             if (run.win) scoreset.win_count++;
