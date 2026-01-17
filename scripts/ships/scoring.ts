@@ -539,6 +539,10 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
             if (bs.crew) continue;
 
             let d1 = filtered.find(f => {
+                if (evasion_needed && f.action.ability?.type === 0 && f.action.bonus_type === 1) {
+                    hr++;
+                    return true;
+                }
                 if (f.action.ability?.condition && !pass && !evasion_needed) return false;
                 if (((!ignore_skill && !f.skill_order.some(s => dataskills.includes(s))) || used.includes(f.symbol))) return false;
                 if (c && c.symbol === f.symbol) return true;
@@ -553,10 +557,6 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
                 }
                 else if (f.action.ability?.type === 5 && (crit < need_crit || pass > 1)) {
                     crit++;
-                    return true;
-                }
-                else if (evasion_needed && f.action.ability?.type === 0 && f.action.bonus_type === 1) {
-                    hr++;
                     return true;
                 }
                 else if (f.action.ability?.type === 2 && ((!evasion_needed && hr < need_hr) || pass > 1)) {
