@@ -550,7 +550,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     }
 
     count = 1;
-    console.log("Testing ships in Fleet Boss battles...");
+    console.log("Testing ships in Fleet Boss battles (1/4)...");
 
     for (let ship of fbb_p2) {
         if (VERBOSE) console.log(`Scoring Max 2-HR FBB on ${ship.name} (${count++} / ${fbb_p2.length})...`);
@@ -561,6 +561,8 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         current_id = runres.current_id;
     }
 
+    console.log("Testing ships in Fleet Boss battles (2/4)...");
+
     for (let ship of fbb_p3) {
         if (VERBOSE) console.log(`Scoring Max 1-HR FBB on ${ship.name} (${count++} / ${fbb_p3.length})...`);
         let crew = ship.battle_stations!.map(m => m.crew!);
@@ -570,6 +572,8 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         current_id = runres.current_id;
     }
 
+    console.log("Testing ships in Fleet Boss battles (3/4)...");
+
     for (let ship of fbb_p4) {
         if (VERBOSE) console.log(`Scoring Max 2-HR FBB (Evasion Preference) on ${ship.name} (${count++} / ${fbb_p4.length})...`);
         let crew = ship.battle_stations!.map(m => m.crew!);
@@ -578,6 +582,8 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         runidx = runres.runidx;
         current_id = runres.current_id;
     }
+
+    console.log("Testing ships in Fleet Boss battles (4/4)...");
 
     for (let ship of fbb_p5) {
         if (VERBOSE) console.log(`Scoring Max 1-HR FBB (Evasion Preference) on ${ship.name} (${count++} / ${fbb_p5.length})...`);
