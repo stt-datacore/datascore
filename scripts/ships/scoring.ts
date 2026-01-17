@@ -651,7 +651,9 @@ export function scoreToShipScore(score: Score, kind: 'offense' | 'defense' | 'sh
                         boss: oppo,
                         rarity: Number(rarity),
                         rank: 0,
-                        score: obj.final
+                        score: obj.final,
+                        crew: obj.max_staff,
+                        duration_crew: obj.max_duration_staff
                     };
                     result.boss_details.push(current);
                 }
