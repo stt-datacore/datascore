@@ -539,7 +539,7 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
             if (bs.crew) continue;
 
             let d1 = filtered.find(f => {
-                if (evasion_needed && f.action.ability?.type === 0 && f.action.bonus_type === 1) {
+                if (evasion_needed && f.action.ability?.type === 0 && f.action.bonus_type === 1 && (hr < need_hr)) {
                     hr++;
                     return true;
                 }
