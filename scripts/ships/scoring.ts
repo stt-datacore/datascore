@@ -394,8 +394,8 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
             if (c && c.symbol === b.symbol) return 1;
 
             if (a.action?.ability?.type === 1 && b.action?.ability?.type === 1) {
-                let amet = (a.action.ability.amount / a.action.initial_cooldown) * actualPower(a.action);
-                let bmet = (b.action.ability.amount / b.action.initial_cooldown) * actualPower(b.action);
+                let amet = (a.action.ability.amount / (fbb ? a.action.cycle_time : a.action.initial_cooldown)) * actualPower(a.action);
+                let bmet = (b.action.ability.amount / (fbb ? b.action.cycle_time : b.action.initial_cooldown)) * actualPower(b.action);
                 return bmet - amet;
             }
             else if (a.action?.ability?.type === 1) {
@@ -431,7 +431,14 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
                     actualPower(b.action) - actualPower(a.action) ||
                     a.action.initial_cooldown - b.action.initial_cooldown;
             }
-
+            if (!r) {
+                if (fbb) {
+                    r = b.ranks.scores.ship.fbb - a.ranks.scores.ship.fbb;
+                }
+                else {
+                    r = b.ranks.scores.ship.arena - a.ranks.scores.ship.arena;
+                }
+            }
             return r;
         });
     }
