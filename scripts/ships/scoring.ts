@@ -446,7 +446,12 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
     let crit = 0;
     let boom = 0;
     let hr = 0;
-    let evasion_needed = fbb && fbb >= 3;
+    let evasion_needed = !!fbb && fbb >= 3;
+
+    if (evasion_needed) {
+        if (fbb === 3) fbb = 1;
+        if (fbb === 4) fbb = 2;
+    }
 
     let bonus_power = 99;
     let bonus_check = -1;
@@ -481,10 +486,8 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
     else if (full === 4) {
         if (fbb) {
             need_boom = 1;
-            need_crit = 1 + (2 - fbb);
-            if (evasion_needed) need_crit-=2;
+            need_crit = 1;
             need_hr = fbb;
-            if (evasion_needed) need_hr-=2;
         }
         else {
             need_boom = 3;
@@ -543,7 +546,7 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
             if (bs.crew) continue;
 
             let d1 = filtered.find(f => {
-                if (!f.skill_order.some(sko => skills.includes(sko)) && pass <= 2) return false;
+                if (!f.skill_order.some(sk => sk === bs.skill) && pass <= 2) return false;
                 if (evasion_needed && f.action.ability?.type === 0 && f.action.bonus_type === 1 && (hr < need_hr)) {
                     hr++;
                     return true;

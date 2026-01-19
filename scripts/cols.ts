@@ -2,7 +2,7 @@ import { cp } from "node:fs";
 import { potentialCols } from "../../website/src/components/stats/utils";
 import { CollectionScore } from "../../website/src/model/collections";
 import { CrewMember } from "../../website/src/model/crew";
-import { CryoCollection as Collection } from "../../website/src/model/player";
+import { CryoCollection as Collection, Reward } from "../../website/src/model/player";
 import { TraitNames } from "../../website/src/model/traits";
 
 type PColType = { trait: string, count: number, distance: number };
@@ -76,6 +76,13 @@ export function scoreCollection(col: Collection, allcrew: CrewMember[]) {
             rarity_datascores: {}
         }
     }
+
+    function crewScore(c: Reward) {
+        let cf = allcrew.find(f => f.symbol === c.symbol)!;
+        if (!cf) return 2;
+        return (100 / cf.ranks.scores.overall) * 5;
+    }
+
     if (col.crew) {
         const colcrew = col.crew;
         let crew = allcrew.filter(f => colcrew.includes(f.symbol));
@@ -102,7 +109,7 @@ export function scoreCollection(col: Collection, allcrew: CrewMember[]) {
                     colscore.details.rarity_datascores[rarity] = rarecrew.map(c => c.ranks.scores.overall).reduce((p, n) => p + n, 0) / rarecrew.length;
                 }
             }
-            let loot = col.milestones!.map(ms => (ms.buffs?.map(b => 5 * 3)?.reduce((p, n) => p + n, 0) ?? 0) + (ms.rewards?.map(r => r.rarity * (r.type === 1 ? 2 : 0.1))?.reduce((p, n) => p + n, 0) ?? 0));
+            let loot = col.milestones!.map(ms => (ms.buffs?.map(b => 5 * 3)?.reduce((p, n) => p + n, 0) ?? 0) + (ms.rewards?.map(r => r.rarity * (r.type === 1 ? crewScore(r) : 0.1))?.reduce((p, n) => p + n, 0) ?? 0));
             colscore.details.loot_score = Math.ceil(loot.reduce((p, n) => p + n, 0));
 
             let diff = col.milestones!.map(ms => ms.goal).reduce((p, n) => p + n, 0);
@@ -130,29 +137,10 @@ export function scoreCollections(cols: Collection[], allcrew: CrewMember[]) {
         sc.score = Number((((sc.score / shigh)) * 100).toFixed(4));
     }
 
-    // function normDeets(field: string, minus?: boolean) {
-    //     scores.sort((a, b) => b.details[field] - a.details[field]);
-    //     let dhigh = scores[0].details[field] as number;
-    //     for (let sc of scores) {
-    //         let val = sc.details[field] as number;
-    //         if (minus) {
-    //             val = Number(((1 - (val / dhigh)) * 100).toFixed(4));
-    //         }
-    //         else {
-    //             val = Number((((val / dhigh)) * 100).toFixed(4));
-    //         }
-    //         sc.details[field] = val;
-    //     }
-    // }
-
-    // normDeets('loot_score');
-    // normDeets('difficulty', true);
-
     // Debug code
     let ncol = [...cols];
     ncol.sort((a, b) => b.score!.score - a.score!.score);
     for (let c of ncol) {
         console.log(`${c.name.padEnd(35)}`, `Score: ${c.score!.score}`.padEnd(18), `Difficulty: ${c.score!.details.difficulty}, `.padEnd(18), `Loot: ${c.score!.details.loot_score}`);
-
     }
 }
