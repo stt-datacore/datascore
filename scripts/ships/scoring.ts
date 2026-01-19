@@ -432,10 +432,10 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
                     a.action.initial_cooldown - b.action.initial_cooldown;
             }
             if (!r) {
-                if (fbb) {
+                if (fbb && b.ranks?.scores?.ship?.fbb && a.ranks?.scores?.ship?.fbb) {
                     r = b.ranks.scores.ship.fbb - a.ranks.scores.ship.fbb;
                 }
-                else {
+                else if (b.ranks?.scores?.ship?.arena && a.ranks?.scores?.ship?.arena) {
                     r = b.ranks.scores.ship.arena - a.ranks.scores.ship.arena;
                 }
             }
