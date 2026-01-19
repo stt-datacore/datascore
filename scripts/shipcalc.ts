@@ -562,7 +562,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         for (let i = 0; i < c; i++) {
             if (i !== 0) {
                 cboss = bosses[i];
-                ship = getStaffedShip(origShips, crew, ship, 2, offs_2, defs_2)!
+                ship = getStaffedShip(origShips, crew, ship, 2, offs_2, defs_2, undefined, undefined, cboss)!
             }
 
             let ccrew = ship.battle_stations!.map(m => m.crew!);
@@ -584,7 +584,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         for (let i = 0; i < c; i++) {
             if (i !== 0) {
                 cboss = bosses[i];
-                ship = getStaffedShip(origShips, crew, ship, 1, offs_2, defs_2)!
+                ship = getStaffedShip(origShips, crew, ship, 1, offs_2, defs_2, undefined, undefined, cboss)!
             }
 
             let ccrew = ship.battle_stations!.map(m => m.crew!);
@@ -606,7 +606,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         for (let i = 0; i < c; i++) {
             if (i !== 0) {
                 cboss = bosses[i];
-                ship = getStaffedShip(origShips, crew, ship, 4, offs_2, defs_2)!
+                ship = getStaffedShip(origShips, crew, ship, 4, offs_2, defs_2, undefined, undefined, cboss)!
             }
 
             let ccrew = ship.battle_stations!.map(m => m.crew!);
@@ -627,7 +627,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         for (let i = 0; i < c; i++) {
             if (i !== 0) {
                 cboss = bosses[i];
-                ship = getStaffedShip(origShips, crew, ship, 3, offs_2, defs_2)!
+                ship = getStaffedShip(origShips, crew, ship, 3, offs_2, defs_2, undefined, undefined, cboss)!
             }
 
             let ccrew = ship.battle_stations!.map(m => m.crew!);
