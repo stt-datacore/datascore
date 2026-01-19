@@ -4,7 +4,7 @@ import { Worker } from 'node:worker_threads';
 
 import { CrewMember, RankScoring, ShipScores } from "../../website/src/model/crew";
 import { Ship, Schematics } from "../../website/src/model/ship";
-import { highestLevel, mergeShips } from "../../website/src/utils/shiputils";
+import { getBosses, highestLevel, mergeShips } from "../../website/src/utils/shiputils";
 import { exit } from 'process';
 import { processShips } from './ships/processing';
 import { Score, characterizeCrew, shipnum, getStaffedShip, BattleRunBase, scoreToShipScore, createBlankShipScore, processScores, ScoreDataConfig, createScoreData, rankBosses } from './ships/scoring';
@@ -18,6 +18,7 @@ import { createMulitpleShips } from './ships/seating';
 import { keyInPause } from 'readline-sync';
 import { AllBuffsCapHash } from '../../website/src/model/player';
 import ship_buff_ref from './ship_buff_ref.json';
+import { BossShip } from '../../website/src/model/boss';
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 const LEVEL_PATH = `${__dirname}/../../../../scripts/data/`;
 
@@ -554,44 +555,87 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
 
     for (let ship of fbb_p2) {
         if (VERBOSE) console.log(`Scoring Max 2-HR FBB on ${ship.name} (${count++} / ${fbb_p2.length})...`);
-        let crew = ship.battle_stations!.map(m => m.crew!);
-        let runres = runBattles(current_id, rate, ship, crew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
+        let bosses = getBosses(ship);
+        bosses.sort((a, b) => b.rarity - a.rarity);
+        let c = bosses.length;
+        let cboss: BossShip | undefined = undefined;
+        for (let i = 0; i < c; i++) {
+            if (i !== 0) {
+                cboss = bosses[i];
+                ship = getStaffedShip(origShips, crew, ship, 2, offs_2, defs_2)!
+            }
 
-        runidx = runres.runidx;
-        current_id = runres.current_id;
+            let ccrew = ship.battle_stations!.map(m => m.crew!);
+            let runres = runBattles(current_id, rate, ship, ccrew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
+
+            runidx = runres.runidx;
+            current_id = runres.current_id;
+        }
     }
 
     console.log("Testing ships in Fleet Boss battles (2/4)...");
 
     for (let ship of fbb_p3) {
         if (VERBOSE) console.log(`Scoring Max 1-HR FBB on ${ship.name} (${count++} / ${fbb_p3.length})...`);
-        let crew = ship.battle_stations!.map(m => m.crew!);
-        let runres = runBattles(current_id, rate, ship, crew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
+        let bosses = getBosses(ship);
+        bosses.sort((a, b) => b.rarity - a.rarity);
+        let c = bosses.length;
+        let cboss: BossShip | undefined = undefined;
+        for (let i = 0; i < c; i++) {
+            if (i !== 0) {
+                cboss = bosses[i];
+                ship = getStaffedShip(origShips, crew, ship, 1, offs_2, defs_2)!
+            }
 
-        runidx = runres.runidx;
-        current_id = runres.current_id;
+            let ccrew = ship.battle_stations!.map(m => m.crew!);
+            let runres = runBattles(current_id, rate, ship, ccrew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
+
+            runidx = runres.runidx;
+            current_id = runres.current_id;
+        }
     }
 
     console.log("Testing ships in Fleet Boss battles (3/4)...");
 
     for (let ship of fbb_p4) {
-        if (VERBOSE) console.log(`Scoring Max 2-HR FBB (Evasion Preference) on ${ship.name} (${count++} / ${fbb_p4.length})...`);
-        let crew = ship.battle_stations!.map(m => m.crew!);
-        let runres = runBattles(current_id, rate, ship, crew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
+        if (VERBOSE) console.log(`Scoring Max 2-Evasion FBB on ${ship.name} (${count++} / ${fbb_p4.length})...`);
+        let bosses = getBosses(ship);
+        bosses.sort((a, b) => b.rarity - a.rarity);
+        let c = bosses.length;
+        let cboss: BossShip | undefined = undefined;
+        for (let i = 0; i < c; i++) {
+            if (i !== 0) {
+                cboss = bosses[i];
+                ship = getStaffedShip(origShips, crew, ship, 4, offs_2, defs_2)!
+            }
 
-        runidx = runres.runidx;
-        current_id = runres.current_id;
+            let ccrew = ship.battle_stations!.map(m => m.crew!);
+            let runres = runBattles(current_id, rate, ship, ccrew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
+
+            runidx = runres.runidx;
+            current_id = runres.current_id;
+        }
     }
-
     console.log("Testing ships in Fleet Boss battles (4/4)...");
 
     for (let ship of fbb_p5) {
-        if (VERBOSE) console.log(`Scoring Max 1-HR FBB (Evasion Preference) on ${ship.name} (${count++} / ${fbb_p5.length})...`);
-        let crew = ship.battle_stations!.map(m => m.crew!);
-        let runres = runBattles(current_id, rate, ship, crew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
+        if (VERBOSE) console.log(`Scoring Max 1-Evasion FBB on ${ship.name} (${count++} / ${fbb_p5.length})...`);
+        let bosses = getBosses(ship);
+        bosses.sort((a, b) => b.rarity - a.rarity);
+        let c = bosses.length;
+        let cboss: BossShip | undefined = undefined;
+        for (let i = 0; i < c; i++) {
+            if (i !== 0) {
+                cboss = bosses[i];
+                ship = getStaffedShip(origShips, crew, ship, 3, offs_2, defs_2)!
+            }
 
-        runidx = runres.runidx;
-        current_id = runres.current_id;
+            let ccrew = ship.battle_stations!.map(m => m.crew!);
+            let runres = runBattles(current_id, rate, ship, ccrew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
+
+            runidx = runres.runidx;
+            current_id = runres.current_id;
+        }
     }
 
     console.log("Score Ships, Pass 2...");

@@ -320,7 +320,7 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
     // }
     let division = getShipDivision(data.rarity);
     //crew = crew.filter(f => getCrewDivisions(f.max_rarity).includes(division));
-    let boss = fbb ? getBosses(data).sort((a, b) => b.rarity - a.rarity)[0] : undefined;
+    let boss = fbb ? (opponent || getBosses(data).sort((a, b) => b.rarity - a.rarity)[0]) as BossShip : undefined;
     data.battle_stations = JSON.parse(JSON.stringify(data.battle_stations)) as BattleStation[];
     let dataskills = data.battle_stations.map(m => m.skill).filter(f => !!f);
     let cloak_time = 0;
