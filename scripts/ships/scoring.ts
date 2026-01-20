@@ -336,7 +336,7 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
         if (ot !== -1 && ot < cloak_time) cloak_time = ot;
     }
 
-    if (opponent) {
+    if (opponent && !fbb) {
         let others = opponent.actions?.filter(f => f.initial_cooldown <= typical_cd && f.bonus_type === 0 || f?.ability?.type === 1 || f?.ability?.type === 5).sort((a, b) => a.initial_cooldown - b.initial_cooldown);
         if (others?.length) {
             oppo_time = others[0].initial_cooldown;
@@ -553,13 +553,8 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
             if (bs.crew) continue;
 
             let d1 = filtered.find(f => {
-                if (!f.skill_order.some(sk => sk === bs.skill) && pass <= 2) return false;
-                if (evasion_needed && f.action.ability?.type === 0 && f.action.bonus_type === 1 && (hr < need_hr)) {
-                    hr++;
-                    return true;
-                }
                 if (f.action.ability?.condition && !pass && !evasion_needed) return false;
-                if (((!ignore_skill && !f.skill_order.some(s => dataskills.includes(s))) || used.includes(f.symbol))) return false;
+                if (((!ignore_skill && !f.skill_order.some(s => bs.skill === s)) || used.includes(f.symbol))) return false;
                 if (c && c.symbol === f.symbol) return true;
                 if (c && pass === 0) {
                     if (f.action.bonus_type === bonus_check) {
@@ -574,7 +569,11 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
                     crit++;
                     return true;
                 }
-                else if (f.action.ability?.type === 2 && hr < need_hr && (!evasion_needed || pass > 1)) {
+                else if ((!evasion_needed || pass > 1) && f.action.ability?.type === 2 && hr < need_hr) {
+                    hr++;
+                    return true;
+                }
+                else if ((evasion_needed || pass > 1) && f.action.ability?.type === 0 && f.action.bonus_type === 1 && hr < need_hr) {
                     hr++;
                     return true;
                 }
