@@ -1,24 +1,22 @@
 import fs from 'fs';
-import os from 'os';
 import { Worker } from 'node:worker_threads';
+import os from 'os';
 
-import { CrewMember, RankScoring, ShipScores } from "../../website/src/model/crew";
-import { Ship, Schematics } from "../../website/src/model/ship";
-import { getBosses, highestLevel, mergeShips } from "../../website/src/utils/shiputils";
 import { exit } from 'process';
-import { processShips } from './ships/processing';
-import { Score, characterizeCrew, shipnum, getStaffedShip, BattleRunBase, scoreToShipScore, createBlankShipScore, processScores, ScoreDataConfig, createScoreData, rankBosses } from './ships/scoring';
-import { AllBosses, getShipDivision } from '../../website/src/utils/shiputils';
+import { BossShip } from '../../website/src/model/boss';
+import { CrewMember, RankScoring, ShipScores } from "../../website/src/model/crew";
+import { AllBuffsCapHash } from '../../website/src/model/player';
+import { Schematics, Ship } from "../../website/src/model/ship";
+import { AllBosses, getBosses, getShipDivision } from "../../website/src/utils/shiputils";
+import ship_buff_ref from './ship_buff_ref.json';
 import { runBattles } from './ships/battle';
 import { battleRunsToCache, cacheToBattleRuns, readBattleCache } from './ships/cache';
-import { makeBuckets } from './ships/util';
 import { CalcRes, ShipCalcConfig } from './ships/paracalc';
-import { score } from './scoring';
+import { processShips } from './ships/processing';
+import { BattleRunBase, Score, ScoreDataConfig, characterizeCrew, createBlankShipScore, createScoreData, getStaffedShip, processScores, rankBosses, scoreToShipScore, shipnum } from './ships/scoring';
 import { createMulitpleShips } from './ships/seating';
-import { keyInPause } from 'readline-sync';
-import { AllBuffsCapHash } from '../../website/src/model/player';
-import ship_buff_ref from './ship_buff_ref.json';
-import { BossShip } from '../../website/src/model/boss';
+import { makeBuckets } from './ships/util';
+
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 const LEVEL_PATH = `${__dirname}/../../../../scripts/data/`;
 
