@@ -749,11 +749,19 @@ export function score() {
 
     results = [].slice();
 
+    function amtrait(c: CrewMember) {
+        let an = 0;
+        let tn = c.traits.map(m => lookupAMSeatsByTrait(m).filter(skill => c.skill_order.includes(skill))).flat().length;
+        if (c.antimatter_bonus) {
+            an = Math.ceil(c.antimatter_bonus / 25);
+        }
+        return tn + an;
+    }
     for (let c of crew) {
         results.push({
             symbol: c.symbol,
             rarity: c.max_rarity,
-            score: c.traits.map(m => lookupAMSeatsByTrait(m).filter(skill => c.skill_order.includes(skill))).flat().length
+            score: amtrait(c)
         });
     }
 
