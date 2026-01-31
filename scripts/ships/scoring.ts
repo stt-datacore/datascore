@@ -3,6 +3,7 @@ import { BossShip } from "../../../website/src/model/boss";
 import { BossDetails, CrewMember, ShipScores } from "../../../website/src/model/crew";
 import { BattleStation, Ship, ShipAction } from "../../../website/src/model/ship";
 import { AllBosses, DEFENSE_ABILITIES, DEFENSE_ACTIONS, getBosses, getCrewDivisions, getShipDivision, OFFENSE_ABILITIES, OFFENSE_ACTIONS } from "../../../website/src/utils/shiputils";
+import { getOverlap } from "../../../website/src/workers/battleworkerutils";
 import { normalize } from "../normscores";
 
 const BossRarities = {} as {[key:string]: number};
@@ -351,21 +352,7 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
 
 
     function compac(a: ShipAction, c: ShipAction) {
-        if (!a.ability?.condition) return 0;
-        if (a.ability?.condition === c.status) {
-            let acy = 0;
-            let bcy = 0;
-            if (a.initial_cooldown > c.initial_cooldown) {
-                acy = a.initial_cooldown + a.duration + a.cooldown;
-                bcy = c.initial_cooldown + c.duration + c.cooldown;
-            }
-            else {
-                acy = a.duration + a.cooldown;
-                bcy = c.duration + c.cooldown;
-            }
-            return Math.abs(acy - bcy);
-        }
-        return 0;
+        return getOverlap(a, c);
     }
 
     let cs = [] as CrewMember[];
@@ -419,7 +406,7 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
                     let fn = data.actions!.find(f => f.status === a.action.ability!.condition)!;
                     let abn = compac(a.action, fn);
                     let bbn = compac(b.action, fn);
-                    let r = abn - bbn;
+                    let r = bbn - abn;
                     if (r) return r;
                 }
                 let amet = (a.action.ability.amount / (fbb ? a.action.cycle_time : a.action.initial_cooldown)) * actualPower(a.action);
