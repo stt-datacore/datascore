@@ -350,13 +350,30 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
     let conds = data?.actions?.map(mp => mp.status).filter(f => f) as number[] ?? [];
     let skills = data.battle_stations?.map(b => b.skill);
 
+    let used = [] as string[];
+    let ct = 0;
+    let full = data.battle_stations.length;
+    let filled = 0;
+    let need_crit = 0;
+    let need_boom = 0;
+    let need_hr = 0;
+    let crit = 0;
+    let boom = 0;
+    let hr = 0;
+    let evasion_needed = !!fbb && fbb >= 3;
 
-    function compac(a: ShipAction, c: ShipAction) {
-        return getOverlap(a, c);
+    if (evasion_needed) {
+        if (fbb === 3) fbb = 1;
+        if (fbb === 4) fbb = 2;
     }
+
+    let bonus_power = 99;
+    let bonus_check = -1;
 
     let cs = [] as CrewMember[];
     let filt = 0;
+
+
     while (cs.length < skills.length) {
         if (filt && prefer_oppo_time) prefer_oppo_time = false;
         else if (filt && cloak_time) cloak_time = 0;
@@ -386,6 +403,9 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
 
     let filtered: CrewMember[] = [];
 
+    let upcache = {} as {[key:string]: number};
+    let startcache = {} as {[key:string]: number};
+
     if (offs && defs) {
         let dmg = offs.map(c2 => cs.find(csf => csf.symbol === c2.symbol)).filter(f => !!f && (!fbb || !f.action.limit)) as CrewMember[];
         let repair = defs.map(c2 => cs.find(csf => csf.symbol === c2.symbol)).filter(f => !!f && (!fbb || !f.action.limit)) as CrewMember[];
@@ -396,43 +416,61 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
         filtered = [...cs];
     }
 
+    for (let c of filtered) {
+        let cdn = 0;
+        let csn = 0;
+        for (let d of data.actions!) {
+            let cx = getOverlap(d, c.action);
+            if (cx && cx.seconds > cdn) cdn = cx.seconds;
+            if (cx && cx.starts > csn) csn = cx.starts;
+        }
+        if (c.action.ability?.type === 0) {
+            cdn *= (c.action.bonus_amount + c.action.ability.amount);
+        }
+        else {
+            cdn *= c.action.bonus_amount;
+        }
+        upcache[c.symbol] = cdn;
+        startcache[c.symbol] = csn;
+    }
+
     if (!no_sort) {
         filtered.sort((a, b) => {
+            let r = 0;
             if (c && c.symbol === a.symbol) return -1;
             if (c && c.symbol === b.symbol) return 1;
-
-            if (a.action?.ability?.type === 1 && b.action?.ability?.type === 1) {
-                if (a.action.ability.condition && a.action.ability.condition === b.action?.ability?.condition) {
-                    let fn = data.actions!.find(f => f.status === a.action.ability!.condition)!;
-                    let abn = compac(a.action, fn);
-                    let bbn = compac(b.action, fn);
-                    let r = bbn - abn;
-                    if (r) return r;
-                }
-                let amet = (a.action.ability.amount / (fbb ? a.action.cycle_time : a.action.initial_cooldown)) * actualPower(a.action);
-                let bmet = (b.action.ability.amount / (fbb ? b.action.cycle_time : b.action.initial_cooldown)) * actualPower(b.action);
-                return bmet - amet;
+            let adn = upcache[a.symbol];
+            let bdn = upcache[b.symbol];
+            let asn = startcache[a.symbol];
+            let bsn = startcache[b.symbol];
+            if (!r && (a.action?.ability?.type === 1 && b.action?.ability?.type === 1)) {
+                r = bdn - adn;
             }
-            else if (a.action?.ability?.type === 1) {
+            if (!r && a.action.bonus_type === 1 && b.action.bonus_type === 1 && evasion_needed) {
+                r = bdn - adn;
+            }
+            if (!r && a.action.ability?.type === b.action.ability?.type && a.action.ability?.type === 2) {
+                r = (bsn * b.action.ability!.amount) - (asn * a.action.ability!.amount);
+            }
+            if (!r && a.action?.ability?.type === 1) {
                 return -1;
             }
-            else if (b.action?.ability?.type === 1) {
+            if (!r && b.action?.ability?.type === 1) {
+                return 1;
+            }
+            if (!r && a.action?.bonus_type === 1 && evasion_needed) {
+                return -1;
+            }
+            if (!r && b.action?.bonus_type === 1 && evasion_needed) {
                 return 1;
             }
 
-            let r = 0;
-            r = b.max_rarity - a.max_rarity;
             if (r) return r;
-            if (a.action.ability?.type === b.action.ability?.type && a.action.ability?.type === 2 && a.action.ability?.amount === b.action.ability?.amount) {
-                r = ((a.action.cooldown + a.action.duration) - (b.action.cooldown + b.action.duration));
-            }
+
             if (opponent) {
                 if (a.action.ability && a.action.ability?.type === b.action?.ability?.type) {
-                    let amet = (a.action.ability.amount / a.action.initial_cooldown) * actualPower(a.action);
-                    let bmet = (b.action.ability.amount / b.action.initial_cooldown) * actualPower(b.action);
-                    r =  bmet - amet;
+                    r = bdn - adn;
                 }
-
                 if (!r) r = a.action.initial_cooldown - b.action.initial_cooldown ||
                     (a.action.ability?.type ?? 99) - (b.action.ability?.type ?? 99) ||
                     (b.action.ability?.amount ?? 0) - (a.action.ability?.amount ?? 0) ||
@@ -457,26 +495,6 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
             return r;
         });
     }
-
-    let used = [] as string[];
-    let ct = 0;
-    let full = data.battle_stations.length;
-    let filled = 0;
-    let need_crit = 0;
-    let need_boom = 0;
-    let need_hr = 0;
-    let crit = 0;
-    let boom = 0;
-    let hr = 0;
-    let evasion_needed = !!fbb && fbb >= 3;
-
-    if (evasion_needed) {
-        if (fbb === 3) fbb = 1;
-        if (fbb === 4) fbb = 2;
-    }
-
-    let bonus_power = 99;
-    let bonus_check = -1;
 
     if (full === 1) {
         if (fbb) {

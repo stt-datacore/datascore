@@ -35,7 +35,7 @@ export function createMulitpleShips(ship: Ship) {
     if (result) {
         let ships: Ship[] = [];
         for (let sub of result) {
-            let newship: Ship = JSON.parse(JSON.stringify(ship));
+            let newship: Ship = structuredClone(ship);
             let c = newship.battle_stations!.length;
             for (let i = 0; i < c; i++) {
                 newship.battle_stations![i].crew = sub[i];

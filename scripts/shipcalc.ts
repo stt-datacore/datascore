@@ -461,43 +461,8 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     let arena_p2 = ships.map(sh => getStaffedShip(origShips, crew, sh, false, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
     arena_p2 = arena_p2.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, false, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
 
-    let fbb_p2 =           ships.map(sh => getStaffedShip(origShips, crew, sh, 2, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
-    fbb_p2 = fbb_p2.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, 2, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
 
-    let fbb_p3 = ships.map(sh =>           getStaffedShip(origShips, crew, sh, 1, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
-    fbb_p3 = fbb_p3.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, 1, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
-
-    let fbb_p4 = ships.map(sh =>           getStaffedShip(origShips, crew, sh, 4, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
-    fbb_p4 = fbb_p4.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, 4, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
-
-    let fbb_p5 = ships.map(sh =>           getStaffedShip(origShips, crew, sh, 3, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
-    fbb_p5 = fbb_p5.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, 3, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
-
-    fbb_p2 = fbb_p2.map(ship => {
-        let result = createMulitpleShips(ship);
-        if (!result) return [ship];
-        return result;
-    }).flat();
-
-    fbb_p3 = fbb_p3.map(ship => {
-        let result = createMulitpleShips(ship);
-        if (!result) return [ship];
-        return result;
-    }).flat();
-
-    fbb_p4 = fbb_p4.map(ship => {
-        let result = createMulitpleShips(ship);
-        if (!result) return [ship];
-        return result;
-    }).flat();
-
-    fbb_p5 = fbb_p5.map(ship => {
-        let result = createMulitpleShips(ship);
-        if (!result) return [ship];
-        return result;
-    }).flat();
-
-    allruns.length = ((arena_p2.length * arena_p2.length) * 4) + (fbb_p2.length * AllBosses.length) + (fbb_p3.length * AllBosses.length) + (fbb_p4.length * AllBosses.length);
+    allruns.length = ((arena_p2.length * arena_p2.length) * 4) + (arena_p2.length * AllBosses.length * 24);
     runidx = 0;
     count = 1;
     console.log("Testing ships in Arena battles...");
@@ -549,92 +514,49 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     }
 
     count = 1;
-    console.log("Testing ships in Fleet Boss battles (1/4) - 2 Hull-Repair ...");
+    let xcount = 1;
+    for (let fbb_num = 4; fbb_num > 0; fbb_num--) {
+        if (fbb_num === 2) console.log(`Testing ships in Fleet Boss battles (${xcount++}/4) - 2 Hull-Repair ...`);
+        else if (fbb_num === 1) console.log(`Testing ships in Fleet Boss battles (${xcount++}/4) - 1 Hull-Repair ...`);
+        else if (fbb_num === 4) console.log(`Testing ships in Fleet Boss battles (${xcount++}/4) - 2 Evasion ...`);
+        else if (fbb_num === 3) console.log(`Testing ships in Fleet Boss battles (${xcount++}/4) - 1 Evasion ...`);
 
-    for (let ship of fbb_p2) {
-        if (VERBOSE) console.log(`Scoring Max 2-HR FBB on ${ship.name} (${count++} / ${fbb_p2.length})...`);
-        let bosses = getBosses(ship);
-        bosses.sort((a, b) => b.rarity - a.rarity);
-        let c = bosses.length;
-        let cboss: BossShip | undefined = undefined;
-        for (let i = 0; i < c; i++) {
-            if (i !== 0) {
+        for (let cship of ships) {
+            if (VERBOSE) console.log(`Scoring FBB on ${cship.name} (${count++} / ${ships.length})...`);
+            let bosses = getBosses(cship);
+            bosses.sort((a, b) => b.rarity - a.rarity);
+            let c = bosses.length;
+            let cboss: BossShip | undefined = undefined;
+            for (let i = 0; i < c; i++) {
+                let ship: Ship | undefined = cship;
                 cboss = bosses[i];
-                ship = getStaffedShip(origShips, crew, ship, 2, offs_2, defs_2, undefined, undefined, cboss)!
+                ship = getStaffedShip(origShips, crew, cship, fbb_num as 1 | 2 | 3 | 4, offs_2, defs_2, undefined, undefined, cboss)!;
+                if (!ship) continue;
+                let multi = createMulitpleShips(ship);
+                if (!multi) {
+                    if (VERBOSE) {
+                        console.log(`${ship.name}, SKIPPING BOSS: ${cboss?.ship_name} ${cboss?.rarity}`);
+                        console.log('Cannot generate lineup');
+                    }
+                    continue;
+                }
+                for (let mship of multi) {
+                    let ccrew = mship.battle_stations!.map(m => m.crew!);
+                    if (!ccrew.every(c => c)) {
+                        console.log(`Something is wrong here`);
+                        console.log(`${mship.name}, ${cboss?.ship_name} ${cboss?.rarity}`);
+                        console.log(ccrew);
+                        process.exit(-1);
+                    }
+                    let runres = runBattles(current_id, rate, mship, ccrew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
+
+                    runidx = runres.runidx;
+                    current_id = runres.current_id;
+                }
             }
-
-            let ccrew = ship.battle_stations!.map(m => m.crew!);
-            let runres = runBattles(current_id, rate, ship, ccrew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
-
-            runidx = runres.runidx;
-            current_id = runres.current_id;
         }
     }
 
-    console.log("Testing ships in Fleet Boss battles (2/4) - 1 Hull-Repair ...");
-
-    for (let ship of fbb_p3) {
-        if (VERBOSE) console.log(`Scoring Max 1-HR FBB on ${ship.name} (${count++} / ${fbb_p3.length})...`);
-        let bosses = getBosses(ship);
-        bosses.sort((a, b) => b.rarity - a.rarity);
-        let c = bosses.length;
-        let cboss: BossShip | undefined = undefined;
-        for (let i = 0; i < c; i++) {
-            if (i !== 0) {
-                cboss = bosses[i];
-                ship = getStaffedShip(origShips, crew, ship, 1, offs_2, defs_2, undefined, undefined, cboss)!
-            }
-
-            let ccrew = ship.battle_stations!.map(m => m.crew!);
-            let runres = runBattles(current_id, rate, ship, ccrew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
-
-            runidx = runres.runidx;
-            current_id = runres.current_id;
-        }
-    }
-
-    console.log("Testing ships in Fleet Boss battles (3/4) - 2 Evasion ...");
-
-    for (let ship of fbb_p4) {
-        if (VERBOSE) console.log(`Scoring Max 2-Evasion FBB on ${ship.name} (${count++} / ${fbb_p4.length})...`);
-        let bosses = getBosses(ship);
-        bosses.sort((a, b) => b.rarity - a.rarity);
-        let c = bosses.length;
-        let cboss: BossShip | undefined = undefined;
-        for (let i = 0; i < c; i++) {
-            if (i !== 0) {
-                cboss = bosses[i];
-                ship = getStaffedShip(origShips, crew, ship, 4, offs_2, defs_2, undefined, undefined, cboss)!
-            }
-
-            let ccrew = ship.battle_stations!.map(m => m.crew!);
-            let runres = runBattles(current_id, rate, ship, ccrew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
-
-            runidx = runres.runidx;
-            current_id = runres.current_id;
-        }
-    }
-    console.log("Testing ships in Fleet Boss battles (4/4) - 1 Evasion ...");
-
-    for (let ship of fbb_p5) {
-        if (VERBOSE) console.log(`Scoring Max 1-Evasion FBB on ${ship.name} (${count++} / ${fbb_p5.length})...`);
-        let bosses = getBosses(ship);
-        bosses.sort((a, b) => b.rarity - a.rarity);
-        let c = bosses.length;
-        let cboss: BossShip | undefined = undefined;
-        for (let i = 0; i < c; i++) {
-            if (i !== 0) {
-                cboss = bosses[i];
-                ship = getStaffedShip(origShips, crew, ship, 3, offs_2, defs_2, undefined, undefined, cboss)!
-            }
-
-            let ccrew = ship.battle_stations!.map(m => m.crew!);
-            let runres = runBattles(current_id, rate, ship, ccrew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
-
-            runidx = runres.runidx;
-            current_id = runres.current_id;
-        }
-    }
 
     console.log("Score Ships, Pass 2...");
     allruns.splice(runidx);
