@@ -443,14 +443,19 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
             let bdn = upcache[b.symbol];
             let asn = startcache[a.symbol];
             let bsn = startcache[b.symbol];
+            if (fbb) {
+                if (!r && a.action.bonus_type === 1 && b.action.bonus_type === 1 && evasion_needed) {
+                    r = bdn - adn;
+                }
+                // if (!r && (a.action?.ability?.type === 0 && b.action?.ability?.type === 0) && evasion_needed) {
+                //     r = bdn - adn;
+                // }
+                if (!r && a.action.ability?.type === b.action.ability?.type && a.action.ability?.type === 2) {
+                    r = (bsn * b.action.ability!.amount) - (asn * a.action.ability!.amount);
+                }
+            }
             if (!r && (a.action?.ability?.type === 1 && b.action?.ability?.type === 1)) {
-                r = bdn - adn;
-            }
-            if (!r && a.action.bonus_type === 1 && b.action.bonus_type === 1 && evasion_needed) {
-                r = bdn - adn;
-            }
-            if (!r && a.action.ability?.type === b.action.ability?.type && a.action.ability?.type === 2) {
-                r = (bsn * b.action.ability!.amount) - (asn * a.action.ability!.amount);
+                r = (actualPower(b.action) * b.action.ability!.amount) - (actualPower(a.action) * a.action!.ability!.amount);
             }
             if (!r && a.action?.ability?.type === 1) {
                 return -1;
@@ -458,18 +463,26 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
             if (!r && b.action?.ability?.type === 1) {
                 return 1;
             }
-            if (!r && a.action?.bonus_type === 1 && evasion_needed) {
-                return -1;
+            if (fbb) {
+                if (!r && a.action?.bonus_type === 1 && evasion_needed) {
+                    return -1;
+                }
+                if (!r && b.action?.bonus_type === 1 && evasion_needed) {
+                    return 1;
+                }
             }
-            if (!r && b.action?.bonus_type === 1 && evasion_needed) {
-                return 1;
-            }
+
 
             if (r) return r;
 
             if (opponent) {
                 if (a.action.ability && a.action.ability?.type === b.action?.ability?.type) {
-                    r = bdn - adn;
+                    if (fbb) {
+                        r = (bdn + (bsn * b.action.ability!.amount)) - (adn + (asn * a.action.ability!.amount));
+                    }
+                    else {
+                        r = (actualPower(b.action) * b.action.ability!.amount) - (actualPower(a.action) * a.action!.ability!.amount);
+                    }
                 }
                 if (!r) r = a.action.initial_cooldown - b.action.initial_cooldown ||
                     (a.action.ability?.type ?? 99) - (b.action.ability?.type ?? 99) ||
