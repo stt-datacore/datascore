@@ -439,6 +439,17 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
             let r = 0;
             if (c && c.symbol === a.symbol) return -1;
             if (c && c.symbol === b.symbol) return 1;
+            if (a.action?.ability?.type === 1 && b.action?.ability?.type === 1) {
+                let amet = (a.action.ability.amount / (fbb ? a.action.cycle_time : a.action.initial_cooldown)) * actualPower(a.action);
+                let bmet = (b.action.ability.amount / (fbb ? b.action.cycle_time : b.action.initial_cooldown)) * actualPower(b.action);
+                return bmet - amet;
+            }
+            else if (a.action?.ability?.type === 1) {
+                return -1;
+            }
+            else if (b.action?.ability?.type === 1) {
+                return 1;
+            }
             let adn = upcache[a.symbol];
             let bdn = upcache[b.symbol];
             let asn = startcache[a.symbol];
@@ -447,23 +458,9 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
                 if (!r && a.action.bonus_type === 1 && b.action.bonus_type === 1 && evasion_needed) {
                     r = bdn - adn;
                 }
-                // if (!r && (a.action?.ability?.type === 0 && b.action?.ability?.type === 0) && evasion_needed) {
-                //     r = bdn - adn;
-                // }
                 if (!r && a.action.ability?.type === b.action.ability?.type && a.action.ability?.type === 2) {
                     r = (bsn * b.action.ability!.amount) - (asn * a.action.ability!.amount);
                 }
-            }
-            if (!r && (a.action?.ability?.type === 1 && b.action?.ability?.type === 1)) {
-                r = (actualPower(b.action) * b.action.ability!.amount) - (actualPower(a.action) * a.action!.ability!.amount);
-            }
-            if (!r && a.action?.ability?.type === 1) {
-                return -1;
-            }
-            if (!r && b.action?.ability?.type === 1) {
-                return 1;
-            }
-            if (fbb) {
                 if (!r && a.action?.bonus_type === 1 && evasion_needed) {
                     return -1;
                 }
@@ -471,8 +468,6 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
                     return 1;
                 }
             }
-
-
             if (r) return r;
 
             if (opponent) {
