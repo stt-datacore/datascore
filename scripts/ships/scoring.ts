@@ -304,6 +304,8 @@ export const shipCompatibility = (ship: Ship, crew: CrewMember, used_seats?: str
     return { score: compat, trigger, seat } as ShipCompat;
 }
 
+
+
 export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string | Ship, fbb: false | 1 | 2 | 3 | 4, offs?: Score[], defs?: Score[], c?: CrewMember, no_sort = false, opponent?: Ship, prefer_oppo_time = false, typical_cd = 8) => {
     let data = typeof ship === 'string' ? ships.find(f => f.symbol === ship) : ships.find(f => f.symbol === ship.symbol);
     if (!data?.battle_stations?.length) return undefined;
@@ -346,6 +348,25 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
 
     let conds = data?.actions?.map(mp => mp.status).filter(f => f) as number[] ?? [];
     let skills = data.battle_stations?.map(b => b.skill);
+
+
+    function compac(a: ShipAction, c: ShipAction) {
+        if (!a.ability?.condition) return 0;
+        if (a.ability?.condition === c.status) {
+            let acy = 0;
+            let bcy = 0;
+            if (a.initial_cooldown > c.initial_cooldown) {
+                acy = a.initial_cooldown + a.duration + a.cooldown;
+                bcy = c.initial_cooldown + c.duration + c.cooldown;
+            }
+            else {
+                acy = a.duration + a.cooldown;
+                bcy = c.duration + c.cooldown;
+            }
+            return Math.abs(acy - bcy);
+        }
+        return 0;
+    }
 
     let cs = [] as CrewMember[];
     let filt = 0;
@@ -394,6 +415,13 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
             if (c && c.symbol === b.symbol) return 1;
 
             if (a.action?.ability?.type === 1 && b.action?.ability?.type === 1) {
+                if (a.action.ability.condition && a.action.ability.condition === b.action?.ability?.condition) {
+                    let fn = data.actions!.find(f => f.status === a.action.ability!.condition)!;
+                    let abn = compac(a.action, fn);
+                    let bbn = compac(b.action, fn);
+                    let r = abn - bbn;
+                    if (r) return r;
+                }
                 let amet = (a.action.ability.amount / (fbb ? a.action.cycle_time : a.action.initial_cooldown)) * actualPower(a.action);
                 let bmet = (b.action.ability.amount / (fbb ? b.action.cycle_time : b.action.initial_cooldown)) * actualPower(b.action);
                 return bmet - amet;
