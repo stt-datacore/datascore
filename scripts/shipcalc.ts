@@ -887,7 +887,8 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                         meta_cache: true,
                         ships: [ship],
                         crew: crewFresh,
-                        meta_list: goodmetas
+                        meta_list: goodmetas,
+                        new_crew: newcrew?.length ? newcrew.map(c => c.symbol) : undefined
                     }
                     const worker = new Worker(__dirname + '/ships/paracalc.js', {
                         workerData: config,
