@@ -781,156 +781,156 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     // ************************
     // *** Meta Cache ***
 
-    const metaCacheFile = "./battle_meta_cache.json";
-    let metaCacheMap = readMetaCache(metaCacheFile, process.argv.includes("--fresh"));
-    let metaCache = Object.values(metaCacheMap).flat();
-    newcrew = [].slice();
-    newships = [].slice();
-    if (metaCache?.length) {
-        console.log("(Meta Cache) Checking integrity...");
-        let corrupt = false;
+    // const metaCacheFile = "./battle_meta_cache.json";
+    // let metaCacheMap = readMetaCache(metaCacheFile, process.argv.includes("--fresh"));
+    // let metaCache = Object.values(metaCacheMap).flat();
+    // newcrew = [].slice();
+    // newships = [].slice();
+    // if (metaCache?.length) {
+    //     console.log("(Meta Cache) Checking integrity...");
+    //     let corrupt = false;
 
-        // Purge yanked entries:
-        metaCache = metaCache.filter(c => origShips.some(s => s.symbol === c.ship)
-            && (!!c.crew?.length && !!c.ship && !!c.score)
-            && (c.crew.every(seat => crewFresh.some(cc => cc.symbol === seat)))
-        );
+    //     // Purge yanked entries:
+    //     metaCache = metaCache.filter(c => origShips.some(s => s.symbol === c.ship)
+    //         && (!!c.crew?.length && !!c.ship && !!c.score)
+    //         && (c.crew.every(seat => crewFresh.some(cc => cc.symbol === seat)))
+    //     );
 
-        // If anything else is weird after that, we're going to uncorrupt it.
-        corrupt = metaCache.some(c => !c.ship || !c.crew?.length);
+    //     // If anything else is weird after that, we're going to uncorrupt it.
+    //     corrupt = metaCache.some(c => !c.ship || !c.crew?.length);
 
-        if (corrupt) {
-            metaCache = [];
-            metaCacheMap = {};
-            console.log("(Meta Cache) Corrupted entries found. Doing full recomputation.");
-        }
-        else {
-            console.log("(Meta Cache) Checking for new crew...");
-            let c_crew = [ ... new Set(metaCache.map(m => m.crew).flat()) ];
-            let g_crew = crew.map(m => m.symbol);
+    //     if (corrupt) {
+    //         metaCache = [];
+    //         metaCacheMap = {};
+    //         console.log("(Meta Cache) Corrupted entries found. Doing full recomputation.");
+    //     }
+    //     else {
+    //         console.log("(Meta Cache) Checking for new crew...");
+    //         let c_crew = [ ... new Set(metaCache.map(m => m.crew).flat()) ];
+    //         let g_crew = crew.map(m => m.symbol);
 
-            g_crew = g_crew.filter((c, i) => g_crew.findIndex(cc => cc === c) === i && !c_crew.includes(c));
+    //         g_crew = g_crew.filter((c, i) => g_crew.findIndex(cc => cc === c) === i && !c_crew.includes(c));
 
-            if (g_crew.length) {
-                newcrew = g_crew.map(s => crewFresh.find(c => c.symbol === s)!);
-                if (newcrew.length) {
-                    console.log(`(Meta Cache) Updating meta cache with ${newcrew.length} new crew...`);
-                }
-            }
-            console.log("(Meta Cache) Checking for new ships...");
+    //         if (g_crew.length) {
+    //             newcrew = g_crew.map(s => crewFresh.find(c => c.symbol === s)!);
+    //             if (newcrew.length) {
+    //                 console.log(`(Meta Cache) Updating meta cache with ${newcrew.length} new crew...`);
+    //             }
+    //         }
+    //         console.log("(Meta Cache) Checking for new ships...");
 
-            let c_ships = [ ... new Set(metaCache.map(m => m.ship)) ];
-            let g_ships = ships.map(m => m.symbol);
+    //         let c_ships = [ ... new Set(metaCache.map(m => m.ship)) ];
+    //         let g_ships = ships.map(m => m.symbol);
 
-            g_ships = g_ships.filter((c, i) => g_ships.findIndex(cc => cc === c) === i && !c_ships.includes(c));
+    //         g_ships = g_ships.filter((c, i) => g_ships.findIndex(cc => cc === c) === i && !c_ships.includes(c));
 
-            if (g_ships.length) {
-                newships = g_ships.map(s => ships.find(c => c.symbol === s)!);
-                if (newships.length) {
-                    console.log(`(Meta Cache) Updating meta cache with ${newships.length} new ships...`);
-                }
-            }
-        }
-    }
+    //         if (g_ships.length) {
+    //             newships = g_ships.map(s => ships.find(c => c.symbol === s)!);
+    //             if (newships.length) {
+    //                 console.log(`(Meta Cache) Updating meta cache with ${newships.length} new ships...`);
+    //             }
+    //         }
+    //     }
+    // }
 
-    allruns.length = 0;
-    offs_2.length = 0;
-    defs_2.length = 0;
-    ship_2.length = 0;
-    ship_3.length = 0
+    // allruns.length = 0;
+    // offs_2.length = 0;
+    // defs_2.length = 0;
+    // ship_2.length = 0;
+    // ship_3.length = 0
 
-    let metaruns = [] as MetaCacheEntry[];
-    let metaidx = 0;
-    let metaship = ships.length;
-    let goodmetas: LineUpMeta[] = ['arena_boom', 'fbb_1_healer', 'fbb_2_healer', 'fbb_1_healer_evasion', 'fbb_2_healer_evasion', 'fbb_0_healer_evasion'];
-    for (let trypass = 0; trypass < 2; trypass++) {
-        if (trypass) {
-            cached = [].slice();
-            newships.length = 0;
-            newcrew.length = 0;
-            console.log(`(Meta Cache) Detected a corruption in crew mapping (symbol change?)!!  Doing full recalculation.`);
-        }
+    // let metaruns = [] as MetaCacheEntry[];
+    // let metaidx = 0;
+    // let metaship = ships.length;
+    // let goodmetas: LineUpMeta[] = ['arena_boom', 'fbb_1_healer', 'fbb_2_healer', 'fbb_1_healer_evasion', 'fbb_2_healer_evasion', 'fbb_0_healer_evasion'];
+    // for (let trypass = 0; trypass < 2; trypass++) {
+    //     if (trypass) {
+    //         cached = [].slice();
+    //         newships.length = 0;
+    //         newcrew.length = 0;
+    //         console.log(`(Meta Cache) Detected a corruption in crew mapping (symbol change?)!!  Doing full recalculation.`);
+    //     }
 
-        if (!metaCache?.length || newcrew.length || newships.length) {
-            //const workcrew = newcrew.length ? newcrew : crew;
-            if (cached.length) {
-                metaidx = metaCache.length;
-            }
-            else {
-                metaidx = 0;
-            }
+    //     if (!metaCache?.length || newcrew.length || newships.length) {
+    //         //const workcrew = newcrew.length ? newcrew : crew;
+    //         if (cached.length) {
+    //             metaidx = metaCache.length;
+    //         }
+    //         else {
+    //             metaidx = 0;
+    //         }
 
-            console.log("(Meta Cache) Calculate crew and ship staffing metas...");
+    //         console.log("(Meta Cache) Calculate crew and ship staffing metas...");
 
-            metaruns.length = (ships.length * crewFresh.length * BuiltInMetas.length * 100);
-            console.log(`(Meta Cache) Alloc ${metaruns.length} items.`);
+    //         metaruns.length = (ships.length * crewFresh.length * BuiltInMetas.length * 100);
+    //         console.log(`(Meta Cache) Alloc ${metaruns.length} items.`);
 
-            const bucketsize = Math.max(Math.floor(os.cpus().length / 2), 2);
-            const shipBuckets = makeBuckets(ships, bucketsize);
+    //         const bucketsize = Math.max(Math.floor(os.cpus().length / 2), 2);
+    //         const shipBuckets = makeBuckets(ships, bucketsize);
 
-            metaship = ships.length;
-            let startidx = 0;
-            for (let x = 0; x < metaship; x += bucketsize) {
-                const bidx = Math.floor(x / bucketsize);
-                let buckets = shipBuckets[bidx];
-                let promises = buckets.map((ship, idx2) => new Promise<MetaCache | undefined>((resolve, reject) => {
-                    const ws = newships.length && newships.some(tship => tship.symbol === ship.symbol);
-                    if (ws) {
-                        console.log(`(Meta Cache) Test new ship ${ship.name}`)
-                    }
-                    if ((newships.length && !ws) && !newcrew.length) {
-                        resolve(undefined);
-                        return;
-                    }
-                    //const shipcrew = ws ? crew : workcrew;
-                    const config: ShipCalcMeta = {
-                        meta_cache: true,
-                        ships: [ship],
-                        crew: crewFresh,
-                        meta_list: goodmetas,
-                        new_crew: newcrew?.length ? newcrew.map(c => c.symbol) : undefined
-                    }
-                    const worker = new Worker(__dirname + '/ships/paracalc.js', {
-                        workerData: config,
-                    });
-                    worker.on('message', (data) => {
-                        // setTimeout(() => {
-                        //     worker.terminate();
-                        // });
-                        resolve(data);
-                    });
-                    worker.on('error', reject);
-                    worker.on('exit', (code) => {
-                    if (code !== 0)
-                        reject(new Error(`(Meta Cache) Worker stopped with exit code ${code}`));
-                    });
-                }));
+    //         metaship = ships.length;
+    //         let startidx = 0;
+    //         for (let x = 0; x < metaship; x += bucketsize) {
+    //             const bidx = Math.floor(x / bucketsize);
+    //             let buckets = shipBuckets[bidx];
+    //             let promises = buckets.map((ship, idx2) => new Promise<MetaCache | undefined>((resolve, reject) => {
+    //                 const ws = newships.length && newships.some(tship => tship.symbol === ship.symbol);
+    //                 if (ws) {
+    //                     console.log(`(Meta Cache) Test new ship ${ship.name}`)
+    //                 }
+    //                 if ((newships.length && !ws) && !newcrew.length) {
+    //                     resolve(undefined);
+    //                     return;
+    //                 }
+    //                 //const shipcrew = ws ? crew : workcrew;
+    //                 const config: ShipCalcMeta = {
+    //                     meta_cache: true,
+    //                     ships: [ship],
+    //                     crew: crewFresh,
+    //                     meta_list: goodmetas,
+    //                     new_crew: newcrew?.length ? newcrew.map(c => c.symbol) : undefined
+    //                 }
+    //                 const worker = new Worker(__dirname + '/ships/paracalc.js', {
+    //                     workerData: config,
+    //                 });
+    //                 worker.on('message', (data) => {
+    //                     // setTimeout(() => {
+    //                     //     worker.terminate();
+    //                     // });
+    //                     resolve(data);
+    //                 });
+    //                 worker.on('error', reject);
+    //                 worker.on('exit', (code) => {
+    //                 if (code !== 0)
+    //                     reject(new Error(`(Meta Cache) Worker stopped with exit code ${code}`));
+    //                 });
+    //             }));
 
-                startidx += buckets.length;
+    //             startidx += buckets.length;
 
-                await Promise.all(promises).then((done) => {
-                    done.forEach((d) => {
-                        if (d) {
-                            let entries = Object.values(d).flat();
-                            for (let e of entries) {
-                                metaruns[metaidx++] = e;
-                            }
-                            entries.length = 0;
-                        }
-                    });
-                });
-                promises.length = 0;
-            }
-            console.log("(Meta Cache) Saving meta cache...");
-            metaruns.splice(metaidx);
-            metaCacheMap = writeMetaCache(metaruns, metaCacheFile);
-            metaCache = Object.values(metaCacheMap).flat();
-        }
-        else {
-            metaidx = metaruns.length;
-        }
-        if (metaruns.every(ar => !!ar.crew?.length && !!ar?.ship)) break;
-    }
+    //             await Promise.all(promises).then((done) => {
+    //                 done.forEach((d) => {
+    //                     if (d) {
+    //                         let entries = Object.values(d).flat();
+    //                         for (let e of entries) {
+    //                             metaruns[metaidx++] = e;
+    //                         }
+    //                         entries.length = 0;
+    //                     }
+    //                 });
+    //             });
+    //             promises.length = 0;
+    //         }
+    //         console.log("(Meta Cache) Saving meta cache...");
+    //         metaruns.splice(metaidx);
+    //         metaCacheMap = writeMetaCache(metaruns, metaCacheFile);
+    //         metaCache = Object.values(metaCacheMap).flat();
+    //     }
+    //     else {
+    //         metaidx = metaruns.length;
+    //     }
+    //     if (metaruns.every(ar => !!ar.crew?.length && !!ar?.ship)) break;
+    // }
 
     // *** End: Meta Cache ***
     // ************************
