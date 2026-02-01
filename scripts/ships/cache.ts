@@ -3,8 +3,10 @@ import { BattleRunBase, BattleRunCache } from './scoring';
 import { AllBosses } from '../../../website/src/utils/shiputils';
 import { CrewMember } from '../../../website/src/model/crew';
 import { Ship } from '../../../website/src/model/ship';
+import { MetaCache, MetaCacheEntry } from './paracalc';
 
 export const CACHE_VERSION = 7.0;
+export const META_CACHE_VERSION = 1.0;
 
 export function readBattleCache(cacheFile: string, purge_outdated = true) {
     let cached = [] as BattleRunCache[];
@@ -26,6 +28,44 @@ export function readBattleCache(cacheFile: string, purge_outdated = true) {
     }
     return cached;
 }
+
+export function readMetaCache(cacheFile: string, purge_outdated = true) {
+    let cached = {} as MetaCache;
+    if (fs.existsSync(cacheFile)) {
+        if (purge_outdated) {
+            console.log("Loading meta cache...");
+            fs.unlinkSync(cacheFile);
+        }
+        else {
+            console.log("Loading meta cache cache...");
+            cached = JSON.parse(fs.readFileSync(cacheFile, 'utf-8'));
+            let test = Object.values(cached)[0];
+            if (cached && !test[0].version || test[0].version < CACHE_VERSION) {
+                console.log("Purging outdated meta cache...");
+                fs.unlinkSync(cacheFile);
+                cached = {};
+            }
+        }
+    }
+    return cached;
+}
+
+
+export function writeMetaCache(runs: MetaCacheEntry[] | MetaCache, cacheFile?: string): MetaCache {
+    if (Array.isArray(runs)) {
+        let obj = {} as MetaCache;
+        for (let r of runs) {
+            obj[r.ship] ??= [];
+            obj[r.ship].push(r)
+        }
+        runs = obj;
+    }
+    if (cacheFile) {
+        fs.writeFileSync(cacheFile, JSON.stringify(runs));
+    }
+    return runs;
+}
+
 
 
 export function battleRunsToCache(runs: BattleRunBase[], cacheFile?: string): BattleRunCache[] {

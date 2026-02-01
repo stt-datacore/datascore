@@ -8,6 +8,7 @@ npm run shipcalc-fresh
 npm run calc
 npm run eventstats
 zip -X ./battle.zip ./battle_run_cache.json && mv ./battle.zip ../scripts/data
+zip -X ./meta.zip ./battle_meta_cache.json && mv ./meta.zip ../scripts/data
 if [ "$1" == "--nocommit" ]; then
     exit 0;
 fi

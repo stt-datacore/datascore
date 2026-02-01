@@ -131,6 +131,7 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+battle_meta_cache.json
 battle_run_cache.json
 battle_run_report.json
 battle_run_report.txt

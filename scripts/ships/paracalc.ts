@@ -4,12 +4,27 @@ import { CrewMember } from "../../../website/src/model/crew";
 import { Ship } from "../../../website/src/model/ship";
 import { nextOpponent, runBattles, getCleanShipCopy, RunRes } from "./battle";
 import { BattleRunBase } from "./scoring";
-import { getShipDivision } from '../../../website/src/utils/shiputils';
+import { getBosses, getCrewDivisions, getShipDivision } from '../../../website/src/utils/shiputils';
+import { BuiltInMetas, LineUpMeta } from '../../../website/src/model/worker';
+import { passesMeta } from '../../../website/src/workers/battleworkermeta';
+import { getPermutations } from '../../../website/src/utils/misc';
+import { canSeatAll, scoreLineUp } from '../../../website/src/workers/battleworkerutils';
+import { META_CACHE_VERSION } from './cache';
 
-export interface ShipCalcConfig {
+export interface ShipCalcBase {
+    meta_cache: boolean;
     ships: Ship[];
+    crew: CrewMember[];
+}
+
+export interface ShipCalcMeta extends ShipCalcBase {
+    meta_list?: LineUpMeta[];
+    boss?: number;
+    new_crew?: string[];
+}
+
+export interface ShipCalcConfig extends ShipCalcBase {
     ship_idx: number;
-    crew: CrewMember[],
     ship_crew: CrewMember[],
     runidx: number;
     current_id: number;
@@ -112,10 +127,166 @@ async function calculateShip(config: ShipCalcConfig) {
     });
 }
 
+export type MetaCacheEntry = {
+    version: number,
+    ship: string,
+    crew: string[],
+    division: number,
+    meta: LineUpMeta,
+    score: number
+}
+
+export type MetaCache = {[key:string]: MetaCacheEntry[]};
+
+export async function calculateMeta(config: ShipCalcMeta) {
+    let { ships, crew, meta_list, boss, new_crew } = config;
+    let metas = {} as MetaCache;
+    const meta_max = 50;
+
+    function testSeats(seats: string[], crew: CrewMember[]) {
+        let seatcount = [] as number[];
+        seatcount.length = seats.length;
+        let c = seats.length;
+        for (let i = 0; i < c; i++) {
+            let d = crew.length;
+            for (let j = 0; j < d; j++) {
+                if (crew[j].skill_order.includes(seats[i])) {
+                    seatcount[i] ??= 0;
+                    seatcount[i]++;
+                }
+            }
+        }
+        return seatcount.every(sc => !!sc);
+    }
+
+    for (let ship of ships) {
+        let seats = ship.battle_stations!.map(m => m.skill);
+        metas[ship.symbol] ??= [].slice();
+        let bosses = getBosses(ship);
+        let division = getShipDivision(ship.rarity);
+        let divcrew = crew.filter(cf => cf.max_rarity >= ship.rarity && getCrewDivisions(cf.max_rarity).includes(division) && (!cf.action?.ability?.condition || ship.actions!.some(act => act.status === cf.action.ability?.condition)));
+        divcrew = divcrew.sort((a, b) => b.ranks.scores.ship.arena - a.ranks.scores.ship.arena).slice(0, meta_max);
+        for (let meta of BuiltInMetas) {
+            if (boss) continue;
+            if (meta_list?.length && !meta_list.includes(meta)) continue;
+            console.log(`Testing meta '${meta}' on ${ship.name} with ${divcrew.length} crew...`);
+            if (!meta.startsWith('fbb')) {
+                let count = 0;
+                for (let pass = 0; pass < 2; pass++) {
+                    let lastscore = 0;
+                    getPermutations(divcrew, ship.battle_stations!.length, undefined, true, undefined, (res, idx) => {
+                        if (new_crew && !res.some(rc => new_crew.includes(rc.symbol))) return false;
+                        if (!pass && !testSeats(seats, res)) return false;
+                        if (passesMeta(ship, res, meta)) {
+                            let score = scoreLineUp(ship, res, 'arena', 20);
+                            if (score <= lastscore) {
+                                return false;
+                            }
+                            lastscore = score;
+                            metas[ship.symbol].push({
+                                version: META_CACHE_VERSION,
+                                ship: ship.symbol,
+                                crew: res.map(c => c.symbol),
+                                division,
+                                meta,
+                                score
+                            });
+                            count++;
+                            return res;
+                        }
+                        else {
+                            return false;
+                        }
+                    });
+                    if (count) break;
+                }
+                console.log(`${count} metas created for '${meta}' on ${ship.name}`);
+            }
+        }
+        for (let testboss of bosses) {
+            if (boss && testboss.id !== boss) continue;
+            for (let meta of BuiltInMetas) {
+                if (meta_list?.length && !meta_list.includes(meta)) continue;
+                let mm = Math.floor(meta_max / 2);
+                let ocrew = crew.filter(cf => !cf.action.limit && cf.ranks.scores.ship.kind === 'offense' && cf.max_rarity >= ship.rarity && getBosses(undefined, cf).includes(testboss) && (!cf.action?.ability?.condition || ship.actions!.some(act => act.status === cf.action.ability?.condition)));
+                let dcrew = crew.filter(cf => !cf.action.limit && cf.ranks.scores.ship.kind === 'defense' && cf.max_rarity >= ship.rarity && getBosses(undefined, cf).includes(testboss) && (!cf.action?.ability?.condition || ship.actions!.some(act => act.status === cf.action.ability?.condition)));
+                ocrew = ocrew.sort((a, b) => {
+                    if (meta.includes('evasion')) {
+                        if (!(a.action.bonus_type === 1 && b.action.bonus_type === 1)) {
+                            if (a.action.bonus_type === 1) return -1;
+                            else if (b.action.bonus_type === 1) return -1;
+                        }
+                    }
+                    return b.ranks.scores.ship.fbb - a.ranks.scores.ship.fbb
+                });
+                dcrew = dcrew.sort((a, b) => {
+                    if (meta.includes('evasion')) {
+                        if (!(a.action.bonus_type === 1 && b.action.bonus_type === 1)) {
+                            if (a.action.bonus_type === 1) return -1;
+                            else if (b.action.bonus_type === 1) return -1;
+                        }
+                    }
+                    return b.ranks.scores.ship.fbb - a.ranks.scores.ship.fbb
+                });
+                if (meta.includes("0_healer")) {
+                    ocrew = ocrew.slice(0, meta_max);
+                    dcrew = [].slice();
+                }
+                else {
+                    ocrew = ocrew.slice(0, mm);
+                    dcrew = dcrew.slice(0, mm);
+                }
+                let bcrew = ocrew.concat(dcrew);
+                bcrew = bcrew.sort((a, b) => b.ranks.scores.ship.fbb - a.ranks.scores.ship.fbb);
+
+                if (meta.startsWith("fbb")) {
+                    console.log(`Testing meta '${meta}' on ${ship.name} with ${bcrew.length} crew...`);
+                    let count = 0;
+                    for (let pass = 0; pass < 2; pass++) {
+                        let lastscore = 0;
+                        getPermutations(bcrew, ship.battle_stations!.length, undefined, true, undefined, (res, idx) => {
+                            if (new_crew && !res.some(rc => new_crew.includes(rc.symbol))) return false;
+                            if (!pass && !testSeats(seats, res)) return false;
+                            if (passesMeta(ship, res, meta)) {
+                                let h: 'evade' | 'heal' = meta.includes('evasion') ? 'evade' : 'heal';
+                                let score = scoreLineUp(ship, res, h);
+                                if (score <= lastscore) {
+                                    return false;
+                                }
+                                lastscore = score;
+                                metas[ship.symbol].push({
+                                    version: META_CACHE_VERSION,
+                                    ship: ship.symbol,
+                                    crew: res.map(c => c.symbol),
+                                    division: testboss.id,
+                                    meta,
+                                    score
+                                });
+                                count++;
+                                return res;
+                            }
+                            else {
+                                return false;
+                            }
+                        });
+                        if (count) break;
+                    }
+                    console.log(`${count} metas created for '${meta}' on ${ship.name}`);
+                }
+            }
+        }
+    }
+    let metavals = Object.values(metas);
+    metavals.forEach((meta) => {
+        meta.sort((a, b) => b.score - a.score);
+    });
+    return metas;
+}
+
 if (!isMainThread) {
     (async () => {
-        const config = workerData as ShipCalcConfig;
-        const response = await calculateShip(config);
+        const config = workerData as ShipCalcBase;
+        const response = config.meta_cache ? await calculateMeta(config as ShipCalcMeta) : await calculateShip(config as ShipCalcConfig);
         parentPort?.postMessage(response);
     })();
 }
