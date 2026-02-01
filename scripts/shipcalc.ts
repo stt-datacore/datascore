@@ -524,6 +524,9 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         for (let cship of ships) {
             if (VERBOSE) console.log(`Scoring FBB on ${cship.name} (${count++} / ${ships.length})...`);
             let bosses = getBosses(cship);
+            // if (cship.name === 'Borg Tactical Cube') {
+            //     let n = 'break';
+            // }
             bosses.sort((a, b) => b.rarity - a.rarity);
             let c = bosses.length;
             let cboss: BossShip | undefined = undefined;
@@ -548,7 +551,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                         console.log(ccrew);
                         process.exit(-1);
                     }
-                    let runres = runBattles(current_id, rate, mship, ccrew, allruns, runidx, [], true, false, undefined, false, arena_variance, fbb_variance);
+                    let runres = runBattles(current_id, rate, mship, ccrew, allruns, runidx, [], true, false, cboss, true, arena_variance, fbb_variance);
 
                     runidx = runres.runidx;
                     current_id = runres.current_id;

@@ -305,9 +305,7 @@ export const shipCompatibility = (ship: Ship, crew: CrewMember, used_seats?: str
     return { score: compat, trigger, seat } as ShipCompat;
 }
 
-
-
-export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string | Ship, fbb: false | 1 | 2 | 3 | 4, offs?: Score[], defs?: Score[], c?: CrewMember, no_sort = false, opponent?: Ship, prefer_oppo_time = false, typical_cd = 8) => {
+export function getStaffedShip(ships: Ship[], crew: CrewMember[], ship: string | Ship, fbb: false | 1 | 2 | 3 | 4, offs?: Score[], defs?: Score[], c?: CrewMember, no_sort = false, opponent?: Ship, prefer_oppo_time = false, typical_cd = 8) {
     let data = typeof ship === 'string' ? ships.find(f => f.symbol === ship) : ships.find(f => f.symbol === ship.symbol);
     if (!data?.battle_stations?.length) return undefined;
     data = { ...data } as Ship;
@@ -318,14 +316,9 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
         }
         return a.bonus_amount;
     }
-    // if (data.name === 'IKS Bortas') {
-    //     console.log("break");
-    // }
     let division = getShipDivision(data.rarity);
-    //crew = crew.filter(f => getCrewDivisions(f.max_rarity).includes(division));
     let boss = fbb ? (opponent || getBosses(data).sort((a, b) => b.rarity - a.rarity)[0]) as BossShip : undefined;
-    data.battle_stations = JSON.parse(JSON.stringify(data.battle_stations)) as BattleStation[];
-    let dataskills = data.battle_stations.map(m => m.skill).filter(f => !!f);
+    data.battle_stations = structuredClone(data.battle_stations) as BattleStation[];
     let cloak_time = 0;
     let oppo_time = 0;
 
@@ -346,7 +339,6 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
             if (others[0].ability?.type === 10) oppo_time = Math.min(typical_cd - others[0].ability.amount, oppo_time);
         }
     }
-
     let conds = data?.actions?.map(mp => mp.status).filter(f => f) as number[] ?? [];
     let skills = data.battle_stations?.map(b => b.skill);
 
@@ -360,19 +352,17 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
     let crit = 0;
     let boom = 0;
     let hr = 0;
+
     let evasion_needed = !!fbb && fbb >= 3;
 
-    if (evasion_needed) {
-        if (fbb === 3) fbb = 1;
-        if (fbb === 4) fbb = 2;
-    }
+    if (fbb === 3) fbb = 1;
+    if (fbb === 4) fbb = 2;
 
     let bonus_power = 99;
     let bonus_check = -1;
 
     let cs = [] as CrewMember[];
     let filt = 0;
-
 
     while (cs.length < skills.length) {
         if (filt && prefer_oppo_time) prefer_oppo_time = false;
@@ -391,7 +381,7 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
                     (prefer_oppo_time && (!oppo_time || cc.action.initial_cooldown <= oppo_time))
                 ) &&
                 (
-                    (fbb && boss && getBosses(data, cc)?.includes(boss)) ||
+                    (!!fbb && !!boss && !!getBosses(undefined, cc)?.includes(boss)) ||
                     (!fbb && getCrewDivisions(cc.max_rarity).includes(division))
                 ) &&
                 (
@@ -435,13 +425,21 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
     }
 
     if (!no_sort) {
+        const dst = evasion_needed ? [1.75, 1.25, 1] : [1.75, 1, 1.25];
+        function dmgnum(bt: ShipAction, curr: number) {
+            return curr * dst[bt.bonus_type];
+        }
         filtered.sort((a, b) => {
             let r = 0;
             if (c && c.symbol === a.symbol) return -1;
             if (c && c.symbol === b.symbol) return 1;
-            if (a.action?.ability?.type === 1 && b.action?.ability?.type === 1) {
+            if ((a.action?.ability?.type === 1 && b.action?.ability?.type === 1)) {
                 let amet = (a.action.ability.amount / (fbb ? a.action.cycle_time : a.action.initial_cooldown)) * actualPower(a.action);
                 let bmet = (b.action.ability.amount / (fbb ? b.action.cycle_time : b.action.initial_cooldown)) * actualPower(b.action);
+                // amet = dmgnum(a.action, amet);
+                // bmet = dmgnum(b.action, bmet);
+                // r = bmet - amet;
+                // if (r) return r;
                 return bmet - amet;
             }
             else if (a.action?.ability?.type === 1) {
@@ -458,13 +456,34 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
                 if (!r && a.action.bonus_type === 1 && b.action.bonus_type === 1 && evasion_needed) {
                     r = bdn - adn;
                 }
+                else if (!r && a.action.bonus_type === 0 && b.action.bonus_type === 0 && !evasion_needed) {
+                    r = bdn - adn;
+                }
                 if (!r && a.action.ability?.type === b.action.ability?.type && a.action.ability?.type === 2) {
                     r = (bsn * b.action.ability!.amount) - (asn * a.action.ability!.amount);
+                }
+                if (!r && a.action?.bonus_type === 1 && a.action?.ability?.type === 2 && evasion_needed) {
+                    return -1;
+                }
+                if (!r && b.action?.bonus_type === 1 && a.action?.ability?.type === 2 && evasion_needed) {
+                    return 1;
+                }
+                if (!r && a.action?.bonus_type === 0 && a.action?.ability?.type === 2 && !evasion_needed) {
+                    return -1;
+                }
+                if (!r && b.action?.bonus_type === 0 && a.action?.ability?.type === 2 && !evasion_needed) {
+                    return 1;
                 }
                 if (!r && a.action?.bonus_type === 1 && evasion_needed) {
                     return -1;
                 }
                 if (!r && b.action?.bonus_type === 1 && evasion_needed) {
+                    return 1;
+                }
+                if (!r && a.action?.bonus_type === 0 && !evasion_needed) {
+                    return -1;
+                }
+                if (!r && b.action?.bonus_type === 0 && !evasion_needed) {
                     return 1;
                 }
             }
@@ -536,6 +555,7 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
             need_boom = 1;
             need_crit = 1;
             need_hr = fbb;
+            if (need_hr === 1) need_boom++;
         }
         else {
             need_boom = 3;
@@ -561,24 +581,6 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
 
     let ignore_skill = false;
 
-    if (evasion_needed) {
-        filtered.sort((a, b) => {
-            if (
-                (!a.action.ability || [0, 2, 3].includes(a.action.ability.type)) &&
-                (!b.action.ability || [0, 2, 3].includes(b.action.ability.type))
-            ) {
-                let tdiff = (a.action.ability?.type ?? 99) - (b.action.ability?.type ?? 99);
-                if (tdiff) return tdiff;
-                if (a.action.bonus_type === 1 && b.action.bonus_type === 1) {
-                    return (actualPower(b.action) - actualPower(a.action));
-                }
-                else if (a.action.bonus_type === 1) return -1;
-                else if (b.action.bonus_type === 1) return 1;
-            }
-            return a.action.bonus_type - b.action.bonus_type || (a.action.ability?.type ?? 99) - (b.action.ability?.type ?? 99) || actualPower(b.action) - actualPower(a.action);
-        });
-    }
-
     for (let pass = 0; pass < 4; pass++) {
         if (pass == 1 || pass == 3) {
             if (filled === full) break;
@@ -594,7 +596,6 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
             if (bs.crew) continue;
 
             let d1 = filtered.find(f => {
-                if (f.action.ability?.condition && !pass && !(f.action?.bonus_type === 1 && evasion_needed)) return false;
                 if (((!ignore_skill && !f.skill_order.some(s => bs.skill === s)) || used.includes(f.symbol))) return false;
                 if (c && c.symbol === f.symbol) return true;
                 if (c && pass === 0) {
@@ -614,7 +615,7 @@ export const getStaffedShip = (ships: Ship[], crew: CrewMember[], ship: string |
                     hr++;
                     return true;
                 }
-                else if ((evasion_needed || pass > 1) && f.action.ability?.type === 0 && f.action.bonus_type === 1 && hr < need_hr) {
+                else if ((evasion_needed || pass > 1) && f.action.bonus_type === 1 && (!!f.action.ability?.type || pass) && hr < need_hr) {
                     hr++;
                     return true;
                 }

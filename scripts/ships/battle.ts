@@ -226,7 +226,7 @@ export const runBattles = (
         //     console.log('break here');
         // }
         // Test FBB
-        let bosses = getBosses(ship, c);
+        let bosses = opponent ? [opponent as BossShip] : getBosses(ship, c);
         if (bosses?.length) {
             bosses.sort((a, b) => b.rarity - a.rarity);
             bosses.forEach((boss) => {
