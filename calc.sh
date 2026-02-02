@@ -4,6 +4,7 @@ git checkout master
 git pull --no-rebase
 cd ../datascore
 rm ./battle_run_cache.json
+rm ./battle_meta_cache.json
 unzip ../scripts/data/battle.zip
 unzip ../scripts/data/meta.zip
 npm run precalculate

@@ -3,6 +3,8 @@ cd ../website
 git checkout master
 git pull --no-rebase
 cd ../datascore
+rm ./battle_run_cache.json
+rm ./battle_meta_cache.json
 npm run precalculate
 npm run shipcalc-fresh
 npm run calc
