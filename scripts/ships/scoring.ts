@@ -868,8 +868,10 @@ export function processScores(
         return scores[0].total_hit;
     }
 
-    const LowerMul = 2.25;
-    const HigherMul = 5.75;
+    const DDBossLow = 2.25;
+    const DDBossHigh = 5.75;
+    const BorgBossLow = 1.25;
+    const BorgBossHigh = 7.25;
 
     const getTopScore = (scores: Scoreable[], mode: 'arena' | 'fbb') => {
         if (mode === 'fbb') {
@@ -879,15 +881,15 @@ export function processScores(
                 let maxhit = getMaxIncomingDamage(scores);
                 if (scores[0].opponent.includes('borg')) {
                     return scores.map(ss =>
-                            ((ss.duration / maxdur) * LowerMul) +
-                            ((1 - (ss.total_hit / maxhit)) * HigherMul)
+                            ((ss.duration / maxdur) * BorgBossHigh) +
+                            ((1 - (ss.total_hit / maxhit)) * BorgBossLow)
                         )
                         .reduce((p, n) => p > n ? p : n, 0);
                 }
                 else {
                     return scores.map(ss =>
-                            ((ss.duration / maxdur) * HigherMul) +
-                            ((ss.total_damage / maxdmg) * LowerMul)
+                            ((ss.duration / maxdur) * DDBossHigh) +
+                            ((ss.total_damage / maxdmg) * DDBossLow)
                         )
                         .reduce((p, n) => p > n ? p : n, 0);
                 }
@@ -905,7 +907,7 @@ export function processScores(
             if (score_mode === 'defense') {
                 let maxdur = getMaxDuration(scores);
                 let maxdmg = getMaxTotalDamage(scores);
-                return scores.map(ss => ((ss.duration / maxdur) * HigherMul) + ((ss.total_damage / maxdmg) * LowerMul)).reduce((p, n) => p > n ? p : n, 0);
+                return scores.map(ss => ((ss.duration / maxdur) * DDBossHigh) + ((ss.total_damage / maxdmg) * DDBossLow)).reduce((p, n) => p > n ? p : n, 0);
             }
             else {
                 let high = scores.map(score => arena_length - score.average_index).reduce((p, n) => p == -1 || p > n ? n : p, -1);
@@ -917,7 +919,7 @@ export function processScores(
     const getMyScore = (top: number, score: Scoreable, mode: 'arena' | 'fbb', maxdmg?: number, maxdur?: number) => {
         if (mode === 'fbb') {
             if (score_mode === 'defense' && maxdmg && maxdur) {
-                return ((score.duration / maxdur) * HigherMul) + ((score.total_damage / maxdmg) * LowerMul);
+                return ((score.duration / maxdur) * DDBossHigh) + ((score.total_damage / maxdmg) * DDBossLow);
             }
             else {
                 if (score_mode === 'ship') {
@@ -930,7 +932,7 @@ export function processScores(
         }
         else {
             if (score_mode === 'defense' && maxdmg && maxdur) {
-                return ((score.duration / maxdur) * HigherMul) + ((score.total_damage / maxdmg) * LowerMul);
+                return ((score.duration / maxdur) * DDBossHigh) + ((score.total_damage / maxdmg) * DDBossLow);
             }
             else {
                 return arena_length - score.average_index;
