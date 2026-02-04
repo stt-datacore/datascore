@@ -236,26 +236,26 @@ export const runBattles = (
                         newstaff.push(c);
                     }
                     else if (c && (crewtype !== 'defense' || isborg)) {
-                        let compathr = hrpool.filter(
+                        let compatdef = hrpool.filter(
                             ff => getBosses(undefined, ff)?.some(b => b.id === boss.id) &&
                             (
-                                (ff.action.bonus_type !== c.action.bonus_type || (isborg && ff.action.bonus_type === 1)) ||
+                                ff.action.bonus_type !== c.action.bonus_type ||
                                 ff.action.bonus_amount < c.action.bonus_amount ||
-                                ff.action.duration < c.action.duration
+                                ff.action.duration < c.action.duration ||
+                                ff.action.cycle_time > c.action.cycle_time
                             ) &&
-                            (!isborg || ff.action.ability?.type === 2) &&
                             (!ff.action.ability?.condition || shipCompatibility(ship, ff).trigger)
                         );
-                        if (compathr.some(cr => cr.action.bonus_type === 1) && isborg) {
-                            compathr = compathr.filter(cr => cr.action.bonus_type === 1)
+                        if (compatdef.some(cr => cr.action.bonus_type === 1) && isborg) {
+                            compatdef = compatdef.filter(cr => cr.action.bonus_type === 1)
                         }
-                        else if (compathr.some(cr => cr.action.ability?.type === 2)) {
-                            compathr = compathr.filter(cr => cr.action.ability?.type === 2)
+                        else if (compatdef.some(cr => cr.action.ability?.type === 2)) {
+                            compatdef = compatdef.filter(cr => cr.action.ability?.type === 2)
                         }
-                        if (compathr?.length) {
+                        if (compatdef?.length) {
                             let olen = newstaff.length;
-                            for (let i = olen; i < ship.battle_stations!.length && i < olen + (crewtype === 'defense' ? 1 : 2) && i < compathr.length; i++) {
-                                newstaff.push(compathr[i-1]);
+                            for (let i = olen; i < ship.battle_stations!.length && i < olen + (crewtype === 'defense' ? 1 : 2) && i < compatdef.length; i++) {
+                                newstaff.push(compatdef[i-1]);
                             }
                         }
                     }
