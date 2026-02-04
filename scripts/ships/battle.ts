@@ -246,7 +246,12 @@ export const runBattles = (
                             (!isborg || ff.action.ability?.type === 2) &&
                             (!ff.action.ability?.condition || shipCompatibility(ship, ff).trigger)
                         );
-
+                        if (compathr.some(cr => cr.action.ability?.type === 2) && !isborg) {
+                            compathr = compathr.filter(cr => cr.action.ability?.type === 2)
+                        }
+                        else if (compathr.some(cr => cr.action.bonus_type === 1) && isborg) {
+                            compathr = compathr.filter(cr => cr.action.bonus_type === 1)
+                        }
                         if (compathr?.length) {
                             let olen = newstaff.length;
                             for (let i = olen; i < ship.battle_stations!.length && i < olen + (crewtype === 'defense' ? 1 : 2) && i < compathr.length; i++) {
