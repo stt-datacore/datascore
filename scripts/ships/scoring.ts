@@ -385,6 +385,9 @@ export function getStaffedShip(ships: Ship[], crew: CrewMember[], ship: string |
                     (!fbb && getCrewDivisions(cc.max_rarity).includes(division))
                 ) &&
                 (
+                    !!cc.action?.ability
+                ) &&
+                (
                     !cc.action.ability?.condition || conds.includes(cc.action.ability.condition)
                 )
             )
