@@ -13,10 +13,11 @@ import { runBattles } from './ships/battle';
 import { battleRunsToCache, cacheToBattleRuns, readBattleCache, readMetaCache, writeMetaCache } from './ships/cache';
 import { CalcRes, MetaCache, MetaCacheEntry, ShipCalcBase, ShipCalcConfig, ShipCalcMeta } from './ships/paracalc';
 import { processShips } from './ships/processing';
-import { BattleRunBase, Score, ScoreDataConfig, characterizeCrew, createBlankShipScore, createScoreData, getStaffedShip, processScores, rankBosses, scoreToShipScore, shipnum } from './ships/scoring';
+import { BattleRunBase, Score, ScoreDataConfig, actualPower, characterizeCrew, createBlankShipScore, createScoreData, getStaffedShip, processScores, rankBosses, scoreToShipScore, shipnum } from './ships/scoring';
 import { createMulitpleShips } from './ships/seating';
 import { makeBuckets } from './ships/util';
 import { BuiltInMetas, LineUpMeta } from '../../website/src/model/worker';
+import CONFIG from '../../website/src/components/CONFIG';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 const LEVEL_PATH = `${__dirname}/../../../../scripts/data/`;
@@ -83,12 +84,12 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     console.log("DataScore Ship Scoring\n");
     let newcrew = [] as CrewMember[];
     let newships = [] as Ship[];
-
+    CONFIG
     // const boompool = crew.filter(f => f.action.ability?.type === 1 && !f.action.limit && !f.action.ability?.condition).sort((a, b) => b.action.ability!.amount - a.action.ability!.amount || a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount || a.action.cycle_time - b.action.cycle_time);
     // const critpool = crew.filter(f => f.action.ability?.type === 5 && !f.action.limit && !f.action.ability?.condition).sort((a, b) => b.action.ability!.amount - a.action.ability!.amount || a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount || a.action.cycle_time - b.action.cycle_time);
     const hrpool = crew.filter(f =>
-        (f.action.ability?.type === 2 || (f.action.bonus_type === 1 && (!f.action.ability || [0,2,3].includes(f.action.ability.type)))) && (!f.action.limit && !f.action.ability?.condition))
-            .sort((a, b) => (b.action.ability?.amount ?? 0) - (a.action.ability?.amount ?? 0) || a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount || a.action.cycle_time - b.action.cycle_time);
+        (f.action.ability?.type === 2 || (f.action.bonus_type === 1 && (!!f.action.ability && [0,2,3,6].includes(f.action.ability.type)))) && (!f.action.limit && !f.action.ability?.condition))
+            .sort((a, b) => actualPower(b.action) - actualPower(a.action) || a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount || b.action.duration - a.action.duration || a.action.cycle_time - b.action.cycle_time);
 
     const crewcategories = {} as { [key: string]: 'defense' | 'offense' }
     const crewcooldowns = {} as { [cooldown: string]: string[] }

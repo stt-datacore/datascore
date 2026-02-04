@@ -222,10 +222,6 @@ export const runBattles = (
     }
 
     if (!no_fbb) {
-        // if (ship.symbol === 'borg_sphere_ship') {
-        //     console.log('break here');
-        // }
-        // Test FBB
         let bosses = opponent ? [opponent as BossShip] : getBosses(ship, c);
         if (bosses?.length) {
             bosses.sort((a, b) => b.rarity - a.rarity);
@@ -236,29 +232,24 @@ export const runBattles = (
                 battle_mode = `fbb_${boss.id - 1}` as BattleMode;
                 let isborg = boss.symbol.includes('borg');
                 if (newstaff.length === 1) {
-                    if (c?.action.ability?.type === 2 || (isborg && c?.action.bonus_type === 1 && c.action.ability?.type === 0)) {
+                    if (!isborg && c?.action.ability?.type === 2) {
                         newstaff.push(c);
                     }
-                    else if (crewtype !== 'defense') {
+                    else if (c && (crewtype !== 'defense' || isborg)) {
                         let compathr = hrpool.filter(
-                            ff => ff.max_rarity <= boss.id
-                            &&
+                            ff => getBosses(undefined, ff)?.some(b => b.id === boss.id) &&
                             (
-                                ff.action.bonus_type !== c?.action.bonus_type ||
-                                ff.action.bonus_amount < c?.action.bonus_amount
-                            )
-                        )
-                        .filter(ff => {
-                            if (isborg && (c && c.action.bonus_type !== 1)) {
-                                return ff.action.bonus_type === 1;
-                            }
-                            else {
-                                return ff.action.ability?.type === 2;
-                            }
-                        });
+                                (ff.action.bonus_type !== c.action.bonus_type || (isborg && ff.action.bonus_type === 1)) ||
+                                ff.action.bonus_amount < c.action.bonus_amount ||
+                                ff.action.duration < c.action.duration
+                            ) &&
+                            (!isborg || ff.action.ability?.type === 2) &&
+                            (!ff.action.ability?.condition || shipCompatibility(ship, ff).trigger)
+                        );
+
                         if (compathr?.length) {
                             let olen = newstaff.length;
-                            for (let i = olen; i < ship.battle_stations!.length && i < olen + 2 && i < compathr.length; i++) {
+                            for (let i = olen; i < ship.battle_stations!.length && i < olen + (crewtype === 'defense' ? 1 : 2) && i < compathr.length; i++) {
                                 newstaff.push(compathr[i-1]);
                             }
                         }

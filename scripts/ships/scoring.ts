@@ -304,18 +304,18 @@ export const shipCompatibility = (ship: Ship, crew: CrewMember, used_seats?: str
     }
     return { score: compat, trigger, seat } as ShipCompat;
 }
+export function actualPower(a: ShipAction) {
+    if (a.ability?.type === 0) {
+        return a.bonus_amount + a.ability.amount;
+    }
+    return a.bonus_amount;
+}
 
 export function getStaffedShip(ships: Ship[], crew: CrewMember[], ship: string | Ship, fbb: false | 1 | 2 | 3 | 4, offs?: Score[], defs?: Score[], c?: CrewMember, no_sort = false, opponent?: Ship, prefer_oppo_time = false, typical_cd = 8) {
     let data = typeof ship === 'string' ? ships.find(f => f.symbol === ship) : ships.find(f => f.symbol === ship.symbol);
     if (!data?.battle_stations?.length) return undefined;
     data = { ...data } as Ship;
 
-    const actualPower = (a: ShipAction) => {
-        if (a.ability?.type === 0) {
-            return a.bonus_amount + a.ability.amount;
-        }
-        return a.bonus_amount;
-    }
     let division = getShipDivision(data.rarity);
     let boss = fbb ? (opponent || getBosses(data).sort((a, b) => b.rarity - a.rarity)[0]) as BossShip : undefined;
     data.battle_stations = structuredClone(data.battle_stations) as BattleStation[];
