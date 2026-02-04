@@ -1,10 +1,8 @@
-import CONFIG from "../../../website/src/components/CONFIG";
 import { BossShip } from "../../../website/src/model/boss";
-import { BossDetails, CrewMember, ShipScores } from "../../../website/src/model/crew";
+import { CrewMember, ShipScores } from "../../../website/src/model/crew";
 import { BattleStation, Ship, ShipAction } from "../../../website/src/model/ship";
 import { AllBosses, DEFENSE_ABILITIES, DEFENSE_ACTIONS, getBosses, getCrewDivisions, getShipDivision, OFFENSE_ABILITIES, OFFENSE_ACTIONS } from "../../../website/src/utils/shiputils";
 import { getOverlap } from "../../../website/src/workers/battleworkerutils";
-import { normalize } from "../normscores";
 
 const BossRarities = {} as {[key:string]: number};
 for (let boss of AllBosses) {
@@ -302,6 +300,7 @@ export const shipCompatibility = (ship: Ship, crew: CrewMember, used_seats?: str
             trigger = true;
         }
     }
+    if (!compat && !trigger) compat = 0.5;
     return { score: compat, trigger, seat } as ShipCompat;
 }
 export function actualPower(a: ShipAction) {

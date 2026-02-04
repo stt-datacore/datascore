@@ -1,15 +1,15 @@
-import { isMainThread, workerData, parentPort } from 'node:worker_threads';
+import { isMainThread, parentPort, workerData } from 'node:worker_threads';
 
 import { CrewMember } from "../../../website/src/model/crew";
 import { Ship } from "../../../website/src/model/ship";
-import { nextOpponent, runBattles, getCleanShipCopy, RunRes } from "./battle";
-import { BattleRunBase } from "./scoring";
-import { getBosses, getCrewDivisions, getShipDivision } from '../../../website/src/utils/shiputils';
 import { BuiltInMetas, LineUpMeta } from '../../../website/src/model/worker';
-import { passesMeta } from '../../../website/src/workers/battleworkermeta';
 import { getPermutations } from '../../../website/src/utils/misc';
-import { canSeatAll, scoreLineUp } from '../../../website/src/workers/battleworkerutils';
+import { getBosses, getCrewDivisions, getShipDivision } from '../../../website/src/utils/shiputils';
+import { passesMeta } from '../../../website/src/workers/battleworkermeta';
+import { scoreLineUp } from '../../../website/src/workers/battleworkerutils';
+import { getCleanShipCopy, nextOpponent, runBattles, RunRes } from "./battle";
 import { META_CACHE_VERSION } from './cache';
+import { BattleRunBase } from "./scoring";
 
 export interface ShipCalcBase {
     meta_cache: boolean;
@@ -40,7 +40,7 @@ export interface CalcRes extends RunRes {
 
 async function calculateShip(config: ShipCalcConfig) {
     return new Promise<CalcRes>((resolve, reject) => {
-        const { rate, ship_crew, ships, hrpool, crew, ship_idx, arena_variance, fbb_variance } = config;
+        const { rate, ship_crew, ships, hrpool, ship_idx, arena_variance, fbb_variance } = config;
         let { runidx, current_id } = config;
         let i = ship_idx;
 
@@ -49,6 +49,7 @@ async function calculateShip(config: ShipCalcConfig) {
         const ship = ships[i];
 
         const shipcrew = ship_crew;
+
         const opponent = nextOpponent(ships, getShipDivision(ship.rarity), i);
 
         let runres = runBattles(current_id, rate, getCleanShipCopy(ship), [], allruns, runidx, hrpool, false, false, undefined, false, arena_variance, fbb_variance, true);

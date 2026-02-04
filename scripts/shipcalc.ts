@@ -3,6 +3,7 @@ import { Worker } from 'node:worker_threads';
 import os from 'os';
 
 import { exit } from 'process';
+import CONFIG from '../../website/src/components/CONFIG';
 import { BossShip } from '../../website/src/model/boss';
 import { CrewMember, RankScoring, ShipScores } from "../../website/src/model/crew";
 import { AllBuffsCapHash } from '../../website/src/model/player';
@@ -10,14 +11,12 @@ import { Schematics, Ship } from "../../website/src/model/ship";
 import { AllBosses, getBosses, getShipDivision } from "../../website/src/utils/shiputils";
 import ship_buff_ref from './ship_buff_ref.json';
 import { runBattles } from './ships/battle';
-import { battleRunsToCache, cacheToBattleRuns, readBattleCache, readMetaCache, writeMetaCache } from './ships/cache';
-import { CalcRes, MetaCache, MetaCacheEntry, ShipCalcBase, ShipCalcConfig, ShipCalcMeta } from './ships/paracalc';
+import { battleRunsToCache, cacheToBattleRuns, readBattleCache } from './ships/cache';
+import { CalcRes, ShipCalcConfig } from './ships/paracalc';
 import { processShips } from './ships/processing';
 import { BattleRunBase, Score, ScoreDataConfig, actualPower, characterizeCrew, createBlankShipScore, createScoreData, getStaffedShip, processScores, rankBosses, scoreToShipScore, shipnum } from './ships/scoring';
 import { createMulitpleShips } from './ships/seating';
 import { makeBuckets } from './ships/util';
-import { BuiltInMetas, LineUpMeta } from '../../website/src/model/worker';
-import CONFIG from '../../website/src/components/CONFIG';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 const LEVEL_PATH = `${__dirname}/../../../../scripts/data/`;
@@ -288,29 +287,29 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                 await Promise.all(promises).then((done) => {
                     done.forEach((d) => {
                         if (d) {
-                            for (let dboom of d.allruns) {
-                                if (dboom.crew) {
-                                    let sym = dboom.crew.symbol;
-                                    delete dboom.crew;
-                                    dboom.crew = crew.find(f => f.symbol === sym)!;
+                            for (let drun of d.allruns) {
+                                if (drun.crew) {
+                                    let sym = drun.crew.symbol;
+                                    delete drun.crew;
+                                    drun.crew = crew.find(f => f.symbol === sym)!;
                                 }
-                                if (dboom.ship) {
-                                    let sym = dboom.ship.symbol;
-                                    delete (dboom as any).ship;
-                                    dboom.ship = ships.find(f => f.symbol === sym)!;
+                                if (drun.ship) {
+                                    let sym = drun.ship.symbol;
+                                    delete (drun as any).ship;
+                                    drun.ship = ships.find(f => f.symbol === sym)!;
                                 }
-                                if (dboom.boss) {
-                                    let id = dboom.boss.id;
-                                    delete (dboom as any).boss;
-                                    dboom.boss = AllBosses.find(f => f.id === id)!;
+                                if (drun.boss) {
+                                    let id = drun.boss.id;
+                                    delete (drun as any).boss;
+                                    drun.boss = AllBosses.find(f => f.id === id)!;
                                 }
-                                if (dboom.opponent) {
-                                    let sym = dboom.opponent.symbol;
-                                    delete (dboom as any).opponent;
-                                    dboom.opponent = ships.find(f => f.symbol === sym)!;
+                                if (drun.opponent) {
+                                    let sym = drun.opponent.symbol;
+                                    delete (drun as any).opponent;
+                                    drun.opponent = ships.find(f => f.symbol === sym)!;
                                 }
-                                if (dboom) {
-                                    allruns[runidx++] = dboom;
+                                if (drun) {
+                                    allruns[runidx++] = drun;
                                 }
                             }
                             d.allruns.length = 0;
@@ -454,10 +453,9 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         bypass_crew: false
     }
 
-
     console.log("\nTabulating Results ...");
     scoreConfig.bypass_crew = false;
-    scoreConfig.trigger_compat = false;
+    scoreConfig.trigger_compat = true;
     scoreConfig.seat_compat = false;
     createScoreData(scoreConfig);
 

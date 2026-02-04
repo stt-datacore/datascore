@@ -1,8 +1,9 @@
 import fs from 'fs';
-import { ConstituentWeights, ComputedSkill, CrewMember, QuipmentDetails, GreatnessDetails, Ranks, RankScoring, Skill } from '../../website/src/model/crew';
+import CONFIG from '../../website/src/components/CONFIG';
+import { ComputedSkill, ConstituentWeights, CrewMember, GreatnessDetails, QuipmentDetails, Ranks, RankScoring, Skill } from '../../website/src/model/crew';
 import { EquipmentItem } from '../../website/src/model/equipment';
-import { CryoCollection as Collection, PlayerCrew } from '../../website/src/model/player';
 import { Gauntlet } from '../../website/src/model/gauntlets';
+import { CryoCollection as Collection, PlayerCrew } from '../../website/src/model/player';
 import { TraitNames } from '../../website/src/model/traits';
 import { getAllCrewRewards, getAllStatBuffs } from '../../website/src/utils/collectionutils';
 import { applyCrewBuffs, getSkillOrderScore, getSkillOrderStats, getVariantTraits, numberToGrade, SkillRarityReport, skillSum } from '../../website/src/utils/crewutils';
@@ -10,9 +11,8 @@ import { getElevatedBuckets } from '../../website/src/utils/gauntlet';
 import { getItemWithBonus } from '../../website/src/utils/itemutils';
 import { calculateMaxBuffs, lookupAMSeatsByTrait } from '../../website/src/utils/voyageutils';
 import { computePotentialColScores, scoreCollections, splitCollections } from './cols';
+import { normalize as norm, RarityScore } from './normscores';
 import { QPowers, scoreQuipment, sortingQuipmentScoring } from './quipment';
-import { RarityScore, normalize as norm } from './normscores';
-import CONFIG from '../../website/src/components/CONFIG';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 const SCRIPTS_DATA_PATH = `${__dirname}/../../../../scripts/data/`;
