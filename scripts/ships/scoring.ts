@@ -30,6 +30,7 @@ export interface SymbolScore {
 export type ShipCompat = {
     score: number,
     trigger: boolean,
+    need_trigger: boolean,
     seat: boolean
 };
 
@@ -267,11 +268,12 @@ export const characterizeCrew = (crew: CrewMember) => {
     else return 1;
 }
 
-export const shipCompatibility = (ship: Ship, crew: CrewMember, used_seats?: string[]) => {
+export function shipCompatibility(ship: Ship, crew: CrewMember, used_seats?: string[]): ShipCompat {
     let compat = 0;
     let trigger = false;
+    let need_trigger = !!crew.action?.ability?.condition;
     let seat = false;
-    if (!ship.battle_stations) return { score: 1, trigger: false, seat: false };
+    if (!ship.battle_stations) return { score: 1, trigger: false, seat: false, need_trigger: false };
 
     let bs = [...ship.battle_stations];
 
@@ -300,8 +302,7 @@ export const shipCompatibility = (ship: Ship, crew: CrewMember, used_seats?: str
             trigger = true;
         }
     }
-    if (!compat && !trigger) compat = 0.5;
-    return { score: compat, trigger, seat } as ShipCompat;
+    return { score: compat, trigger, seat, need_trigger } as ShipCompat;
 }
 export function actualPower(a: ShipAction) {
     if (a.ability?.type === 0) {
@@ -1052,7 +1053,7 @@ export const createScoreData = (config: ScoreDataConfig) => {
 
         for (let run of runs) {
             z++;
-            if (trigger_compat && (run.compatibility.trigger === true && run.compatibility.score !== 1)) continue;
+            if (trigger_compat && (run.compatibility.score < 0.75)) continue;
             if (seat_compat && !run.compatibility.seat) continue;
 
             let item: CrewMember | Ship;

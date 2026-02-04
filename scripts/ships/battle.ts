@@ -180,7 +180,7 @@ export const runBattles = (
 
     const c = testcrew.length ? testcrew[0] : undefined;
     const crewtype = c ? characterizeCrew(c) < 0 ? 'defense' : 'offense' : 'offense';
-    const compat = c ? shipCompatibility(ship, c) : { score: 1, trigger: false, seat: true };
+    const compat = c ? shipCompatibility(ship, c) : { score: 1, trigger: false, seat: true, need_trigger: false };
     const ship_division = getShipDivision(ship.rarity);
     const crew_divisions = c ? getCrewDivisions(c.max_rarity) : [ship_division];
 
