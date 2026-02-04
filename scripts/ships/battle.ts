@@ -231,11 +231,11 @@ export const runBattles = (
 
                 battle_mode = `fbb_${boss.id - 1}` as BattleMode;
                 let isborg = boss.symbol.includes('borg');
-                if (newstaff.length === 1) {
-                    if (!isborg && c?.action.ability?.type === 2) {
+                if (newstaff.length === 1 && c) {
+                    if (crewtype === 'defense') {
                         newstaff.push(c);
                     }
-                    else if (c && (crewtype !== 'defense' || isborg)) {
+                    else {
                         let compatdef = hrpool.filter(
                             ff => getBosses(undefined, ff)?.some(b => b.id === boss.id) &&
                             (
@@ -254,7 +254,7 @@ export const runBattles = (
                         }
                         if (compatdef?.length) {
                             let olen = newstaff.length;
-                            for (let i = olen; i < ship.battle_stations!.length && i < olen + (crewtype === 'defense' ? 1 : 2) && i < compatdef.length; i++) {
+                            for (let i = olen; i < ship.battle_stations!.length && i < olen + 2 && i < compatdef.length; i++) {
                                 newstaff.push(compatdef[i-1]);
                             }
                         }
