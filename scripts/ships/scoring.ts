@@ -870,7 +870,7 @@ export function processScores(
 
     const DDBossLow = 2.25;
     const DDBossHigh = 5.75;
-    const BorgBossLow = 1.25;
+    const BorgBossLow = 3.25;
     const BorgBossHigh = 7.25;
 
     const getTopScore = (scores: Scoreable[], mode: 'arena' | 'fbb') => {
@@ -881,8 +881,8 @@ export function processScores(
                 let maxhit = getMaxIncomingDamage(scores);
                 if (scores[0].opponent.includes('borg')) {
                     return scores.map(ss =>
-                            ((ss.duration / maxdur) * BorgBossHigh) +
-                            ((1 - (ss.total_hit / maxhit)) * BorgBossLow)
+                            ((ss.duration / maxdur) * BorgBossLow) +
+                            ((1 - (ss.total_hit / maxhit)) * BorgBossHigh)
                         )
                         .reduce((p, n) => p > n ? p : n, 0);
                 }
