@@ -246,11 +246,11 @@ export const runBattles = (
                             (!isborg || ff.action.ability?.type === 2) &&
                             (!ff.action.ability?.condition || shipCompatibility(ship, ff).trigger)
                         );
-                        if (compathr.some(cr => cr.action.ability?.type === 2) && !isborg) {
-                            compathr = compathr.filter(cr => cr.action.ability?.type === 2)
-                        }
-                        else if (compathr.some(cr => cr.action.bonus_type === 1) && isborg) {
+                        if (compathr.some(cr => cr.action.bonus_type === 1) && isborg) {
                             compathr = compathr.filter(cr => cr.action.bonus_type === 1)
+                        }
+                        else if (compathr.some(cr => cr.action.ability?.type === 2)) {
+                            compathr = compathr.filter(cr => cr.action.ability?.type === 2)
                         }
                         if (compathr?.length) {
                             let olen = newstaff.length;
