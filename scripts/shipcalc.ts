@@ -11,12 +11,13 @@ import { Schematics, Ship } from "../../website/src/model/ship";
 import { AllBosses, getBosses, getShipDivision } from "../../website/src/utils/shiputils";
 import ship_buff_ref from './ship_buff_ref.json';
 import { runBattles } from './ships/battle';
-import { battleRunsToCache, cacheToBattleRuns, readBattleCache } from './ships/cache';
-import { CalcRes, ShipCalcConfig } from './ships/paracalc';
+import { battleRunsToCache, cacheToBattleRuns, readBattleCache, readMetaCache, writeMetaCache } from './ships/cache';
+import { CalcRes, MetaCache, MetaCacheEntry, ShipCalcConfig, ShipCalcMeta } from './ships/paracalc';
 import { processShips } from './ships/processing';
 import { BattleRunBase, Score, ScoreDataConfig, actualPower, characterizeCrew, createBlankShipScore, createScoreData, getStaffedShip, processScores, rankBosses, scoreToShipScore, shipnum } from './ships/scoring';
 import { createMulitpleShips } from './ships/seating';
 import { makeBuckets } from './ships/util';
+import { LineUpMeta, BuiltInMetas } from '../../website/src/model/worker';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 const LEVEL_PATH = `${__dirname}/../../../../scripts/data/`;
@@ -470,6 +471,195 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     console.log("Scoring Ships ...");
     processScores(crew, ships, ship_2, 'ship', arenaruns.length, fbbruns.length);
 
+    const crewRanksOut = {} as {[key: string]: ShipScores }
+    const shipRanksOut = {} as {[key: string]: ShipScores }
+
+    [offs_2, defs_2].forEach((scores, idx) => {
+        scores = scores.sort((a, b) => a.name.localeCompare(b.name) || b.overall_final - a.overall_final);
+        if (scores[0].name === scores[1].name) {
+            console.log(`Identical entries detected!!! ${scores[0].name}`);
+        }
+
+        scores.sort((a, b) => b.fbb_final - a.fbb_final);
+        scores.forEach((score, i) => score.fbb_rank = i + 1);
+
+        scores.sort((a, b) => b.arena_final - a.arena_final);
+        scores.forEach((score, i) => score.arena_rank = i + 1);
+        scores.sort((a, b) => b.overall_final - a.overall_final);
+        scores.forEach((score, i) => score.overall_rank = i + 1);
+        for (let score of scores) {
+            crewRanksOut[score.symbol] = scoreToShipScore(score, idx ? 'defense' : 'offense');
+        }
+    });
+
+    rankBosses(crewRanksOut, crew);
+    const metaCrew = structuredClone(crew);
+    Object.entries(crewRanksOut).forEach(([symbol, ranks]) => {
+        const c = metaCrew.find(f => f.symbol === symbol);
+        if (c) {
+            c.ranks.scores ??= {} as RankScoring;
+            c.ranks.scores.ship = ranks;
+        }
+    });
+
+
+
+    // ************************
+    // *** Meta Cache ***
+
+    const metaCacheFile = "./battle_meta_cache.json";
+    let metaCacheMap = readMetaCache(metaCacheFile, process.argv.includes("--fresh"));
+    let metaCache = Object.values(metaCacheMap).flat();
+    //newcrew = [].slice();
+    newships = [].slice();
+    if (metaCache?.length) {
+        console.log("(Meta Cache) Checking integrity...");
+        let corrupt = false;
+
+        // Purge yanked entries:
+        metaCache = metaCache.filter(c => origShips.some(s => s.symbol === c.ship)
+            && (!!c.crew?.length && !!c.ship && !!c.score)
+            && (c.crew.every(seat => metaCrew.some(cc => cc.symbol === seat)))
+        );
+
+        // If anything else is weird after that, we're going to uncorrupt it.
+        corrupt = metaCache.some(c => !c.ship || !c.crew?.length);
+
+        if (corrupt) {
+            metaCache = [];
+            metaCacheMap = {};
+            console.log("(Meta Cache) Corrupted entries found. Doing full recomputation.");
+        }
+        else {
+            // console.log("(Meta Cache) Checking for new crew...");
+            // let c_crew = [ ... new Set(metaCache.map(m => m.crew).flat()) ];
+            // let g_crew = crew.map(m => m.symbol);
+
+            // g_crew = g_crew.filter((c, i) => g_crew.findIndex(cc => cc === c) === i && !c_crew.includes(c));
+
+            // if (g_crew.length) {
+            //     newcrew = g_crew.map(s => metaCrew.find(c => c.symbol === s)!);
+            //     if (newcrew.length) {
+            //         console.log(`(Meta Cache) Updating meta cache with ${newcrew.length} new crew...`);
+            //     }
+            // }
+            console.log("(Meta Cache) Checking for new ships...");
+
+            let c_ships = [ ... new Set(metaCache.map(m => m.ship)) ];
+            let g_ships = ships.map(m => m.symbol);
+
+            g_ships = g_ships.filter((c, i) => g_ships.findIndex(cc => cc === c) === i && !c_ships.includes(c));
+
+            if (g_ships.length) {
+                newships = g_ships.map(s => ships.find(c => c.symbol === s)!);
+                if (newships.length) {
+                    console.log(`(Meta Cache) Updating meta cache with ${newships.length} new ships...`);
+                }
+            }
+        }
+    }
+
+    allruns.length = 0;
+
+    let metaruns = [] as MetaCacheEntry[];
+    let metaidx = 0;
+    let metaship = ships.length;
+    let goodmetas: LineUpMeta[] = ['arena_boom', 'fbb_1_healer', 'fbb_2_healer', 'fbb_1_healer_evasion', 'fbb_2_healer_evasion', 'fbb_0_healer_evasion'];
+
+    for (let trypass = 0; trypass < 2; trypass++) {
+        if (trypass) {
+            cached = [].slice();
+            newships.length = 0;
+            newcrew.length = 0;
+            console.log(`(Meta Cache) Detected a corruption in crew mapping (symbol change?)!!  Doing full recalculation.`);
+        }
+
+        if (!metaCache?.length || newcrew.length || newships.length) {
+            //const workcrew = newcrew.length ? newcrew : crew;
+            if (cached.length) {
+                metaidx = metaCache.length;
+            }
+            else {
+                metaidx = 0;
+            }
+
+            console.log("(Meta Cache) Calculate crew and ship staffing metas...");
+
+            metaruns.length = (ships.length * metaCrew.length * BuiltInMetas.length * 100);
+            console.log(`(Meta Cache) Alloc ${metaruns.length} items.`);
+
+            const bucketsize = Math.max(Math.floor(os.cpus().length / 2), 2);
+            const shipBuckets = makeBuckets(ships, bucketsize);
+
+            metaship = ships.length;
+            let startidx = 0;
+            for (let x = 0; x < metaship; x += bucketsize) {
+                const bidx = Math.floor(x / bucketsize);
+                let buckets = shipBuckets[bidx];
+                let promises = buckets.map((ship, idx2) => new Promise<MetaCache | undefined>((resolve, reject) => {
+                    const ws = newships.length && newships.some(tship => tship.symbol === ship.symbol);
+                    if (ws) {
+                        console.log(`(Meta Cache) Test new ship ${ship.name}`)
+                    }
+                    if ((newships.length && !ws) && !newcrew.length) {
+                        resolve(undefined);
+                        return;
+                    }
+                    //const shipcrew = ws ? crew : workcrew;
+                    const config: ShipCalcMeta = {
+                        meta_cache: true,
+                        ships: [ship],
+                        crew: metaCrew,
+                        meta_list: goodmetas,
+                        new_crew: newcrew?.length ? newcrew.map(c => c.symbol) : undefined
+                    }
+                    const worker = new Worker(__dirname + '/ships/paracalc.js', {
+                        workerData: config,
+                    });
+                    worker.on('message', (data) => {
+                        // setTimeout(() => {
+                        //     worker.terminate();
+                        // });
+                        resolve(data);
+                    });
+                    worker.on('error', reject);
+                    worker.on('exit', (code) => {
+                    if (code !== 0)
+                        reject(new Error(`(Meta Cache) Worker stopped with exit code ${code}`));
+                    });
+                }));
+
+                startidx += buckets.length;
+
+                await Promise.all(promises).then((done) => {
+                    done.forEach((d) => {
+                        if (d) {
+                            let entries = Object.values(d).flat();
+                            for (let e of entries) {
+                                metaruns[metaidx++] = e;
+                            }
+                            entries.length = 0;
+                        }
+                    });
+                });
+                promises.length = 0;
+            }
+            console.log("(Meta Cache) Saving meta cache...");
+            metaruns.splice(metaidx);
+            metaCacheMap = writeMetaCache(metaruns, metaCacheFile);
+            metaCache = Object.values(metaCacheMap).flat();
+        }
+        else {
+            metaidx = metaruns.length;
+        }
+        if (metaruns.every(ar => !!ar.crew?.length && !!ar?.ship)) break;
+    }
+
+    allruns.length = 0;
+
+    // *** End: Meta Cache ***
+    // ************************
+
     console.log("Mapping best crew to ships...");
 
     let arena_p2 = ships.map(sh => getStaffedShip(origShips, crew, sh, false, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
@@ -526,48 +716,124 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         }
     }
 
+    // count = 1;
+    // let xcount = 1;
+    // for (let fbb_num = 4; fbb_num > 0; fbb_num--) {
+    //     if (fbb_num === 2) console.log(`Testing ships in Fleet Boss battles (${xcount++}/4) - 2 Hull-Repair ...`);
+    //     else if (fbb_num === 1) console.log(`Testing ships in Fleet Boss battles (${xcount++}/4) - 1 Hull-Repair ...`);
+    //     else if (fbb_num === 4) console.log(`Testing ships in Fleet Boss battles (${xcount++}/4) - 2 Evasion ...`);
+    //     else if (fbb_num === 3) console.log(`Testing ships in Fleet Boss battles (${xcount++}/4) - 1 Evasion ...`);
+
+    //     for (let cship of ships) {
+    //         if (VERBOSE) console.log(`Scoring FBB on ${cship.name} (${count++} / ${ships.length})...`);
+    //         let bosses = getBosses(cship);
+    //         // if (cship.name === 'Borg Tactical Cube') {
+    //         //     let n = 'break';
+    //         // }
+    //         bosses.sort((a, b) => b.rarity - a.rarity);
+    //         let c = bosses.length;
+    //         let cboss: BossShip | undefined = undefined;
+    //         for (let i = 0; i < c; i++) {
+    //             let ship: Ship | undefined = cship;
+    //             cboss = bosses[i];
+    //             ship = getStaffedShip(origShips, crew, cship, fbb_num as 1 | 2 | 3 | 4, offs_2, defs_2, undefined, undefined, cboss)!;
+    //             if (!ship) continue;
+    //             let multi = createMulitpleShips(ship);
+    //             if (!multi) {
+    //                 if (VERBOSE) {
+    //                     console.log(`${ship.name}, SKIPPING BOSS: ${cboss?.ship_name} ${cboss?.rarity}`);
+    //                     console.log('Cannot generate lineup');
+    //                 }
+    //                 continue;
+    //             }
+    //             for (let mship of multi) {
+    //                 let ccrew = mship.battle_stations!.map(m => m.crew!);
+    //                 if (!ccrew.every(c => c)) {
+    //                     console.log(`Something is wrong here`);
+    //                     console.log(`${mship.name}, ${cboss?.ship_name} ${cboss?.rarity}`);
+    //                     console.log(ccrew);
+    //                     process.exit(-1);
+    //                 }
+    //                 let runres = runBattles(current_id, rate, mship, ccrew, allruns, runidx, [], true, false, cboss, true, arena_variance, fbb_variance);
+
+    //                 runidx = runres.runidx;
+    //                 current_id = runres.current_id;
+    //             }
+    //         }
+    //     }
+    // }
+
     count = 1;
     let xcount = 1;
-    for (let fbb_num = 4; fbb_num > 0; fbb_num--) {
-        if (fbb_num === 2) console.log(`Testing ships in Fleet Boss battles (${xcount++}/4) - 2 Hull-Repair ...`);
-        else if (fbb_num === 1) console.log(`Testing ships in Fleet Boss battles (${xcount++}/4) - 1 Hull-Repair ...`);
-        else if (fbb_num === 4) console.log(`Testing ships in Fleet Boss battles (${xcount++}/4) - 2 Evasion ...`);
-        else if (fbb_num === 3) console.log(`Testing ships in Fleet Boss battles (${xcount++}/4) - 1 Evasion ...`);
-
+    let symbols = [ ...new Set(AllBosses.map(b => b.symbol)) ];
+    for (let boss_sym of symbols) {
+        console.log(`Test Boss: ${boss_sym}`);
         for (let cship of ships) {
             if (VERBOSE) console.log(`Scoring FBB on ${cship.name} (${count++} / ${ships.length})...`);
-            let bosses = getBosses(cship);
+            let bosses = getBosses(cship).filter(f => f.symbol === boss_sym);
             // if (cship.name === 'Borg Tactical Cube') {
             //     let n = 'break';
             // }
+
             bosses.sort((a, b) => b.rarity - a.rarity);
             let c = bosses.length;
             let cboss: BossShip | undefined = undefined;
             for (let i = 0; i < c; i++) {
                 let ship: Ship | undefined = cship;
                 cboss = bosses[i];
-                ship = getStaffedShip(origShips, crew, cship, fbb_num as 1 | 2 | 3 | 4, offs_2, defs_2, undefined, undefined, cboss)!;
-                if (!ship) continue;
-                let multi = createMulitpleShips(ship);
-                if (!multi) {
-                    if (VERBOSE) {
-                        console.log(`${ship.name}, SKIPPING BOSS: ${cboss?.ship_name} ${cboss?.rarity}`);
-                        console.log('Cannot generate lineup');
+                let isborg = boss_sym.includes('borg');
+                let testmetas: (MetaCacheEntry | undefined)[] = metaCacheMap[ship.symbol].filter(f => {
+                    if (cboss) {
+                        return f.division === cboss.id;
                     }
-                    continue;
-                }
-                for (let mship of multi) {
-                    let ccrew = mship.battle_stations!.map(m => m.crew!);
-                    if (!ccrew.every(c => c)) {
-                        console.log(`Something is wrong here`);
-                        console.log(`${mship.name}, ${cboss?.ship_name} ${cboss?.rarity}`);
-                        console.log(ccrew);
-                        process.exit(-1);
+                    if (isborg) {
+                        return f.meta.includes('fbb') && f.meta.includes('evasion');
                     }
-                    let runres = runBattles(current_id, rate, mship, ccrew, allruns, runidx, [], true, false, cboss, true, arena_variance, fbb_variance);
+                    else {
+                        return f.meta.includes('fbb') && !f.meta.includes('evasion');
+                    }
+                });
+                //if (!testmetas.length)
+                    testmetas.push(undefined);
 
-                    runidx = runres.runidx;
-                    current_id = runres.current_id;
+                for (let meta of testmetas) {
+                    if (!meta || meta.crew.length !== cship?.battle_stations!.length) {
+                        let fbb_num = isborg ? 4 : 2;
+                        if (cship.battle_stations!.length <= 3 || cship.actions?.some(act => act.ability?.type === 2 && !act.limit)) fbb_num--;
+                        ship = getStaffedShip(origShips, crew, cship, fbb_num as 1 | 2 | 3 | 4, offs_2, defs_2, undefined, undefined, cboss)!;
+                    }
+                    else if (cship) {
+                        ship = structuredClone(cship);
+                        meta.crew.forEach((cs, idx) => {
+                            let mcrew = metaCrew.find(f => f.symbol === cs);
+                            if (mcrew) {
+                                ship!.battle_stations![idx].crew = mcrew;
+                            }
+                        });
+                        if (!ship.battle_stations?.every(bs => !!bs.crew)) ship = undefined;
+                    }
+                    if (!ship) continue;
+                    let multi = createMulitpleShips(ship);
+                    if (!multi) {
+                        if (VERBOSE) {
+                            console.log(`${ship.name}, SKIPPING BOSS: ${cboss?.ship_name} ${cboss?.rarity}`);
+                            console.log('Cannot generate lineup');
+                        }
+                        continue;
+                    }
+                    for (let mship of multi) {
+                        let ccrew = mship.battle_stations!.map(m => m.crew!);
+                        if (!ccrew.every(c => c)) {
+                            console.log(`Something is wrong here`);
+                            console.log(`${mship.name}, ${cboss?.ship_name} ${cboss?.rarity}`);
+                            console.log(ccrew);
+                            process.exit(-1);
+                        }
+                        let runres = runBattles(current_id, rate, mship, ccrew, allruns, runidx, [], true, false, cboss, true, arena_variance, fbb_variance);
+
+                        runidx = runres.runidx;
+                        current_id = runres.current_id;
+                    }
                 }
             }
         }
@@ -617,9 +883,6 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     const tc = (s: string) => s.slice(0, 1).toUpperCase() + s.slice(1);
 
     const buffer = [] as string[];
-
-    const crewRanksOut = {} as {[key: string]: ShipScores }
-    const shipRanksOut = {} as {[key: string]: ShipScores }
 
     function printAndLog(...params: any[]) {
         let text = params.join(" ");
@@ -776,162 +1039,6 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     fs.writeFileSync(STATIC_PATH + 'crew.json', JSON.stringify(crewFresh));
     fs.writeFileSync(STATIC_PATH + 'ship_schematics.json', JSON.stringify(shipFresh));
 
-    // ************************
-    // *** Meta Cache ***
-
-    // const metaCacheFile = "./battle_meta_cache.json";
-    // let metaCacheMap = readMetaCache(metaCacheFile, process.argv.includes("--fresh"));
-    // let metaCache = Object.values(metaCacheMap).flat();
-    // newcrew = [].slice();
-    // newships = [].slice();
-    // if (metaCache?.length) {
-    //     console.log("(Meta Cache) Checking integrity...");
-    //     let corrupt = false;
-
-    //     // Purge yanked entries:
-    //     metaCache = metaCache.filter(c => origShips.some(s => s.symbol === c.ship)
-    //         && (!!c.crew?.length && !!c.ship && !!c.score)
-    //         && (c.crew.every(seat => crewFresh.some(cc => cc.symbol === seat)))
-    //     );
-
-    //     // If anything else is weird after that, we're going to uncorrupt it.
-    //     corrupt = metaCache.some(c => !c.ship || !c.crew?.length);
-
-    //     if (corrupt) {
-    //         metaCache = [];
-    //         metaCacheMap = {};
-    //         console.log("(Meta Cache) Corrupted entries found. Doing full recomputation.");
-    //     }
-    //     else {
-    //         console.log("(Meta Cache) Checking for new crew...");
-    //         let c_crew = [ ... new Set(metaCache.map(m => m.crew).flat()) ];
-    //         let g_crew = crew.map(m => m.symbol);
-
-    //         g_crew = g_crew.filter((c, i) => g_crew.findIndex(cc => cc === c) === i && !c_crew.includes(c));
-
-    //         if (g_crew.length) {
-    //             newcrew = g_crew.map(s => crewFresh.find(c => c.symbol === s)!);
-    //             if (newcrew.length) {
-    //                 console.log(`(Meta Cache) Updating meta cache with ${newcrew.length} new crew...`);
-    //             }
-    //         }
-    //         console.log("(Meta Cache) Checking for new ships...");
-
-    //         let c_ships = [ ... new Set(metaCache.map(m => m.ship)) ];
-    //         let g_ships = ships.map(m => m.symbol);
-
-    //         g_ships = g_ships.filter((c, i) => g_ships.findIndex(cc => cc === c) === i && !c_ships.includes(c));
-
-    //         if (g_ships.length) {
-    //             newships = g_ships.map(s => ships.find(c => c.symbol === s)!);
-    //             if (newships.length) {
-    //                 console.log(`(Meta Cache) Updating meta cache with ${newships.length} new ships...`);
-    //             }
-    //         }
-    //     }
-    // }
-
-    // allruns.length = 0;
-    // offs_2.length = 0;
-    // defs_2.length = 0;
-    // ship_2.length = 0;
-    // ship_3.length = 0
-
-    // let metaruns = [] as MetaCacheEntry[];
-    // let metaidx = 0;
-    // let metaship = ships.length;
-    // let goodmetas: LineUpMeta[] = ['arena_boom', 'fbb_1_healer', 'fbb_2_healer', 'fbb_1_healer_evasion', 'fbb_2_healer_evasion', 'fbb_0_healer_evasion'];
-    // for (let trypass = 0; trypass < 2; trypass++) {
-    //     if (trypass) {
-    //         cached = [].slice();
-    //         newships.length = 0;
-    //         newcrew.length = 0;
-    //         console.log(`(Meta Cache) Detected a corruption in crew mapping (symbol change?)!!  Doing full recalculation.`);
-    //     }
-
-    //     if (!metaCache?.length || newcrew.length || newships.length) {
-    //         //const workcrew = newcrew.length ? newcrew : crew;
-    //         if (cached.length) {
-    //             metaidx = metaCache.length;
-    //         }
-    //         else {
-    //             metaidx = 0;
-    //         }
-
-    //         console.log("(Meta Cache) Calculate crew and ship staffing metas...");
-
-    //         metaruns.length = (ships.length * crewFresh.length * BuiltInMetas.length * 100);
-    //         console.log(`(Meta Cache) Alloc ${metaruns.length} items.`);
-
-    //         const bucketsize = Math.max(Math.floor(os.cpus().length / 2), 2);
-    //         const shipBuckets = makeBuckets(ships, bucketsize);
-
-    //         metaship = ships.length;
-    //         let startidx = 0;
-    //         for (let x = 0; x < metaship; x += bucketsize) {
-    //             const bidx = Math.floor(x / bucketsize);
-    //             let buckets = shipBuckets[bidx];
-    //             let promises = buckets.map((ship, idx2) => new Promise<MetaCache | undefined>((resolve, reject) => {
-    //                 const ws = newships.length && newships.some(tship => tship.symbol === ship.symbol);
-    //                 if (ws) {
-    //                     console.log(`(Meta Cache) Test new ship ${ship.name}`)
-    //                 }
-    //                 if ((newships.length && !ws) && !newcrew.length) {
-    //                     resolve(undefined);
-    //                     return;
-    //                 }
-    //                 //const shipcrew = ws ? crew : workcrew;
-    //                 const config: ShipCalcMeta = {
-    //                     meta_cache: true,
-    //                     ships: [ship],
-    //                     crew: crewFresh,
-    //                     meta_list: goodmetas,
-    //                     new_crew: newcrew?.length ? newcrew.map(c => c.symbol) : undefined
-    //                 }
-    //                 const worker = new Worker(__dirname + '/ships/paracalc.js', {
-    //                     workerData: config,
-    //                 });
-    //                 worker.on('message', (data) => {
-    //                     // setTimeout(() => {
-    //                     //     worker.terminate();
-    //                     // });
-    //                     resolve(data);
-    //                 });
-    //                 worker.on('error', reject);
-    //                 worker.on('exit', (code) => {
-    //                 if (code !== 0)
-    //                     reject(new Error(`(Meta Cache) Worker stopped with exit code ${code}`));
-    //                 });
-    //             }));
-
-    //             startidx += buckets.length;
-
-    //             await Promise.all(promises).then((done) => {
-    //                 done.forEach((d) => {
-    //                     if (d) {
-    //                         let entries = Object.values(d).flat();
-    //                         for (let e of entries) {
-    //                             metaruns[metaidx++] = e;
-    //                         }
-    //                         entries.length = 0;
-    //                     }
-    //                 });
-    //             });
-    //             promises.length = 0;
-    //         }
-    //         console.log("(Meta Cache) Saving meta cache...");
-    //         metaruns.splice(metaidx);
-    //         metaCacheMap = writeMetaCache(metaruns, metaCacheFile);
-    //         metaCache = Object.values(metaCacheMap).flat();
-    //     }
-    //     else {
-    //         metaidx = metaruns.length;
-    //     }
-    //     if (metaruns.every(ar => !!ar.crew?.length && !!ar?.ship)) break;
-    // }
-
-    // *** End: Meta Cache ***
-    // ************************
     const runEnd = new Date();
     const diff = (runEnd.getTime() - runStart.getTime()) / (1000 * 60);
     console.log("Run Time", `${diff.toFixed(2)} minutes.`);

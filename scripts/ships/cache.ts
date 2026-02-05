@@ -33,14 +33,14 @@ export function readMetaCache(cacheFile: string, purge_outdated = true) {
     let cached = {} as MetaCache;
     if (fs.existsSync(cacheFile)) {
         if (purge_outdated) {
-            console.log("Loading meta cache...");
+            console.log("Purging meta cache...");
             fs.unlinkSync(cacheFile);
         }
         else {
-            console.log("Loading meta cache cache...");
+            console.log("Loading meta cache...");
             cached = JSON.parse(fs.readFileSync(cacheFile, 'utf-8'));
             let test = Object.values(cached)[0];
-            if (cached && !test[0].version || test[0].version < CACHE_VERSION) {
+            if (cached && !test[0].version || test[0].version < META_CACHE_VERSION) {
                 console.log("Purging outdated meta cache...");
                 fs.unlinkSync(cacheFile);
                 cached = {};
