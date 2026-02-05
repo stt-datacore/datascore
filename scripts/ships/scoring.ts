@@ -1054,7 +1054,7 @@ export const createScoreData = (config: ScoreDataConfig) => {
         for (let run of runs) {
             z++;
             if (seat_compat && !run.compatibility.seat) continue;
-            if (trigger_compat && (run.compatibility.score <= 0.25)) continue;
+            if (trigger_compat && (run.compatibility.need_trigger && !run.compatibility.trigger)) continue;
 
             let item: CrewMember | Ship;
             if (score_type === 'crew') {
