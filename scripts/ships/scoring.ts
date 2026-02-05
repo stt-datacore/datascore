@@ -439,10 +439,6 @@ export function getStaffedShip(ships: Ship[], crew: CrewMember[], ship: string |
             if ((a.action?.ability?.type === 1 && b.action?.ability?.type === 1)) {
                 let amet = (a.action.ability.amount / (fbb ? a.action.cycle_time : a.action.initial_cooldown)) * actualPower(a.action);
                 let bmet = (b.action.ability.amount / (fbb ? b.action.cycle_time : b.action.initial_cooldown)) * actualPower(b.action);
-                // amet = dmgnum(a.action, amet);
-                // bmet = dmgnum(b.action, bmet);
-                // r = bmet - amet;
-                // if (r) return r;
                 return bmet - amet;
             }
             else if (a.action?.ability?.type === 1) {
@@ -459,7 +455,7 @@ export function getStaffedShip(ships: Ship[], crew: CrewMember[], ship: string |
                 if (!r && a.action.bonus_type === 1 && b.action.bonus_type === 1 && evasion_needed) {
                     r = bdn - adn;
                 }
-                else if (!r && a.action.bonus_type === 0 && b.action.bonus_type === 0 && !evasion_needed) {
+                else if (!r && a.action.bonus_type === 0 && b.action.bonus_type === 0) {
                     r = bdn - adn;
                 }
                 if (!r && a.action.ability?.type === b.action.ability?.type && a.action.ability?.type === 2) {

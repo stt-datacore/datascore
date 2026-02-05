@@ -87,7 +87,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     // const boompool = crew.filter(f => f.action.ability?.type === 1 && !f.action.limit && !f.action.ability?.condition).sort((a, b) => b.action.ability!.amount - a.action.ability!.amount || a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount || a.action.cycle_time - b.action.cycle_time);
     // const critpool = crew.filter(f => f.action.ability?.type === 5 && !f.action.limit && !f.action.ability?.condition).sort((a, b) => b.action.ability!.amount - a.action.ability!.amount || a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount || a.action.cycle_time - b.action.cycle_time);
     const hrpool = crew.filter(f =>
-        (f.action.ability?.type === 2 || (f.action.bonus_type === 1 && (!!f.action.ability && [0,2,3,6].includes(f.action.ability.type)))) && (!f.action.limit && !f.action.ability?.condition))
+        (f.action.ability?.type === 2 || (f.action.bonus_type === 1 && (!!f.action.ability && [0,2,3,6].includes(f.action.ability.type)))) && (!f.action.limit))
             .sort((a, b) => actualPower(b.action) - actualPower(a.action) || a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount || b.action.duration - a.action.duration || a.action.cycle_time - b.action.cycle_time);
 
     const crewcategories = {} as { [key: string]: 'defense' | 'offense' }
@@ -455,7 +455,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
 
     console.log("\nTabulating Results ...");
     scoreConfig.bypass_crew = false;
-    scoreConfig.trigger_compat = true;
+    scoreConfig.trigger_compat = false;
     scoreConfig.seat_compat = false;
     createScoreData(scoreConfig);
 
@@ -474,7 +474,6 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
 
     let arena_p2 = ships.map(sh => getStaffedShip(origShips, crew, sh, false, offs_2, defs_2, undefined, false, undefined, false, typical_cd)).filter(f => !!f);
     arena_p2 = arena_p2.concat(ships.map(sh => getStaffedShip(origShips, crew, sh, false, offs_2, defs_2, undefined, true, undefined, false, typical_cd)).filter(f => !!f));
-
 
     allruns.length = ((arena_p2.length * arena_p2.length) * 4) + (arena_p2.length * AllBosses.length * 24);
     runidx = 0;
