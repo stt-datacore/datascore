@@ -23,5 +23,7 @@ if [ "$1" == "--sync" ]; then
     git add .
     git commit . -m "Re-Calculation"
     git push
+    cd ../tal-shiar
+    ./pubcrew.sh
     cd ../datascore
 fi
