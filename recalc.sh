@@ -22,5 +22,7 @@ cd ../website
 git add .
 git commit . -m "battle run cache regeneration"
 git push
+cd ../tal-shiar
+./pubcrew.sh
 cd ../datascore
 
