@@ -437,8 +437,8 @@ export function getStaffedShip(ships: Ship[], crew: CrewMember[], ship: string |
             if (c && c.symbol === a.symbol) return -1;
             if (c && c.symbol === b.symbol) return 1;
             if ((a.action?.ability?.type === 1 && b.action?.ability?.type === 1)) {
-                let amet = (a.action.ability.amount / (fbb ? a.action.cycle_time : a.action.initial_cooldown)) * actualPower(a.action);
-                let bmet = (b.action.ability.amount / (fbb ? b.action.cycle_time : b.action.initial_cooldown)) * actualPower(b.action);
+                let amet = ((a.action.duration + a.action.ability.amount) / (fbb ? a.action.cooldown : a.action.initial_cooldown)) * actualPower(a.action);
+                let bmet = ((b.action.duration + b.action.ability.amount) / (fbb ? b.action.cooldown : b.action.initial_cooldown)) * actualPower(b.action);
                 return bmet - amet;
             }
             else if (a.action?.ability?.type === 1) {
@@ -447,8 +447,8 @@ export function getStaffedShip(ships: Ship[], crew: CrewMember[], ship: string |
             else if (b.action?.ability?.type === 1) {
                 return 1;
             }
-            let adn = upcache[a.symbol];
-            let bdn = upcache[b.symbol];
+            let adn = ((a.action.duration + (a.action.ability?.amount ?? 0)) / (fbb ? a.action.cooldown : a.action.initial_cooldown)) * actualPower(a.action);
+            let bdn = ((b.action.duration + (b.action.ability?.amount ?? 0)) / (fbb ? b.action.cooldown : b.action.initial_cooldown)) * actualPower(b.action);
             let asn = startcache[a.symbol];
             let bsn = startcache[b.symbol];
             if (fbb) {
