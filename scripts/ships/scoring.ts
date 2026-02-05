@@ -376,6 +376,7 @@ export function getStaffedShip(ships: Ship[], crew: CrewMember[], ship: string |
         cs = crew.filter(cc =>
             (c && c.symbol === cc.symbol) ||
             (
+                (cc.max_rarity >= data.rarity) &&
                 (
                     (!prefer_oppo_time && (!cloak_time || cc.action.initial_cooldown >= cloak_time)) ||
                     (prefer_oppo_time && (!oppo_time || cc.action.initial_cooldown <= oppo_time))
