@@ -175,7 +175,7 @@ export async function calculateMeta(config: ShipCalcMeta) {
             if (!meta.startsWith('fbb')) {
                 let count = 0;
                 for (let pass = 0; pass < 2; pass++) {
-                    if (pass > 0 &&  metas[ship.symbol]?.length) break;
+                    if (pass > 0 &&  metas[ship.symbol]?.some(m => m.ship === ship.symbol && m.division === division)) break;
                     let cscore = prev_scores?.filter(f => f.ship === ship.symbol && f.division === division).sort((a, b) => b.score - a.score);
                     let lastscore = cscore?.length ? cscore[0].score : 0;
                     if (cscore?.length && pass === 0) {
@@ -249,7 +249,7 @@ export async function calculateMeta(config: ShipCalcMeta) {
                     console.log(`Testing meta '${meta}' on ${ship.name} with ${bcrew.length} crew...`);
                     let count = 0;
                     for (let pass = 0; pass < 2; pass++) {
-                        if (pass > 0 &&  metas[ship.symbol]?.length) break;
+                        if (pass > 0 &&  metas[ship.symbol]?.some(m => m.ship === ship.symbol && m.division === testboss.id)) break;
                         let cscore = prev_scores?.filter(f => f.ship === ship.symbol && f.division === testboss.id).sort((a, b) => b.score - a.score);
                         let lastscore = cscore?.length ? cscore[0].score : 0;
                         if (cscore?.length && pass === 0) {
