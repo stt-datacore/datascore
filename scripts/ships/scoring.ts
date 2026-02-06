@@ -468,6 +468,12 @@ export function getStaffedShip(ships: Ship[], crew: CrewMember[], ship: string |
                 if (!r && b.action?.bonus_type === 1 && a.action?.ability?.type === 2 && evasion_needed) {
                     return 1;
                 }
+                if (!r && a.action?.bonus_type === 1 && a.action?.ability?.type === 3 && evasion_needed) {
+                    return -1;
+                }
+                if (!r && b.action?.bonus_type === 1 && a.action?.ability?.type === 3 && evasion_needed) {
+                    return 1;
+                }
                 if (!r && a.action?.bonus_type === 0 && a.action?.ability?.type === 2 && !evasion_needed) {
                     return -1;
                 }
