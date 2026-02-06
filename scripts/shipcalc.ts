@@ -147,7 +147,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     // *** Battle Run Cache ***
 
     const cacheFile = "./battle_run_cache.json";
-    let cached = readBattleCache(cacheFile, process.argv.includes("--fresh"))
+    let cached = readBattleCache(cacheFile, process.argv.includes("--fresh") || process.argv.includes("--fresh-cache"))
 
     if (cached?.length) {
         console.log("Checking integrity...");
@@ -508,7 +508,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     // *** Meta Cache ***
 
     const metaCacheFile = "./battle_meta_cache.json";
-    let metaCacheMap = readMetaCache(metaCacheFile, process.argv.includes("--fresh"));
+    let metaCacheMap = readMetaCache(metaCacheFile, process.argv.includes("--fresh") || process.argv.includes("--fresh-meta"));
     let metaCache = Object.values(metaCacheMap).flat();
     //newcrew = [].slice();
     newships = [].slice();

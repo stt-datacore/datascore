@@ -9,6 +9,8 @@
     "precalculate": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/precalculate.js",
     "shipcalc": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/shipcalc.js",
     "shipcalc-fresh": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/shipcalc.js --fresh",
+    "shipcalc-fresh-meta": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/shipcalc.js --fresh-meta",
+    "shipcalc-fresh-cache": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/shipcalc.js --fresh-cache",
     "scoring": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/scoring.js --debug",
     "calc": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/scoring.js",
     "nc-calc": "yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/scoring.js --nochange",
