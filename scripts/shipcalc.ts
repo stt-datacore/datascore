@@ -605,13 +605,15 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                         resolve(undefined);
                         return;
                     }
+                    let cacheFind = metaCache.filter(f => f.ship === ship.symbol);
                     //const shipcrew = ws ? crew : workcrew;
                     const config: ShipCalcMeta = {
                         meta_cache: true,
+                        current_scores: cacheFind,
                         ships: [ship],
                         crew: metaCrew,
                         meta_list: goodmetas,
-                        new_crew: newcrew?.length ? newcrew.map(c => c.symbol) : undefined
+                        new_crew: newcrew?.length && !ws ? newcrew.map(c => c.symbol) : undefined
                     }
                     const worker = new Worker(__dirname + '/ships/paracalc.js', {
                         workerData: config,
@@ -635,6 +637,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                     done.forEach((d) => {
                         if (d) {
                             let entries = Object.values(d).flat();
+                            entries = entries.sort((a, b) => b.score - a.score).slice(0, 10);
                             for (let e of entries) {
                                 metaruns[metaidx++] = e;
                             }

@@ -15,6 +15,7 @@ export interface ShipCalcBase {
     meta_cache: boolean;
     ships: Ship[];
     crew: CrewMember[];
+    current_scores?: MetaCacheEntry[];
 }
 
 export interface ShipCalcMeta extends ShipCalcBase {
@@ -140,7 +141,7 @@ export type MetaCacheEntry = {
 export type MetaCache = {[key:string]: MetaCacheEntry[]};
 
 export async function calculateMeta(config: ShipCalcMeta) {
-    let { ships, crew, meta_list, boss, new_crew } = config;
+    let { ships, crew, meta_list, boss, new_crew, current_scores: prev_scores } = config;
     let metas = {} as MetaCache;
     const meta_max = 50;
 
@@ -174,7 +175,12 @@ export async function calculateMeta(config: ShipCalcMeta) {
             if (!meta.startsWith('fbb')) {
                 let count = 0;
                 for (let pass = 0; pass < 2; pass++) {
-                    let lastscore = 0;
+                    if (pass > 0 &&  metas[ship.symbol]?.length) break;
+                    let cscore = prev_scores?.filter(f => f.ship === ship.symbol && f.division === division).sort((a, b) => b.score - a.score);
+                    let lastscore = cscore?.length ? cscore[0].score : 0;
+                    if (cscore?.length && pass === 0) {
+                        metas[ship.symbol] = metas[ship.symbol].concat(cscore);
+                    }
                     getPermutations(divcrew, ship.battle_stations!.length, undefined, true, undefined, (res, idx) => {
                         if (new_crew && !res.some(rc => new_crew.includes(rc.symbol))) return false;
                         if (!pass && !testSeats(seats, res)) return false;
@@ -239,12 +245,16 @@ export async function calculateMeta(config: ShipCalcMeta) {
                 }
                 let bcrew = ocrew.concat(dcrew);
                 bcrew = bcrew.sort((a, b) => b.ranks.scores.ship.fbb - a.ranks.scores.ship.fbb);
-
                 if (meta.startsWith("fbb")) {
                     console.log(`Testing meta '${meta}' on ${ship.name} with ${bcrew.length} crew...`);
                     let count = 0;
                     for (let pass = 0; pass < 2; pass++) {
-                        let lastscore = 0;
+                        if (pass > 0 &&  metas[ship.symbol]?.length) break;
+                        let cscore = prev_scores?.filter(f => f.ship === ship.symbol && f.division === testboss.id).sort((a, b) => b.score - a.score);
+                        let lastscore = cscore?.length ? cscore[0].score : 0;
+                        if (cscore?.length && pass === 0) {
+                            metas[ship.symbol] = metas[ship.symbol].concat(cscore);
+                        }
                         getPermutations(bcrew, ship.battle_stations!.length, undefined, true, undefined, (res, idx) => {
                             if (new_crew && !res.some(rc => new_crew.includes(rc.symbol))) return false;
                             if (!pass && !testSeats(seats, res)) return false;
