@@ -588,7 +588,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
             metaruns.length = (ships.length * metaCrew.length * BuiltInMetas.length * 100);
             console.log(`(Meta Cache) Alloc ${metaruns.length} items.`);
 
-            const bucketsize = Math.max(Math.floor(os.cpus().length / 2), 2);
+            const bucketsize = Math.max(Math.ceil(os.cpus().length * 0.75), 2);
             const shipBuckets = makeBuckets(ships, bucketsize);
 
             metaship = ships.length;
