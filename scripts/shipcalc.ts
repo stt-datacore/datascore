@@ -638,7 +638,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                         if (d) {
                             let entries = Object.values(d).flat();
                             entries = entries.sort((a, b) => b.score - a.score)
-                            entries = entries.filter((e, i) => entries.findIndex(e2 => e.crew.join() === e2.crew.join() && e.ship === e2.ship && e.division === e2.division) === i);
+                            entries = entries.filter((e, i) => entries.findIndex(e2 => e.crew.join() === e2.crew.join() && e.ship === e2.ship && e.division === e2.division && e.meta === e2.meta) === i);
                             entries = entries.slice(0, 10);
 
                             for (let e of entries) {
@@ -660,7 +660,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         else {
             console.log(`(Meta Cache) Checing for dupes...`);
             let l1 = metaruns.length;
-            metaruns = metaruns.filter((e, i) => metaruns.findIndex(e2 => e.crew.join() === e2.crew.join() && e.ship === e2.ship && e.division === e2.division) === i);
+            metaruns = metaruns.filter((e, i) => metaruns.findIndex(e2 => e.crew.join() === e2.crew.join() && e.ship === e2.ship && e.division === e2.division && e.meta === e2.meta) === i);
             let l2 = metaruns.length;
             if (l2 !== l1) {
                 console.log("(Meta Cache) Saving cleaned meta cache...");
