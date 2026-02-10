@@ -658,6 +658,15 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
             metaCache = Object.values(metaCacheMap).flat();
         }
         else {
+            console.log(`(Meta Cache) Checing for dupes...`);
+            let l1 = metaruns.length;
+            metaruns = metaruns.filter((e, i) => metaruns.findIndex(e2 => e.crew.join() === e2.crew.join() && e.ship === e2.ship && e.division === e2.division) === i);
+            let l2 = metaruns.length;
+            if (l2 !== l1) {
+                console.log("(Meta Cache) Saving cleaned meta cache...");
+                metaCacheMap = writeMetaCache(metaruns, metaCacheFile);
+                metaCache = Object.values(metaCacheMap).flat();
+            }
             metaidx = metaruns.length;
         }
         if (metaruns.every(ar => !!ar.crew?.length && !!ar?.ship)) break;
