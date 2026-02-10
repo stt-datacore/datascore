@@ -584,9 +584,9 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
             }
 
             console.log("(Meta Cache) Calculate crew and ship staffing metas...");
-            metaruns = metaCache;
-            let startidx = metaCache.length;
-            metaruns.length = (ships.length * metaCrew.length * BuiltInMetas.length * 100);
+            metaruns = [].slice();
+            let startidx = 0;
+            metaruns.length = (ships.length * metaCrew.length * BuiltInMetas.length * 10);
             console.log(`(Meta Cache) Alloc ${metaruns.length} items.`);
 
             const bucketsize = Math.max(Math.ceil(os.cpus().length * 0.75), 2);
@@ -599,7 +599,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                 let promises = buckets.map((ship, idx2) => new Promise<MetaCache | undefined>((resolve, reject) => {
                     const ws = newships.length && newships.some(tship => tship.symbol === ship.symbol);
                     if (ws) {
-                        console.log(`(Meta Cache) Test new ship ${ship.name}`)
+                        console.log(`(Meta Cache) Test new ship ${ship.name}`);
                     }
                     if ((newships.length && !ws) && !newcrew.length) {
                         resolve(undefined);
@@ -637,10 +637,15 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                     done.forEach((d) => {
                         if (d) {
                             let entries = Object.values(d).flat();
-                            entries = entries.sort((a, b) => b.score - a.score).slice(0, 10);
+                            entries = entries.sort((a, b) => b.score - a.score)
+                            entries = entries.filter((e, i) => entries.findIndex(e2 => e.crew.join() === e2.crew.join() && e.ship === e2.ship && e.division === e2.division) === i);
+                            entries = entries.slice(0, 10);
+
                             for (let e of entries) {
-                                metaruns[metaidx++] = e;
+                                metaruns[metaidx] = e;
+                                metaidx++;
                             }
+
                             entries.length = 0;
                         }
                     });
