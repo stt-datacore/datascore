@@ -55,6 +55,7 @@ export function writeMetaCache(runs: MetaCacheEntry[] | MetaCache, cacheFile?: s
     if (Array.isArray(runs)) {
         let obj = {} as MetaCache;
         for (let r of runs) {
+            if (!r?.ship) continue;
             obj[r.ship] ??= [];
             obj[r.ship].push(r)
         }

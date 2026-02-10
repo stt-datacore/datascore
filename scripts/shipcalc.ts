@@ -584,7 +584,8 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
             }
 
             console.log("(Meta Cache) Calculate crew and ship staffing metas...");
-
+            metaruns = metaCache;
+            let startidx = metaCache.length;
             metaruns.length = (ships.length * metaCrew.length * BuiltInMetas.length * 100);
             console.log(`(Meta Cache) Alloc ${metaruns.length} items.`);
 
@@ -592,7 +593,6 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
             const shipBuckets = makeBuckets(ships, bucketsize);
 
             metaship = ships.length;
-            let startidx = 0;
             for (let x = 0; x < metaship; x += bucketsize) {
                 const bidx = Math.floor(x / bucketsize);
                 let buckets = shipBuckets[bidx];
@@ -674,46 +674,74 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     console.log("Testing ships in Arena battles...");
 
     for (let ship of arena_p2) {
-        let crew = ship.battle_stations?.map(m => m.crew).filter(f => !!f);
-        if (!crew?.length || crew?.length !== ship.battle_stations?.length) {
+        let tcrew = ship.battle_stations?.map(m => m.crew).filter(f => !!f);
+        if (!tcrew?.length || tcrew?.length !== ship.battle_stations?.length) {
             console.log(`Missing crew!!!`, ship, count);
             exit(-1);
         }
         if (VERBOSE) console.log(`Scoring arena on ${ship.name} against all compatible ships (${count++} / ${arena_p2.length})...`);
         let division = getShipDivision(ship.rarity);
-        for (let ship2 of arena_p2) {
-            if (ship == ship2) continue;
-            if (getShipDivision(ship2.rarity) !== division) continue;
-            let runres = runBattles(current_id, rate, ship, crew, allruns, runidx, hrpool, false, true, ship2, false, arena_variance, fbb_variance);
-
-            runidx = runres.runidx;
-            current_id = runres.current_id;
-
-            let testship = getStaffedShip(origShips, crew, ship, false, offs_2, defs_2, undefined, false, ship2, false, typical_cd)
-            let testcrew = testship?.battle_stations!.map(m => m.crew).filter(f => !!f);
-            if (!testcrew?.length || testcrew?.length !== ship.battle_stations?.length) {
-                console.log(`Missing crew #2!!!`, ship, count);
-                exit(-1);
+        let shipmeta: (MetaCacheEntry | undefined)[] = metaCache.filter(f => f.ship === ship.symbol && f.meta.includes('arena') && f.division === division);
+        shipmeta.push(undefined);
+        for (let meta of shipmeta) {
+            let wcrew: CrewMember[] = [];
+            if (!meta) {
+                wcrew = [...tcrew];
             }
-            if (testship && testcrew?.length) {
-                let runres = runBattles(current_id, rate, testship, testcrew, allruns, runidx, hrpool, false, true, ship2, false, arena_variance, fbb_variance);
+            else {
+                wcrew = meta.crew.map(csym => crew.find(f => f.symbol === csym)!);
+            }
+
+            for (let ship2 of arena_p2) {
+                if (ship == ship2) continue;
+                if (getShipDivision(ship2.rarity) !== division) continue;
+                let runres = runBattles(current_id, rate, ship, wcrew, allruns, runidx, hrpool, false, true, ship2, false, arena_variance, fbb_variance);
 
                 runidx = runres.runidx;
                 current_id = runres.current_id;
-            }
+                let testship: Ship | undefined = undefined;
+                let testcrew: CrewMember[] | undefined = undefined;
 
-            if (ship.actions?.some(a => a.status === 2)) {
-                testship = getStaffedShip(origShips, crew, ship, false, offs_2, defs_2, undefined, false, ship2, true, typical_cd)
-                testcrew = testship?.battle_stations!.map(m => m.crew).filter(f => !!f);
+                if (!meta) {
+                    testship = getStaffedShip(origShips, wcrew, ship, false, offs_2, defs_2, undefined, false, ship2, false, typical_cd)
+                    testcrew = testship?.battle_stations!.map(m => m.crew).filter(f => !!f);
+                }
+                else {
+                    testship = structuredClone(ship);
+                    testship.battle_stations!.forEach((bs, idx) => bs.crew = wcrew[idx]);
+                    testcrew = wcrew;
+                }
+
                 if (!testcrew?.length || testcrew?.length !== ship.battle_stations?.length) {
-                    console.log(`Missing crew #3!!!`, ship, count);
+                    console.log(`Missing crew #2!!!`, ship, count);
                     exit(-1);
                 }
                 if (testship && testcrew?.length) {
-                    let runres = runBattles(current_id, rate, testship, testcrew, allruns, runidx, hrpool, false, true, ship2, false, arena_variance, fbb_variance);
-
-                    runidx = runres.runidx;
-                    current_id = runres.current_id;
+                    let shipmeta2: (MetaCacheEntry | undefined)[] = metaCache.filter(f => f.ship === ship2.symbol && f.meta.includes('arena') && f.division === division);
+                    shipmeta2.push(undefined);
+                    for (let meta2 of shipmeta2) {
+                        let wship2 = ship2;
+                        if (!meta2) {
+                            let runres = runBattles(current_id, rate, testship!, testcrew, allruns, runidx, hrpool, false, true, ship2, false, arena_variance, fbb_variance);
+                            runidx = runres.runidx;
+                            current_id = runres.current_id;
+                        }
+                        else {
+                            let wship2 = structuredClone(ship2);
+                            wship2.battle_stations!.forEach((bs, idx) => bs.crew = crew.find(f => f.symbol === meta2.crew[idx])!);
+                            let runres = runBattles(current_id, rate, testship!, testcrew, allruns, runidx, hrpool, false, true, wship2, false, arena_variance, fbb_variance);
+                            runidx = runres.runidx;
+                            current_id = runres.current_id;
+                        }
+                        if (ship.actions?.some(a => a.status === 2)) {
+                            testship = getStaffedShip(origShips, wcrew, ship, false, offs_2, defs_2, undefined, false, wship2, true, typical_cd)
+                            testcrew = testship?.battle_stations!.map(m => m.crew).filter(f => !!f);
+                            if (!testcrew?.length || testcrew?.length !== ship.battle_stations?.length) {
+                                console.log(`Missing crew #3!!!`, ship, count);
+                                exit(-1);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -787,7 +815,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                 let isborg = boss_sym.includes('borg');
                 let testmetas: (MetaCacheEntry | undefined)[] = metaCacheMap[ship.symbol].filter(f => {
                     if (cboss) {
-                        return f.division === cboss.id;
+                        return f.division === cboss.id && f.meta.includes('fbb');
                     }
                     if (isborg) {
                         return f.meta.includes('fbb') && f.meta.includes('evasion');

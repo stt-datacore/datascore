@@ -172,7 +172,7 @@ export async function calculateMeta(config: ShipCalcMeta) {
             if (boss) continue;
             if (meta_list?.length && !meta_list.includes(meta)) continue;
             console.log(`Testing meta '${meta}' on ${ship.name} with ${divcrew.length} crew...`);
-            if (!meta.startsWith('fbb')) {
+            if (!meta.startsWith('fbb') && (!new_crew?.length || divcrew.some(bc => new_crew.some(nc => bc.symbol === nc)))) {
                 let count = 0;
                 for (let pass = 0; pass < 2; pass++) {
                     if (pass > 0 && metas[ship.symbol]?.some(m => m.ship === ship.symbol && m.division === division)) break;
@@ -245,7 +245,7 @@ export async function calculateMeta(config: ShipCalcMeta) {
                 }
                 let bcrew = ocrew.concat(dcrew);
                 bcrew = bcrew.sort((a, b) => b.ranks.scores.ship.fbb - a.ranks.scores.ship.fbb);
-                if (meta.startsWith("fbb")) {
+                if (meta.startsWith("fbb") && (!new_crew?.length || bcrew.some(bc => new_crew.some(nc => bc.symbol === nc)))) {
                     console.log(`Testing meta '${meta}' on ${ship.name} with ${bcrew.length} crew...`);
                     let count = 0;
                     for (let pass = 0; pass < 2; pass++) {
