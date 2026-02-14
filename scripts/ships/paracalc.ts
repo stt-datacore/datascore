@@ -143,7 +143,7 @@ export type MetaCache = {[key:string]: MetaCacheEntry[]};
 export async function calculateMeta(config: ShipCalcMeta) {
     let { ships, crew, meta_list, boss, new_crew, current_scores: prev_scores } = config;
     let metas = {} as MetaCache;
-    const meta_max = 50;
+    const meta_max = 30;
 
     function testSeats(seats: string[], crew: CrewMember[]) {
         let seatcount = [] as number[];
@@ -166,8 +166,8 @@ export async function calculateMeta(config: ShipCalcMeta) {
         metas[ship.symbol] ??= [].slice();
         let bosses = getBosses(ship);
         let division = getShipDivision(ship.rarity);
-        let divcrew = crew.filter(cf => cf.max_rarity >= ship.rarity && getCrewDivisions(cf.max_rarity).includes(division) && (!cf.action?.ability?.condition || ship.actions!.some(act => act.status === cf.action.ability?.condition)));
-        divcrew = divcrew.sort((a, b) => b.ranks.scores.ship.arena - a.ranks.scores.ship.arena).slice(0, meta_max);
+        let divcrew = crew.filter(cf => cf.ranks.scores.ship.kind === 'offense' && cf.max_rarity >= ship.rarity && getCrewDivisions(cf.max_rarity).includes(division) && (!cf.action?.ability?.condition || ship.actions!.some(act => act.status === cf.action.ability?.condition)));
+        divcrew = divcrew.sort((a, b) => (b.ranks.scores.ship.divisions.arena[division] || 0) - (a.ranks.scores.ship.divisions.arena[division] || 0)).slice(0, meta_max);
         for (let meta of BuiltInMetas) {
             if (boss) continue;
             if (meta_list?.length && !meta_list.includes(meta)) continue;
@@ -187,7 +187,7 @@ export async function calculateMeta(config: ShipCalcMeta) {
                             if (!pass && !testSeats(seats, res)) return false;
                             if (passesMeta(ship, res, meta)) {
                                 let score = scoreLineUp(ship, res, 'arena', 20);
-                                if (score <= lastscore - (lastscore / 10)) {
+                                if (score <= lastscore) {
                                     return false;
                                 }
                                 lastscore = score;
@@ -229,8 +229,8 @@ export async function calculateMeta(config: ShipCalcMeta) {
                             else if (b.action.bonus_type === 1) return -1;
                         }
                     }
-                    return b.ranks.scores.ship.fbb - a.ranks.scores.ship.fbb
-                });
+                    return (b.ranks.scores.ship.divisions.fbb[testboss.id] || 0) - (a.ranks.scores.ship.divisions.fbb[testboss.id] || 0);
+                }).slice(0, mm);
                 dcrew = dcrew.sort((a, b) => {
                     if (meta.includes('evasion')) {
                         if (!(a.action.bonus_type === 1 && b.action.bonus_type === 1)) {
@@ -238,18 +238,10 @@ export async function calculateMeta(config: ShipCalcMeta) {
                             else if (b.action.bonus_type === 1) return -1;
                         }
                     }
-                    return b.ranks.scores.ship.fbb - a.ranks.scores.ship.fbb
-                });
-                if (meta.includes("0_healer")) {
-                    ocrew = ocrew.slice(0, meta_max);
-                    dcrew = [].slice();
-                }
-                else {
-                    ocrew = ocrew.slice(0, mm);
-                    dcrew = dcrew.slice(0, mm);
-                }
+                    return (b.ranks.scores.ship.divisions.fbb[testboss.id] || 0) - (a.ranks.scores.ship.divisions.fbb[testboss.id] || 0);
+                }).slice(0, mm);
                 let bcrew = ocrew.concat(dcrew);
-                bcrew = bcrew.sort((a, b) => b.ranks.scores.ship.fbb - a.ranks.scores.ship.fbb);
+                bcrew = bcrew.sort((a, b) => (b.ranks.scores.ship.divisions.fbb[testboss.id] || 0) - (a.ranks.scores.ship.divisions.fbb[testboss.id] || 0));
                 if (meta.startsWith("fbb")) {
                     console.log(`Testing meta '${meta}' on ${ship.name} with ${bcrew.length} crew...`);
                     let count = 0;
@@ -267,7 +259,7 @@ export async function calculateMeta(config: ShipCalcMeta) {
                                 if (passesMeta(ship, res, meta)) {
                                     let h: 'evade' | 'heal' = meta.includes('evasion') ? 'evade' : 'heal';
                                     let score = scoreLineUp(ship, res, h);
-                                    if (score <= lastscore - (lastscore / 10)) {
+                                    if (score <= lastscore) {
                                         return false;
                                     }
                                     lastscore = score;
