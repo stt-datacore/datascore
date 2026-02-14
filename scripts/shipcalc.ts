@@ -820,6 +820,9 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
             //     let n = 'break';
             // }
 
+            if (cship.name?.includes('Discovery')) {
+                let p = 0;
+            }
             bosses.sort((a, b) => b.rarity - a.rarity);
             let c = bosses.length;
             let cboss: BossShip | undefined = undefined;
@@ -838,8 +841,8 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                         return f.meta.includes('fbb') && !f.meta.includes('evasion');
                     }
                 });
-                //if (!testmetas.length)
-                    testmetas.push(undefined);
+
+                testmetas.push(undefined);
 
                 for (let meta of testmetas) {
                     if (!meta || meta.crew.length !== cship?.battle_stations!.length) {
