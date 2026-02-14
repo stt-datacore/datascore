@@ -187,7 +187,7 @@ export async function calculateMeta(config: ShipCalcMeta) {
                             if (!pass && !testSeats(seats, res)) return false;
                             if (passesMeta(ship, res, meta)) {
                                 let score = scoreLineUp(ship, res, 'arena', 20);
-                                if (score <= lastscore) {
+                                if (score <= lastscore - (lastscore / 10)) {
                                     return false;
                                 }
                                 lastscore = score;
@@ -267,7 +267,7 @@ export async function calculateMeta(config: ShipCalcMeta) {
                                 if (passesMeta(ship, res, meta)) {
                                     let h: 'evade' | 'heal' = meta.includes('evasion') ? 'evade' : 'heal';
                                     let score = scoreLineUp(ship, res, h);
-                                    if (score <= lastscore) {
+                                    if (score <= lastscore - (lastscore / 10)) {
                                         return false;
                                     }
                                     lastscore = score;
