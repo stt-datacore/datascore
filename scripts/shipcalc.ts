@@ -820,9 +820,9 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
             //     let n = 'break';
             // }
 
-            if (cship.name?.includes('Discovery')) {
-                let p = 0;
-            }
+            // if (cship.name?.includes('Discovery')) {
+            //     let p = 0;
+            // }
             bosses.sort((a, b) => b.rarity - a.rarity);
             let c = bosses.length;
             let cboss: BossShip | undefined = undefined;
