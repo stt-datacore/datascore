@@ -22,6 +22,7 @@ export interface ShipCalcMeta extends ShipCalcBase {
     meta_list?: LineUpMeta[];
     boss?: number;
     new_crew?: string[];
+    no_sort?: boolean;
 }
 
 export interface ShipCalcConfig extends ShipCalcBase {
@@ -139,11 +140,11 @@ export type MetaCacheEntry = {
 }
 
 export type MetaCache = {[key:string]: MetaCacheEntry[]};
+export const META_MAX = 30;
 
 export async function calculateMeta(config: ShipCalcMeta) {
-    let { ships, crew, meta_list, boss, new_crew, current_scores: prev_scores } = config;
+    let { ships, crew, meta_list, boss, new_crew, current_scores: prev_scores, no_sort } = config;
     let metas = {} as MetaCache;
-    const meta_max = 30;
 
     function testSeats(seats: string[], crew: CrewMember[]) {
         let seatcount = [] as number[];
@@ -167,7 +168,12 @@ export async function calculateMeta(config: ShipCalcMeta) {
         let bosses = getBosses(ship);
         let division = getShipDivision(ship.rarity);
         let divcrew = crew.filter(cf => cf.ranks.scores.ship.kind === 'offense' && cf.max_rarity >= ship.rarity && getCrewDivisions(cf.max_rarity).includes(division) && (!cf.action?.ability?.condition || ship.actions!.some(act => act.status === cf.action.ability?.condition)));
-        divcrew = divcrew.sort((a, b) => (b.ranks.scores.ship.divisions.arena[division] || 0) - (a.ranks.scores.ship.divisions.arena[division] || 0)).slice(0, meta_max);
+        if (!no_sort) {
+            divcrew = divcrew.sort((a, b) => (b.ranks.scores.ship.divisions.arena[division] || 0) - (a.ranks.scores.ship.divisions.arena[division] || 0)).slice(0, META_MAX);
+        }
+        else {
+            divcrew = divcrew.slice(0, META_MAX);
+        }
         for (let meta of BuiltInMetas) {
             if (boss) continue;
             if (meta_list?.length && !meta_list.includes(meta)) continue;
@@ -219,27 +225,33 @@ export async function calculateMeta(config: ShipCalcMeta) {
             if (boss && testboss.id !== boss) continue;
             for (let meta of BuiltInMetas) {
                 if (meta_list?.length && !meta_list.includes(meta)) continue;
-                let mm = Math.floor(meta_max / 2);
+                let mm = Math.floor(META_MAX / 2);
                 let ocrew = crew.filter(cf => !cf.action.limit && cf.ranks.scores.ship.kind === 'offense' && cf.max_rarity >= ship.rarity && getBosses(undefined, cf).includes(testboss) && (!cf.action?.ability?.condition || ship.actions!.some(act => act.status === cf.action.ability?.condition)));
                 let dcrew = crew.filter(cf => !cf.action.limit && cf.ranks.scores.ship.kind === 'defense' && cf.max_rarity >= ship.rarity && getBosses(undefined, cf).includes(testboss) && (!cf.action?.ability?.condition || ship.actions!.some(act => act.status === cf.action.ability?.condition)));
-                ocrew = ocrew.sort((a, b) => {
-                    if (meta.includes('evasion')) {
-                        if (!(a.action.bonus_type === 1 && b.action.bonus_type === 1)) {
-                            if (a.action.bonus_type === 1) return -1;
-                            else if (b.action.bonus_type === 1) return -1;
+                if (!no_sort) {
+                    ocrew = ocrew.sort((a, b) => {
+                        if (meta.includes('evasion')) {
+                            if (!(a.action.bonus_type === 1 && b.action.bonus_type === 1)) {
+                                if (a.action.bonus_type === 1) return -1;
+                                else if (b.action.bonus_type === 1) return -1;
+                            }
                         }
-                    }
-                    return (b.ranks.scores.ship.divisions.fbb[testboss.id] || 0) - (a.ranks.scores.ship.divisions.fbb[testboss.id] || 0);
-                }).slice(0, mm);
-                dcrew = dcrew.sort((a, b) => {
-                    if (meta.includes('evasion')) {
-                        if (!(a.action.bonus_type === 1 && b.action.bonus_type === 1)) {
-                            if (a.action.bonus_type === 1) return -1;
-                            else if (b.action.bonus_type === 1) return -1;
+                        return (b.ranks.scores.ship.divisions.fbb[testboss.id] || 0) - (a.ranks.scores.ship.divisions.fbb[testboss.id] || 0);
+                    }).slice(0, mm);
+                    dcrew = dcrew.sort((a, b) => {
+                        if (meta.includes('evasion')) {
+                            if (!(a.action.bonus_type === 1 && b.action.bonus_type === 1)) {
+                                if (a.action.bonus_type === 1) return -1;
+                                else if (b.action.bonus_type === 1) return -1;
+                            }
                         }
-                    }
-                    return (b.ranks.scores.ship.divisions.fbb[testboss.id] || 0) - (a.ranks.scores.ship.divisions.fbb[testboss.id] || 0);
-                }).slice(0, mm);
+                        return (b.ranks.scores.ship.divisions.fbb[testboss.id] || 0) - (a.ranks.scores.ship.divisions.fbb[testboss.id] || 0);
+                    }).slice(0, mm);
+                }
+                else {
+                    ocrew = ocrew.slice(0, mm);
+                    dcrew = dcrew.slice(0, mm);
+                }
                 let bcrew = ocrew.concat(dcrew);
                 bcrew = bcrew.sort((a, b) => (b.ranks.scores.ship.divisions.fbb[testboss.id] || 0) - (a.ranks.scores.ship.divisions.fbb[testboss.id] || 0));
                 if (meta.startsWith("fbb")) {

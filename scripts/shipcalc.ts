@@ -14,7 +14,7 @@ import { runBattles } from './ships/battle';
 import { battleRunsToCache, cacheToBattleRuns, readBattleCache, readMetaCache, writeMetaCache } from './ships/cache';
 import { CalcRes, MetaCache, MetaCacheEntry, ShipCalcConfig, ShipCalcMeta } from './ships/paracalc';
 import { processShips } from './ships/processing';
-import { BattleRunBase, Score, ScoreDataConfig, actualPower, characterizeCrew, createBlankShipScore, createScoreData, getStaffedShip, processScores, rankBosses, scoreToShipScore, shipnum } from './ships/scoring';
+import { BattleRunBase, BestCrewShip, Score, ScoreDataConfig, actualPower, characterizeCrew, createBlankShipScore, createScoreData, getBestCrewShip, getStaffedShip, processScores, rankBosses, scoreToShipScore, shipnum } from './ships/scoring';
 import { createMulitpleShips } from './ships/seating';
 import { makeBuckets } from './ships/util';
 import { LineUpMeta, BuiltInMetas } from '../../website/src/model/worker';
@@ -479,7 +479,6 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         if (scores[0].name === scores[1].name) {
             console.log(`Identical entries detected!!! ${scores[0].name}`);
         }
-
         scores.sort((a, b) => b.fbb_final - a.fbb_final);
         scores.forEach((score, i) => score.fbb_rank = i + 1);
 
@@ -559,6 +558,8 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         }
     }
 
+    const crewship = [] as BestCrewShip[];
+
     allruns.length = 0;
 
     let metaruns = [] as MetaCacheEntry[];
@@ -594,6 +595,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
 
             metaship = ships.length;
             for (let x = 0; x < metaship; x += bucketsize) {
+
                 const bidx = Math.floor(x / bucketsize);
                 let buckets = shipBuckets[bidx];
                 let promises = buckets.map((ship, idx2) => new Promise<MetaCache | undefined>((resolve, reject) => {
@@ -605,13 +607,28 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                         resolve(undefined);
                         return;
                     }
+                    crewship.length = metaCrew.length * (AllBosses.length + 3);
+                    console.log(`Computing best meta-eligible crew for ${ship.name}...`);
+                    let bcidx = 0;
+                    for (let div of [1, 2, 3]) {
+                        let bsc = getBestCrewShip(arenaruns, metaCrew, ship.symbol, 'arena', div);
+                        if (bsc) crewship[bcidx++] = bsc;
+                    }
+                    for (let div of AllBosses.map(b => b.id)) {
+                        let bsc = getBestCrewShip(fbbruns, metaCrew, ship.symbol, 'fbb', div);
+                        if (bsc) crewship[bcidx++] = bsc;
+                    }
+                    crewship.length = bcidx;
                     let cacheFind = metaCache.filter(f => f.ship === ship.symbol);
                     //const shipcrew = ws ? crew : workcrew;
+                    let ship_bcc = crewship.find(f => f.ship === ship.symbol);
+                    let mcrew = ship_bcc?.crew_battles.sort((a, b) => a.score - b.score).map(mc => metaCrew.find(fc => fc.symbol === mc.crew)!);
                     const config: ShipCalcMeta = {
                         meta_cache: true,
                         current_scores: cacheFind,
                         ships: [ship],
-                        crew: metaCrew,
+                        crew: mcrew || metaCrew,
+                        no_sort: !!mcrew,
                         meta_list: goodmetas,
                         new_crew: newcrew?.length && !ws ? newcrew.map(c => c.symbol) : undefined
                     }

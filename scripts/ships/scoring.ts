@@ -135,6 +135,20 @@ export interface BattleRun extends BattleRunBase {
     reference_battle: false;
 }
 
+export interface CrewBattle {
+    crew: string;
+    battle: 'arena' | 'fbb';
+    division: number;
+    score: number;
+    rank: number;
+    type: 'offense' | 'defense';
+}
+
+export interface BestCrewShip {
+    ship: string;
+    crew_battles: CrewBattle[];
+}
+
 export interface BattleRunRef extends BattleRunBase {
     crew: undefined,
     reference_battle: true;
@@ -1020,35 +1034,39 @@ export function processScores(
     });
 }
 
+export function sortRuns(runs: BattleRunBase[], is_fbb: boolean, score_type: 'crew' | 'ship') {
+    if (!is_fbb && score_type === 'crew') {
+        runs.sort((a, b) => {
+            if (a.type !== b.type) {
+                if (a.type === 'defense') return 1;
+                else return -1;
+            }
+            if (a.type === 'defense') {
+                return (b.compatibility.score - a.compatibility.score || b.duration - a.duration || b.damage - a.damage);
+            }
+            else {
+                return (a.win != b.win) ? (a.win ? -1 : 1) : (b.compatibility.score - a.compatibility.score || ((b.damage / b.duration) - (a.damage / a.duration)));
+            }
+        });
+    }
+    else if (!is_fbb && score_type === 'ship') {
+        runs.sort((a, b) => {
+            //return (b.compatibility.score - a.compatibility.score || b.damage - a.damage || a.duration - b.duration);
+            return (a.win != b.win) ? (a.win ? -1 : 1) : (b.compatibility.score - a.compatibility.score || b.damage - a.damage || a.duration - b.duration);
+        });
+    }
+    else if (is_fbb) {
+        runs.sort((a, b) => b.compatibility.score - a.compatibility.score || b.damage - a.damage || b.duration - a.duration);
+    }
+}
+
 export const createScoreData = (config: ScoreDataConfig) => {
     const { crew, ships, trigger_compat, seat_compat, bypass_crew, crewscores, shipscores, fbbruns, arenaruns } = config;
 
     shipscores.length = 0;
     if (!bypass_crew) crewscores.length = 0;
     const scoreRun = (runs: BattleRunBase[], is_fbb: boolean, scores: Score[], score_type: 'crew' | 'ship') => {
-        if (!is_fbb && score_type === 'crew') {
-            runs.sort((a, b) => {
-                if (a.type !== b.type) {
-                    if (a.type === 'defense') return 1;
-                    else return -1;
-                }
-                if (a.type === 'defense') {
-                    return (b.compatibility.score - a.compatibility.score || b.duration - a.duration || b.damage - a.damage);
-                }
-                else {
-                    return (a.win != b.win) ? (a.win ? -1 : 1) : (b.compatibility.score - a.compatibility.score || ((b.damage / b.duration) - (a.damage / a.duration)));
-                }
-            });
-        }
-        else if (!is_fbb && score_type === 'ship') {
-            runs.sort((a, b) => {
-                //return (b.compatibility.score - a.compatibility.score || b.damage - a.damage || a.duration - b.duration);
-                return (a.win != b.win) ? (a.win ? -1 : 1) : (b.compatibility.score - a.compatibility.score || b.damage - a.damage || a.duration - b.duration);
-            });
-        }
-        else if (is_fbb) {
-            runs.sort((a, b) => b.compatibility.score - a.compatibility.score || b.damage - a.damage || b.duration - a.duration);
-        }
+        sortRuns(runs, is_fbb, score_type);
 
         let z = -1;
         let score: Score | undefined = undefined;
@@ -1257,3 +1275,29 @@ export function rankBosses(data: {[key:string]: ShipScores }, fullData: CrewMemb
     }
 }
 
+export function getBestCrewShip(runs: BattleRunBase[], crew: CrewMember[], ship: string, battle: 'arena' | 'fbb', division?: number): BestCrewShip | undefined {
+    sortRuns(runs, battle === 'fbb', 'crew');
+    let rundata = runs
+        .filter(r => r.battle === battle && r.ship.symbol === ship && (!division || r.division === division))
+        .map((r, i) => ({ crew: r.crew, index: i, type: r.type }));
+    let crew_battles = crew.map(c => {
+        let cfilt = rundata.filter(f => f.crew === c.symbol);
+        if (!cfilt.length) return undefined;
+        let avgidx = cfilt.map(f => f.index).reduce((p, n) => p + n, 0) / cfilt.length;
+        return {
+            crew: c.symbol,
+            battle,
+            division: division || 0,
+            score: avgidx,
+            rank: 0,
+            type: cfilt[0].type
+        }
+    }).filter(f => f !== undefined);
+    if (!crew_battles.length) return undefined;
+    crew_battles.sort((a, b) => a.score - b.score);
+    crew_battles.forEach((cb, i) => cb.rank = i + 1);
+    return {
+        ship,
+        crew_battles
+    }
+}
