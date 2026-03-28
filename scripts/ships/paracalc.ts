@@ -195,7 +195,7 @@ export async function calculateMeta(config: ShipCalcMeta) {
                                 let battle = iterateBattle(10, false, ship, res);
                                 let run = processBattleRun(1, 'arena', battle, res, 10);
                                 if (!run) return false;
-                                let score = (run.attack * run.battle_time) / ((run.opponent_attack * run.battle_time) || 1);
+                                let score = (run.attack * run.battle_time) / ((run.opponent_attack) || 1);
 
                                 //let score = scoreLineUp(ship, res, 'arena', 20);
                                 if (score <= lastscore) {
@@ -278,7 +278,7 @@ export async function calculateMeta(config: ShipCalcMeta) {
                                     let battle = iterateBattle(10, true, ship, res, testboss);
                                     let run = processBattleRun(1, 'fbb', battle, res, 10);
                                     if (!run) return false;
-                                    let score = (run.attack * run.battle_time) / ((run.opponent_attack * run.battle_time) || 1);
+                                    let score = (run.attack * run.battle_time) / ((run.opponent_attack) || 1);
 
                                     //let score = scoreLineUp(ship, res, h);
                                     if (score <= lastscore) {
