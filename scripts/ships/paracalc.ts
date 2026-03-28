@@ -6,9 +6,9 @@ import { BuiltInMetas, LineUpMeta } from '../../../website/src/model/worker';
 import { getPermutations } from '../../../website/src/utils/misc';
 import { getBosses, getCrewDivisions, getShipDivision } from '../../../website/src/utils/shiputils';
 import { passesMeta } from '../../../website/src/workers/battleworkermeta';
-import { scoreLineUp } from '../../../website/src/workers/battleworkerutils';
-import { getCleanShipCopy, nextOpponent, runBattles, RunRes } from "./battle";
-import { META_CACHE_VERSION } from './cache';
+import { iterateBattle, scoreLineUp } from '../../../website/src/workers/battleworkerutils';
+import { getCleanShipCopy, nextOpponent, processBattleRun, runBattles, RunRes } from "./battle";
+import { battleRunsToCache, META_CACHE_VERSION } from './cache';
 import { BattleRunBase } from "./scoring";
 
 export interface ShipCalcBase {
@@ -192,7 +192,12 @@ export async function calculateMeta(config: ShipCalcMeta) {
                             if (new_crew && !res.some(rc => new_crew.includes(rc.symbol))) return false;
                             if (!pass && !testSeats(seats, res)) return false;
                             if (passesMeta(ship, res, meta)) {
-                                let score = scoreLineUp(ship, res, 'arena', 20);
+                                let battle = iterateBattle(10, false, ship, res);
+                                let run = processBattleRun(1, 'arena', battle, res, 10);
+                                if (!run) return false;
+                                let score = (run.attack * run.battle_time) / ((run.opponent_attack * run.battle_time) || 1);
+
+                                //let score = scoreLineUp(ship, res, 'arena', 20);
                                 if (score <= lastscore) {
                                     return false;
                                 }
@@ -270,7 +275,12 @@ export async function calculateMeta(config: ShipCalcMeta) {
                                 if (!pass && !testSeats(seats, res)) return false;
                                 if (passesMeta(ship, res, meta)) {
                                     let h: 'evade' | 'heal' = meta.includes('evasion') ? 'evade' : 'heal';
-                                    let score = scoreLineUp(ship, res, h);
+                                    let battle = iterateBattle(10, true, ship, res, testboss);
+                                    let run = processBattleRun(1, 'fbb', battle, res, 10);
+                                    if (!run) return false;
+                                    let score = (run.attack * run.battle_time) / ((run.opponent_attack * run.battle_time) || 1);
+
+                                    //let score = scoreLineUp(ship, res, h);
                                     if (score <= lastscore) {
                                         return false;
                                     }
