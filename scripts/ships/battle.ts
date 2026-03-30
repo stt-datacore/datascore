@@ -232,7 +232,28 @@ export const runBattles = (
                 battle_mode = `fbb_${boss.id - 1}` as BattleMode;
                 let isborg = boss.symbol.includes('borg');
                 if (newstaff.length === 1 && c) {
-                    if (crewtype === 'defense') {
+                    if (c.action.bonus_type === 1 && crewtype === 'defense') {
+                        let compatdef = hrpool.filter(
+                            ff => getBosses(undefined, ff)?.some(b => b.id === boss.id) &&
+                            (
+                                ff.action.bonus_type === 1 &&
+                                (ff.action.bonus_amount < c.action.bonus_amount ||
+                                ff.action.duration < c.action.duration ||
+                                ff.action.cycle_time > c.action.cycle_time)
+                            ) &&
+                            (!ff.action.ability?.condition || shipCompatibility(ship, ff).trigger)
+                        );
+                        if (compatdef?.length) {
+                            let olen = newstaff.length;
+                            for (let i = olen; i < ship.battle_stations!.length && i < olen + 2 && i < compatdef.length; i++) {
+                                newstaff.push(compatdef[i-1]);
+                            }
+                        }
+                        else {
+                            newstaff.push(c);
+                        }
+                    }
+                    else if (crewtype === 'defense') {
                         newstaff.push(c);
                     }
                     else {
