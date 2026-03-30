@@ -245,7 +245,7 @@ export const runBattles = (
                         );
                         if (compatdef?.length) {
                             let olen = newstaff.length;
-                            for (let i = olen; i < ship.battle_stations!.length && i < olen + 2 && i < compatdef.length; i++) {
+                            for (let i = olen; i < ship.battle_stations!.length && i < olen + 1 && i < compatdef.length; i++) {
                                 newstaff.push(compatdef[i-1]);
                             }
                         }
