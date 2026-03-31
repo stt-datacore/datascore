@@ -275,7 +275,15 @@ export async function calculateMeta(config: ShipCalcMeta) {
                                 if (!pass && !testSeats(seats, res)) return false;
                                 if (passesMeta(ship, res, meta)) {
                                     let h: 'evade' | 'heal' = meta.includes('evasion') ? 'evade' : 'heal';
-                                    let battle = iterateBattle(10, true, ship, res, testboss);
+                                    let battle = iterateBattle(10, true, ship, res, testboss,
+                                        undefined,
+                                        undefined,
+                                        undefined,
+                                        undefined,
+                                        undefined,
+                                        undefined,
+                                        testboss.symbol.includes('borg') ? 0.2 : 0
+                                    );
                                     let run = processBattleRun(1, 'fbb', battle, res, 10);
                                     if (!run) return false;
                                     let score = (run.attack * run.battle_time) / ((run.opponent_attack) || 1);

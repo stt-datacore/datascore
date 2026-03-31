@@ -894,6 +894,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                             console.log(ccrew);
                             process.exit(-1);
                         }
+                        fbb_variance = isborg ? 0.20 : 0;
                         let runres = runBattles(current_id, rate, mship, ccrew, allruns, runidx, [], true, false, cboss, true, arena_variance, fbb_variance);
 
                         runidx = runres.runidx;
