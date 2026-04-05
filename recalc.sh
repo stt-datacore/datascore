@@ -4,7 +4,7 @@ git checkout master
 git pull --no-rebase
 cd ../datascore
 npm run precalculate
-if [[ "$1" == "--only-meta" || "$2" == "--only-meta" ]]; then	
+if [[ "$1" == "--only-meta" || "$2" == "--only-meta" ]]; then
     npm run shipcalc-fresh-meta
 elif [[ "$1" == "--only-cache" || "$2" == "--only-cache" ]]; then
     npm run shipcalc-fresh-cache
@@ -15,6 +15,7 @@ npm run calc
 npm run eventstats
 zip -X ./battle.zip ./battle_run_cache.json && mv ./battle.zip ../scripts/data
 zip -X ./meta.zip ./battle_meta_cache.json && mv ./meta.zip ../scripts/data
+cp ./battle_meta_cache.json ../scripts/data/battle_metas.json
 if [[ "$1" == "--nocommit" || "$2" == "--nocommit" ]]; then
     exit 0;
 fi

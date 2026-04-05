@@ -13,7 +13,7 @@ npm run calc
 npm run eventstats
 zip -X ./battle.zip ./battle_run_cache.json && mv ./battle.zip ../scripts/data
 zip -X ./meta.zip ./battle_meta_cache.json && mv ./meta.zip ../scripts/data
-
+cp ./battle_meta_cache.json ../scripts/data/battle_metas.json
 if [ "$1" == "--sync" ]; then
     cd ../scripts
     git add .
