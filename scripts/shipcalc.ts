@@ -689,7 +689,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         if (metaruns.every(ar => !!ar.crew?.length && !!ar?.ship)) break;
     }
 
-    fs.writeFileSync(STATIC_PATH + 'battle_metas.json', JSON.stringify(metaruns));
+    fs.writeFileSync(STATIC_PATH + 'battle_metas.json', JSON.stringify(metaCache));
 
     allruns.length = 0;
 
