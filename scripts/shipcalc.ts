@@ -672,6 +672,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
             console.log("(Meta Cache) Saving meta cache...");
             metaruns.splice(metaidx);
             metaCacheMap = writeMetaCache(metaruns, metaCacheFile);
+            fs.writeFileSync(STATIC_PATH + 'battle_metas.json', JSON.stringify(metaruns));
             metaCache = Object.values(metaCacheMap).flat();
         }
         else {
