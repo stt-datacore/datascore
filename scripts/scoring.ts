@@ -330,33 +330,33 @@ export function score() {
             skill_rarity: 2.75          - (0.2 * (5 - c.max_rarity)),
             gauntlet: 1.75              + (0.2 * (5 - c.max_rarity)),
             shuttle: 1                  - (0.1 * (5 - c.max_rarity)),
-            quipment: 0.5               + (0.3 * (5 - c.max_rarity)),
-            collections: 0.55           + (1.5 * (5 - c.max_rarity)),
-            trait: 0.35                 + (0.5 * (5 - c.max_rarity)),
+            collections: 0.60           + (1.5 * (5 - c.max_rarity)),
+            quipment: 0.55              + (0.3 * (5 - c.max_rarity)),
+            ship: 0.375                 + (0.65 * (5 - c.max_rarity)),
             crit: 0.267,
-            ship: 0.275                 + (0.65 * (5 - c.max_rarity)),
             am_seating: 0.25            - (0.07 * (5 - c.max_rarity)),
-            greatness: 0.2,
+            greatness: 0.2325,
+            trait: 0.2                  + (0.5 * (5 - c.max_rarity)),
+            voyage_plus: 0.15,
+            gauntlet_plus: 0.14,
+            shuttle_plus: 0.13,
             velocity: 0.09              - (0.02 * (5 - c.max_rarity)),
             potential_cols: 0.1         + (0.17 * (5 - c.max_rarity)),
             main_cast: 0.1              + (0.1 * (5 - c.max_rarity)),
             variant: 0.08               + (0.02 * (5 - c.max_rarity)),
             skill_positions: 0.05       - (0.2 * (5 - c.max_rarity)),
-            voyage_plus: 0.05,
-            shuttle_plus: 0.05,
-            gauntlet_plus: 0.20,
             sko_ambivalent: 0.05        - (0.005 * (5 - c.max_rarity)),
             sko_absolute: 0.025         - (0.005 * (5 - c.max_rarity)),
             tertiary_rarity: 0.01,
             primary_rarity: 0.01,
             voyage_plus_weights: {
                 voyage: 1,
-                am_seating: 0.2,
-                quipment: 0.75
+                am_seating: 0.75,
+                quipment: 0.5
             },
             gauntlet_plus_weights: {
                 gauntlet: 1,
-                crit: 0.75,
+                crit: 0.5,
                 quipment: 0.5
             },
             base_plus_weights: {
@@ -753,7 +753,7 @@ export function score() {
         let an = 0;
         let tn = c.traits.map(m => lookupAMSeatsByTrait(m).filter(skill => c.skill_order.includes(skill))).flat().length;
         if (c.antimatter_bonus) {
-            an = Math.ceil(c.antimatter_bonus / 25);
+            an = Math.ceil(c.antimatter_bonus / 25) * 2;
         }
         return tn + an;
     }
