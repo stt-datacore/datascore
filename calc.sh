@@ -8,7 +8,7 @@ rm ./battle_meta_cache.json
 unzip ../scripts/data/battle.zip
 unzip ../scripts/data/meta.zip
 npm run precalculate
-npm run shipcalc
+yarn tsc --project ./tsconfig.node.json && node build/datascore/scripts/shipcalc.js $1 $2
 npm run calc
 npm run eventstats
 zip -X ./battle.zip ./battle_run_cache.json && mv ./battle.zip ../scripts/data
