@@ -164,8 +164,8 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         let force_refresh = (() => {
             let x = process.argv.indexOf("--force");
             if (x !== -1 && process.argv.length > x + 1) {
-                let syms = process.argv[x+1].split(",").map(m => m.trim());
-                return syms;
+                let syms = process.argv[x+1]?.split(",").map(m => m.trim()).filter(s => !!s);
+                if (syms?.length) return syms;
             }
             return undefined;
         })();
