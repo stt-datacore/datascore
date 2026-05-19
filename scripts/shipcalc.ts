@@ -160,10 +160,22 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                 }
             }
         });
+
+        let force_refresh = (() => {
+            let x = process.argv.indexOf("--force");
+            if (x !== -1 && process.argv.length > x + 1) {
+                let syms = process.argv[x+1].split(",").map(m => m.trim());
+                return syms;
+            }
+            return undefined;
+        })();
+
         let shipsym = origShips.map(o => o.symbol);
         let crewsym = crew.map(c => c.symbol);
+
         // Purge yanked entries:
         cached = cached.filter(c => shipsym.includes(c.ship)
+            && (!force_refresh || !force_refresh.includes(c.crew))
             && (!!c.crew || !!c.seated?.length || !!c.reference_battle)
             && (!c.crew || crew.some(cc => cc.symbol === c.crew))
             && (!c.seated?.length || c.seated.every(seat => crewsym.includes(seat)))
