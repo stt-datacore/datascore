@@ -165,7 +165,27 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
             let x = process.argv.indexOf("--force");
             if (x !== -1 && process.argv.length > x + 1) {
                 let syms = process.argv[x+1]?.split(",").map(m => m.trim()).filter(s => !!s);
-                if (syms?.length) return syms;
+                if (syms?.length) {
+                    let trynum = syms.map(n => Number(n));
+                    if (trynum.every(n => !Number.isNaN(n))) {
+                        let count = trynum[0];
+                        let rarities: number[] = [];
+                        if (trynum.length > 1) {
+                            rarities = trynum.slice(1);
+                        }
+                        let t_crew = crew.slice();
+                        if (rarities.length) {
+                            t_crew = t_crew.filter(f => rarities.includes(f.max_rarity));
+                        }
+                        t_crew = t_crew.sort((a, b) => {
+                            if (typeof a.date_added === 'string') a.date_added = new Date(a.date_added);
+                            if (typeof b.date_added === 'string') b.date_added = new Date(b.date_added);
+                            return b.date_added.getTime() - a.date_added.getTime();
+                        }).slice(0, count);
+                        syms = t_crew.map(c => c.symbol);
+                    }
+                    return syms;
+                }
             }
             return undefined;
         })();
