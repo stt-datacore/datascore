@@ -5,6 +5,7 @@ import { EquipmentItem } from '../../website/src/model/equipment';
 import { Gauntlet } from '../../website/src/model/gauntlets';
 import { CryoCollection as Collection, PlayerCrew } from '../../website/src/model/player';
 import { TraitNames } from '../../website/src/model/traits';
+import { VoyageStatEntry } from '../../website/src/model/hof';
 import { getAllCrewRewards, getAllStatBuffs } from '../../website/src/utils/collectionutils';
 import { applyCrewBuffs, getSkillOrderScore, getSkillOrderStats, getVariantTraits, numberToGrade, SkillRarityReport, skillSum } from '../../website/src/utils/crewutils';
 import { getElevatedBuckets } from '../../website/src/utils/gauntlet';
@@ -15,6 +16,7 @@ import { normalize as norm, RarityScore } from './normscores';
 import { QPowers, scoreQuipment, sortingQuipmentScoring } from './quipment';
 
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
+const STATS_FILE = `${__dirname}/../../../../site-server/static/profiles/stats/daily_stats.json`;
 const SCRIPTS_DATA_PATH = `${__dirname}/../../../../scripts/data/`;
 
 const DEBUG = process.argv.includes('--debug');
@@ -268,6 +270,21 @@ function collectionScore(c: CrewMember, collections: Collection[]) {
     return (bu * 3) + (cr * 2) + (cc * 1);
 }
 
+function makeDonut(stat: VoyageStatEntry, refcrew: CrewMember[]) {
+    let crew = refcrew.find(c => c.symbol === stat.crewSymbol);
+    if (!crew) return undefined;
+    const output: RarityScore = {
+        symbol: stat.crewSymbol,
+        rarity: crew.max_rarity,
+        score: 0
+    }
+    let typeValues = Object.values(stat.voyageTypes!);
+    let sum = typeValues.reduce((p, n) => p + n, 0);
+    let count = typeValues.length;
+    output.score = (sum * count);
+    return output;
+}
+
 export function score() {
     const Weights: {[key:string]: ConstituentWeights} = {};
 
@@ -290,6 +307,9 @@ export function score() {
         }
         return Object.values(ghash);
     })();
+
+    const voystats = JSON.parse(fs.readFileSync(STATS_FILE, 'utf-8')) as { [key: string]: VoyageStatEntry[] };
+    const oneYear = voystats["lastNinetyDays"];
 
     const collections = JSON.parse(fs.readFileSync(STATIC_PATH + 'collections.json', 'utf-8')) as Collection[];
     const TRAIT_NAMES = JSON.parse(fs.readFileSync(STATIC_PATH + 'translation_en.json', 'utf-8')).trait_names as TraitNames;
@@ -330,6 +350,7 @@ export function score() {
             skill_rarity: 2.75          - (0.2 * (5 - c.max_rarity)),
             gauntlet: 1.75              + (0.2 * (5 - c.max_rarity)),
             shuttle: 1                  - (0.1 * (5 - c.max_rarity)),
+            donut: 0.80                 + ((c.max_rarity) * (c.max_rarity / 5)),
             collections: 0.60           + (1.5 * (5 - c.max_rarity)),
             quipment: 0.55              + (0.3 * (5 - c.max_rarity)),
             ship: 0.375                 + (0.65 * (5 - c.max_rarity)),
@@ -493,6 +514,17 @@ export function score() {
     let shuttle = results;
     if (DEBUG) console.log("Shuttle")
     if (DEBUG) console.log(shuttle.slice(0, 20));
+    results = [].slice();
+
+
+    if (!QUIET) console.log("Scoring voyage donuts...");
+
+    results = oneYear.map(stat => makeDonut(stat, origCrew)).filter(f => f !== undefined);
+    let donuts = norm(results);
+    measureGreatness(donuts, "donut");
+    if (DEBUG) console.log("Voyage Donuts")
+    if (DEBUG) console.log(donuts.slice(0, 20));
+
     results = [].slice();
 
     if (!QUIET) console.log("Scoring in-skill-order rank (absolute)...");
