@@ -327,8 +327,8 @@ export function score() {
         return Object.values(ghash);
     })();
 
-    const voystats = JSON.parse(fs.readFileSync(STATIC_PATH + 'daily_stats.json', 'utf-8')) as { [key: string]: VoyageStatEntry[] };
-    const oneYear = voystats["lastNinetyDays"];
+    const voystats = JSON.parse(fs.readFileSync(SCRIPTS_DATA_PATH + 'daily_stats.json', 'utf-8')) as { [key: string]: VoyageStatEntry[] };
+    const days90 = voystats["lastNinetyDays"];
 
     const collections = JSON.parse(fs.readFileSync(STATIC_PATH + 'collections.json', 'utf-8')) as Collection[];
     const TRAIT_NAMES = JSON.parse(fs.readFileSync(STATIC_PATH + 'translation_en.json', 'utf-8')).trait_names as TraitNames;
@@ -539,7 +539,7 @@ export function score() {
     if (!QUIET) console.log("Scoring voyage donuts...");
 
     for (let c of crew) {
-        let stat = oneYear.find(f => f.crewSymbol === c.symbol);
+        let stat = days90.find(f => f.crewSymbol === c.symbol);
         let score: RarityScore | undefined = undefined;
         if (stat) {
             score = makeDonut(stat, origCrew);
