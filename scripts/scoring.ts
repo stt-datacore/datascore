@@ -273,15 +273,34 @@ function collectionScore(c: CrewMember, collections: Collection[]) {
 function makeDonut(stat: VoyageStatEntry, refcrew: CrewMember[]) {
     let crew = refcrew.find(c => c.symbol === stat.crewSymbol);
     if (!crew) return undefined;
-    const output: RarityScore = {
+    let output: RarityScore = {
         symbol: stat.crewSymbol,
         rarity: crew.max_rarity,
         score: 0
     }
-    let typeValues = Object.values(stat.voyageTypes!);
-    let sum = typeValues.reduce((p, n) => p + n, 0);
+
+    if (!stat.voyageTypes) return undefined;
+    let typeValues = Object.values(stat.voyageTypes);
+    if (!typeValues.length) return undefined;
+    typeValues.sort((a, b) => b - a);
+    let maxType = typeValues[0];
     let count = typeValues.length;
-    output.score = (sum * count);
+    let sum = typeValues.reduce((p, n) => p + n, 0);
+    let avg = sum / count;
+    let maxDist = typeValues.reduce((p, n) => Math.max(maxType - p, maxType - n), maxType) || 1;
+    //let distSum = typeValues.reduce((p, n) => p + (maxType - n), 0) || 1;
+    //let distAvg = distSum / count;
+    output.score = (avg * count) * (maxType / maxDist);
+    // (output as any) = {
+    //     ... (output as any),
+    //     avg,
+    //     count,
+    //     distAvg,
+    //     distSum,
+    //     maxDist,
+    //     maxType,
+    //     sum
+    // };
     return output;
 }
 
@@ -350,7 +369,6 @@ export function score() {
             skill_rarity: 2.75          - (0.2 * (5 - c.max_rarity)),
             gauntlet: 1.75              + (0.2 * (5 - c.max_rarity)),
             shuttle: 1                  - (0.1 * (5 - c.max_rarity)),
-            donut: 0.80                 + ((c.max_rarity) * (c.max_rarity / 5)),
             collections: 0.60           + (1.5 * (5 - c.max_rarity)),
             quipment: 0.55              + (0.3 * (5 - c.max_rarity)),
             ship: 0.375                 + (0.65 * (5 - c.max_rarity)),
@@ -361,6 +379,7 @@ export function score() {
             voyage_plus: 0.15,
             gauntlet_plus: 0.14,
             shuttle_plus: 0.13,
+            donut: 0.10                 + ((c.max_rarity) * (c.max_rarity / 5)),
             velocity: 0.09              - (0.02 * (5 - c.max_rarity)),
             potential_cols: 0.1         + (0.17 * (5 - c.max_rarity)),
             main_cast: 0.1              + (0.1 * (5 - c.max_rarity)),
@@ -1026,12 +1045,16 @@ export function score() {
         let gauntlet_n = gauntlet.find(f => f.symbol === c.symbol)!.score;
         let voyage_n = voyage.find(f => f.symbol === c.symbol)!.score;
         let i_core_n = shuttle.findIndex(f => f.symbol === c.symbol);
+
         let core_n = shuttle[i_core_n].score;
 
         c.ranks.scores.gauntlet = gauntlet_n;
         c.ranks.scores.voyage = voyage_n;
         c.ranks.scores.shuttle = core_n;
         c.ranks.shuttleRank = i_core_n + 1;
+
+        let i_donut_n = donuts.findIndex(f => f.symbol === c.symbol);
+        let donut_n = donuts[i_donut_n].score;
 
         let i_greatness_n = greatness.findIndex(f => f.symbol === c.symbol);
         let greatness_n = greatness[i_greatness_n].score;
@@ -1095,6 +1118,9 @@ export function score() {
 
         let i_vplus_n = voyage_plus.findIndex(f => f.symbol === c.symbol);
         let vplus_n = voyage_plus[i_vplus_n].score;
+
+        c.ranks.scores.donut = donut_n;
+        c.ranks.scores.donut_rank = i_donut_n + 1;
 
         c.ranks.scores.greatness = greatness_n;
         c.ranks.scores.greatness_rank = i_greatness_n + 1;
@@ -1181,6 +1207,7 @@ export function score() {
         splus_n *= weight.shuttle_plus;
 
         greatness_n *= weight.greatness;
+        donut_n *= weight.donut!;
 
         voyage_n *= weight.voyage;
         sko_rare_n *= weight.skill_rarity;
@@ -1205,6 +1232,7 @@ export function score() {
 
         let scores = [
             greatness_n,
+            donut_n,
             amseat_n,
             maincast_n,
             variant_n,
