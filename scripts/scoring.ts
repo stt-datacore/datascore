@@ -327,7 +327,7 @@ export function score() {
         return Object.values(ghash);
     })();
 
-    const voystats = JSON.parse(fs.readFileSync(STATS_FILE, 'utf-8')) as { [key: string]: VoyageStatEntry[] };
+    const voystats = JSON.parse(fs.readFileSync(STATIC_PATH + 'daily_stats.json', 'utf-8')) as { [key: string]: VoyageStatEntry[] };
     const oneYear = voystats["lastNinetyDays"];
 
     const collections = JSON.parse(fs.readFileSync(STATIC_PATH + 'collections.json', 'utf-8')) as Collection[];
