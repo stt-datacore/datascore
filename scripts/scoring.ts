@@ -379,7 +379,7 @@ export function score() {
             voyage_plus: 0.15,
             gauntlet_plus: 0.14,
             shuttle_plus: 0.13,
-            donut: 0.10                 + ((c.max_rarity) * (c.max_rarity / 5)),
+            donut: 0.10,
             velocity: 0.09              - (0.02 * (5 - c.max_rarity)),
             potential_cols: 0.1         + (0.17 * (5 - c.max_rarity)),
             main_cast: 0.1              + (0.1 * (5 - c.max_rarity)),
