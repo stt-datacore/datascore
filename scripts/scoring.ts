@@ -538,7 +538,23 @@ export function score() {
 
     if (!QUIET) console.log("Scoring voyage donuts...");
 
-    results = oneYear.map(stat => makeDonut(stat, origCrew)).filter(f => f !== undefined);
+    for (let c of crew) {
+        let stat = oneYear.find(f => f.crewSymbol === c.symbol);
+        let score: RarityScore | undefined = undefined;
+        if (stat) {
+            score = makeDonut(stat, origCrew);
+        }
+        if (!score) {
+            score = {
+                symbol: c.symbol,
+                rarity: c.max_rarity,
+                score: 0
+            };
+        }
+        if (score) {
+            results.push(score);
+        }
+    }
     let donuts = norm(results);
     measureGreatness(donuts, "donut");
     if (DEBUG) console.log("Voyage Donuts")
