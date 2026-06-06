@@ -419,14 +419,16 @@ export function score() {
 
     const weightDiff = makeWeightDiff(oldweights, Weights);
 
-    if (weightDiff?.length) {
-        console.log(`Weighting Changed!\n`);
-        if (!QUIET) {
-            for (let s of weightDiff) {
-                console.log(s);
-            }
-        }
-    }
+    // // Uncomment for testing only.
+    // if (weightDiff?.length) {
+    //     console.log(`Weighting Changed!\n`);
+    //     if (!QUIET) {
+    //         for (let s of weightDiff) {
+    //             console.log(s);
+    //         }
+    //     }
+    // }
+
     function getEvenDistributions(scores: RarityScore[]) {
         const result = scores.map(score => ({ ...score }));
         return normalize(result, false, false, false, scores.length);
