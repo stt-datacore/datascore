@@ -312,6 +312,15 @@ export function score() {
     const maincast = JSON.parse(fs.readFileSync(STATIC_PATH + 'maincast.json', 'utf-8')) as MainCast;
     const items = JSON.parse(fs.readFileSync(STATIC_PATH + 'items.json', 'utf-8')) as EquipmentItem[];
     const quipment = items.filter(f => f.type === 14).map(item => getItemWithBonus(item));
+    const oldweights = (() => {
+        const fp = STATIC_PATH + 'current_weighting.json';
+        if (fs.existsSync(fp)) {
+            return JSON.parse(fs.readFileSync(fp, 'utf-8')) as {[key:string]: ConstituentWeights};
+        }
+        else {
+            return {} as {[key:string]: ConstituentWeights}
+        }
+    })();
     // items.length = 0;
 
     const gauntlets = (() => {
@@ -364,14 +373,15 @@ export function score() {
 
     CONFIG.RARITIES.forEach((data, idx) => {
         let c = { max_rarity: idx + 1};
+        if (c.max_rarity > 5) return;
         Weights[c.max_rarity] ??= {
-            voyage: 3                   + ((c.max_rarity) * (c.max_rarity / 5)),
-            skill_rarity: 2.75          - (0.2 * (5 - c.max_rarity)),
+            voyage: 1.75                + (0.2 * (5 - c.max_rarity)),
             gauntlet: 1.75              + (0.2 * (5 - c.max_rarity)),
+            ship: 1.375                 + (0.65 * (5 - c.max_rarity)),
+            skill_rarity: 1.25          - (0.2 * (5 - c.max_rarity)),
             shuttle: 1                  - (0.1 * (5 - c.max_rarity)),
             collections: 0.60           + (1.5 * (5 - c.max_rarity)),
             quipment: 0.55              + (0.3 * (5 - c.max_rarity)),
-            ship: 0.375                 + (0.65 * (5 - c.max_rarity)),
             crit: 0.267,
             am_seating: 0.25            - (0.07 * (5 - c.max_rarity)),
             greatness: 0.2325,
@@ -407,6 +417,16 @@ export function score() {
 
     });
 
+    const weightDiff = makeWeightDiff(oldweights, Weights);
+
+    if (weightDiff?.length) {
+        console.log(`Weighting Changed!\n`);
+        if (!QUIET) {
+            for (let s of weightDiff) {
+                console.log(s);
+            }
+        }
+    }
     function getEvenDistributions(scores: RarityScore[]) {
         const result = scores.map(score => ({ ...score }));
         return normalize(result, false, false, false, scores.length);
@@ -1390,9 +1410,25 @@ export function score() {
     if (!QUIET) console.log("Writing current_weighting.json...");
     fs.writeFileSync(STATIC_PATH + 'current_weighting.json', JSON.stringify(Weights));
 
+    if (weightDiff?.length) {
+        console.log(`Weighting Changed!\n`);
+        if (!QUIET) {
+            for (let s of weightDiff) {
+                console.log(s);
+            }
+        }
+    }
+
     if (!process.argv.includes("--nochange")) {
+        const stamp = new Date();
+        if (weightDiff?.length) {
+            const weightChangeFile = `weight_change_log_${stamp.getTime()}.txt`;
+            console.log(`Writing ${weightChangeFile}...`);
+            fs.writeFileSync(SCRIPTS_DATA_PATH + weightChangeFile, weightDiff.join("\n"));
+        }
+
         const digestPath = `${SCRIPTS_DATA_PATH}change_log_digest.json`;
-        const changeFile = `change_log_${(new Date()).getTime()}.json`;
+        const changeFile = `change_log_${stamp.getTime()}.json`;
         const changePath = `${SCRIPTS_DATA_PATH}${changeFile}`;
 
         let old = [] as Digest[];
@@ -1422,6 +1458,56 @@ export function score() {
     }
     fs.writeFileSync(`${STATIC_PATH}sync_timestamp.txt`, `${(new Date().toISOString())}\n`);
     if (!QUIET) console.log("Done.");
+}
+
+function makeWeightDiff(prev: {[key:string]: ConstituentWeights}, next: {[key:string]: ConstituentWeights}): string[] {
+    const diff = [] as string[];
+
+    function objGraph(obj: any, curr?: any, prefix?: string) {
+        curr ??= {};
+        prefix ??= "";
+        if (prefix && !prefix.endsWith(".")) prefix = prefix + ".";
+        let keys = Object.keys(obj);
+        for (let key of keys) {
+            if (typeof obj[key] !=='object') {
+                curr[`${prefix}${key}`] = obj[key];
+            }
+            else {
+                curr[`${prefix}${key}`] = objGraph(obj[key], curr, `${prefix}${key}`);
+            }
+        }
+        return curr;
+    }
+
+    let graph1 = objGraph(prev);
+    let graph2 = objGraph(next);
+    let keys1 = Object.keys(graph1);
+    let keys2 = Object.keys(graph2);
+
+    let removed = keys1.filter(key => !keys2.includes(key));
+    if (removed.length) {
+        for (let key of removed) {
+            if (!(typeof graph1[key] === 'number')) continue;
+            let s = `${key}: ${graph1[key].toFixed(3)} => REMOVED`;
+            let n1 = graph1[key] || 0;
+            let n2 = graph2[key] || 0;
+            if (typeof n1 === 'number' && typeof n2 === 'number' && n2 - n1 !== 0) {
+                diff.push(`${s} - Delta: ${(n2 - n1).toFixed(3)}`);
+            }
+        }
+    }
+
+    for (let key in graph2) {
+        let num1 = (graph1[key] ? Number(graph1[key]) : undefined)?.toFixed(3) || 'NEW WEIGHT';
+        let num2 = (graph2[key] ? Number(graph2[key]) : undefined)?.toFixed(3) || 0;
+        let s = `${key}: ${num1} => ${num2}`;
+        let n1 = graph1[key] || 0;
+        let n2 = graph2[key] || 0;
+        if (typeof n1 === 'number' && typeof n2 === 'number' && n2 - n1 !== 0) {
+            diff.push(`${s} - Delta: ${(n2 - n1).toFixed(3)}`);
+        }
+    }
+    return diff;
 }
 
 type Digest = {
