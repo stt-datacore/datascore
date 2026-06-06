@@ -1327,7 +1327,7 @@ export function score() {
         let rank = 1;
         let score_mul = 2;
         //let rank_mul = 6 * (filtered[0].score - filtered[1].score);
-        let rank_mul = filtered.length / (filtered.length / (6 * (filtered[0].score - filtered[1].score)));
+        let rank_mul = filtered.length / (filtered.length / (2 * (filtered[0].score - filtered[Math.min(filtered.length, 20) - 1].score)));
         if (!r) {
             for (let rec of filtered) {
                 let c = origCrew.find(fc => fc.symbol === rec.symbol);
