@@ -376,8 +376,8 @@ export function score() {
         if (c.max_rarity > 5) return;
         Weights[c.max_rarity] ??= {
             voyage: 1.5                 + ((c.max_rarity) * (c.max_rarity / 5)),
-            gauntlet: 1.85              + (0.2 * (5 - c.max_rarity)),
-            ship: 1.5                   + (0.65 * (5 - c.max_rarity)),
+            gauntlet: 1.35              + (0.2 * (5 - c.max_rarity)),
+            ship: 1.30                  + (0.65 * (5 - c.max_rarity)),
             skill_rarity: 1.25          - (0.2 * (5 - c.max_rarity)),
             shuttle: 1                  - (0.1 * (5 - c.max_rarity)),
             collections: 0.60           + (1.5 * (5 - c.max_rarity)),
