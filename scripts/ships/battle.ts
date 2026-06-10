@@ -296,14 +296,14 @@ export const runBattles = (
                             if (compatdmg?.length) {
                                 let olen = newstaff.length;
                                 for (let i = olen; i < ship.battle_stations!.length && i < olen + 2 && i < compatdmg.length; i++) {
-                                    newstaff.push(compatdmg[i-1]);
+                                    newstaff.push(compatdmg[i-olen]);
                                 }
                             }
                         }
                         if (compatdef?.length) {
                             let olen = newstaff.length;
                             for (let i = olen; i < ship.battle_stations!.length && i < olen + 2 && i < compatdef.length; i++) {
-                                newstaff.push(compatdef[i-1]);
+                                newstaff.push(compatdef[i-olen]);
                             }
                         }
                     }
