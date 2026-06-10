@@ -1,3 +1,4 @@
+import CONFIG from "../../../website/src/components/CONFIG";
 import { BossShip } from "../../../website/src/model/boss";
 import { CrewMember } from "../../../website/src/model/crew";
 import { BattleMode, Ship } from "../../../website/src/model/ship";
@@ -169,6 +170,7 @@ export const runBattles = (
     allruns: BattleRunBase[],
     runidx: number,
     hrpool: CrewMember[],
+    dmgpool: CrewMember[],
     no_arena = false,
     no_fbb = false,
     opponent?: Ship | BossShip,
@@ -272,6 +274,14 @@ export const runBattles = (
                         }
                         else if (!isborg && compatdef.some(cr => cr.action.ability?.type === 2)) {
                             compatdef = compatdef.filter(cr => cr.action.ability?.type === 2)
+                        }
+                        // Petra et al
+                        if (isborg && c.action.bonus_type === 1 && CONFIG.OFFENSE_ABILITIES.some(atype => c.action.ability?.type === atype)) {
+                            compatdef = dmgpool.filter(cr => !!cr.action.ability?.amount && cr.action.bonus_type === 0).sort((a, b) => b.action.bonus_amount - a.action.bonus_amount || b.action.duration - a.action.duration);
+                            if (compatdef.some(cr => cr.action.initial_cooldown <= c.action.initial_cooldown)) {
+                                compatdef = compatdef.filter(cr => cr.action.initial_cooldown <= c.action.initial_cooldown);
+                            }
+                            compatdef = compatdef.slice(0, 1);
                         }
                         if (compatdef?.length) {
                             let olen = newstaff.length;

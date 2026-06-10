@@ -32,6 +32,7 @@ export interface ShipCalcConfig extends ShipCalcBase {
     current_id: number;
     rate: number;
     hrpool: CrewMember[];
+    dmgpool: CrewMember[];
     arena_variance: number,
     fbb_variance: number
 }
@@ -42,7 +43,7 @@ export interface CalcRes extends RunRes {
 
 async function calculateShip(config: ShipCalcConfig) {
     return new Promise<CalcRes>((resolve, reject) => {
-        const { rate, ship_crew, ships, hrpool, ship_idx, arena_variance, fbb_variance } = config;
+        const { rate, ship_crew, ships, hrpool, dmgpool, ship_idx, arena_variance, fbb_variance} = config;
         let { runidx, current_id } = config;
         let i = ship_idx;
 
@@ -54,7 +55,7 @@ async function calculateShip(config: ShipCalcConfig) {
 
         const opponent = nextOpponent(ships, getShipDivision(ship.rarity), i);
 
-        let runres = runBattles(current_id, rate, getCleanShipCopy(ship), [], allruns, runidx, hrpool, false, false, undefined, false, arena_variance, fbb_variance, true);
+        let runres = runBattles(current_id, rate, getCleanShipCopy(ship), [], allruns, runidx, hrpool, dmgpool, false, false, undefined, false, arena_variance, fbb_variance, true);
 
         runidx = 0;
         current_id = runres.current_id;
@@ -65,14 +66,14 @@ async function calculateShip(config: ShipCalcConfig) {
         console.log(`Run ${shipcrew.length} crew on ${ship.name} (FBB Only)...`);
 
         work_ship = getCleanShipCopy(ship);
-        runres = runBattles(current_id, rate, work_ship, [], allruns, runidx, hrpool, false, false, undefined, false, arena_variance, fbb_variance, true);
+        runres = runBattles(current_id, rate, work_ship, [], allruns, runidx, hrpool, dmgpool, false, false, undefined, false, arena_variance, fbb_variance, true);
 
         runidx = runres.runidx;
         current_id = runres.current_id;
 
         for (let c of shipcrew) {
             work_ship = getCleanShipCopy(ship);
-            let runres = runBattles(current_id, rate, work_ship, c, allruns, runidx, hrpool, true, false, undefined, false, arena_variance, fbb_variance);
+            let runres = runBattles(current_id, rate, work_ship, c, allruns, runidx, hrpool, dmgpool, true, false, undefined, false, arena_variance, fbb_variance);
 
             runidx = runres.runidx;
             current_id = runres.current_id;
@@ -82,7 +83,7 @@ async function calculateShip(config: ShipCalcConfig) {
 
         for (let c of shipcrew) {
             work_ship = getCleanShipCopy(ship);
-            let runres = runBattles(current_id, rate, work_ship, c, allruns, runidx, hrpool, false, true, undefined, false, arena_variance, fbb_variance);
+            let runres = runBattles(current_id, rate, work_ship, c, allruns, runidx, hrpool, dmgpool, false, true, undefined, false, arena_variance, fbb_variance);
 
             runidx = runres.runidx;
             current_id = runres.current_id;
@@ -90,10 +91,10 @@ async function calculateShip(config: ShipCalcConfig) {
 
         console.log(`Run ${shipcrew.length} crew on ${ship.name} (Arena Only; Opponent: ${opponent?.name ?? 'NONE'}) ...`);
         if (opponent) {
-            runres = runBattles(current_id, rate, getCleanShipCopy(ship), [], allruns, runidx, hrpool, false, true, getCleanShipCopy(opponent), false, arena_variance, fbb_variance, true);
+            runres = runBattles(current_id, rate, getCleanShipCopy(ship), [], allruns, runidx, hrpool, dmgpool, false, true, getCleanShipCopy(opponent), false, arena_variance, fbb_variance, true);
             runidx = runres.runidx;
             current_id = runres.current_id;
-            runres = runBattles(current_id, rate, getCleanShipCopy(opponent), [], allruns, runidx, hrpool, false, true, getCleanShipCopy(ship), false, arena_variance, fbb_variance, true);
+            runres = runBattles(current_id, rate, getCleanShipCopy(opponent), [], allruns, runidx, hrpool, dmgpool, false, true, getCleanShipCopy(ship), false, arena_variance, fbb_variance, true);
             runidx = runres.runidx;
             current_id = runres.current_id;
         }
@@ -104,7 +105,7 @@ async function calculateShip(config: ShipCalcConfig) {
             if (work_oppo?.battle_stations?.length) {
                 work_oppo.battle_stations[0].crew = c;
             }
-            let runres = runBattles(current_id, rate, work_ship, c, allruns, runidx, hrpool, false, true, work_oppo, false, arena_variance, fbb_variance);
+            let runres = runBattles(current_id, rate, work_ship, c, allruns, runidx, hrpool, dmgpool, false, true, work_oppo, false, arena_variance, fbb_variance);
 
             runidx = runres.runidx;
             current_id = runres.current_id;
@@ -118,7 +119,7 @@ async function calculateShip(config: ShipCalcConfig) {
                 if (work_ship?.battle_stations?.length) {
                     work_ship.battle_stations[0].crew = c;
                 }
-                let runres = runBattles(current_id, rate, work_oppo, c, allruns, runidx, hrpool, false, true, work_ship, false, arena_variance, fbb_variance);
+                let runres = runBattles(current_id, rate, work_oppo, c, allruns, runidx, hrpool, dmgpool, false, true, work_ship, false, arena_variance, fbb_variance);
 
                 runidx = runres.runidx;
                 current_id = runres.current_id;

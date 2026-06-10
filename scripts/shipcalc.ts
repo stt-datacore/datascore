@@ -85,7 +85,8 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     let newcrew = [] as CrewMember[];
     let newships = [] as Ship[];
     CONFIG
-    // const boompool = crew.filter(f => f.action.ability?.type === 1 && !f.action.limit && !f.action.ability?.condition).sort((a, b) => b.action.ability!.amount - a.action.ability!.amount || a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount || a.action.cycle_time - b.action.cycle_time);
+    const dmgpool = crew.filter(f => f.action.ability?.type && CONFIG.OFFENSE_ABILITIES.includes(f.action.ability.type) && !f.action.limit && !f.action.ability?.condition)
+        .sort((a, b) => actualPower(b.action) - actualPower(a.action) || a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount || b.action.duration - a.action.duration || a.action.cycle_time - b.action.cycle_time);
     // const critpool = crew.filter(f => f.action.ability?.type === 5 && !f.action.limit && !f.action.ability?.condition).sort((a, b) => b.action.ability!.amount - a.action.ability!.amount || a.action.bonus_type - b.action.bonus_type || b.action.bonus_amount - a.action.bonus_amount || a.action.cycle_time - b.action.cycle_time);
     const hrpool = crew.filter(f =>
         (f.action.ability?.type === 2 || (f.action.bonus_type === 1 && (!!f.action.ability && [0,2,3,6].includes(f.action.ability.type)))) && (!f.action.limit))
@@ -296,6 +297,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                         current_id,
                         rate,
                         hrpool,
+                        dmgpool,
                         arena_variance,
                         fbb_variance
                     }
@@ -760,7 +762,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
             for (let ship2 of arena_p2) {
                 if (ship == ship2) continue;
                 if (getShipDivision(ship2.rarity) !== division) continue;
-                let runres = runBattles(current_id, rate, ship, wcrew, allruns, runidx, hrpool, false, true, ship2, false, arena_variance, fbb_variance);
+                let runres = runBattles(current_id, rate, ship, wcrew, allruns, runidx, hrpool, dmgpool, false, true, ship2, false, arena_variance, fbb_variance);
 
                 runidx = runres.runidx;
                 current_id = runres.current_id;
@@ -787,14 +789,14 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                     for (let meta2 of shipmeta2) {
                         let wship2 = ship2;
                         if (!meta2) {
-                            let runres = runBattles(current_id, rate, testship!, testcrew, allruns, runidx, hrpool, false, true, ship2, false, arena_variance, fbb_variance);
+                            let runres = runBattles(current_id, rate, testship!, testcrew, allruns, runidx, hrpool, dmgpool, false, true, ship2, false, arena_variance, fbb_variance);
                             runidx = runres.runidx;
                             current_id = runres.current_id;
                         }
                         else {
                             let wship2 = structuredClone(ship2);
                             wship2.battle_stations!.forEach((bs, idx) => bs.crew = crew.find(f => f.symbol === meta2.crew[idx])!);
-                            let runres = runBattles(current_id, rate, testship!, testcrew, allruns, runidx, hrpool, false, true, wship2, false, arena_variance, fbb_variance);
+                            let runres = runBattles(current_id, rate, testship!, testcrew, allruns, runidx, hrpool, dmgpool, false, true, wship2, false, arena_variance, fbb_variance);
                             runidx = runres.runidx;
                             current_id = runres.current_id;
                         }
@@ -929,7 +931,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                             process.exit(-1);
                         }
                         fbb_variance = isborg ? 0.20 : 0;
-                        let runres = runBattles(current_id, rate, mship, ccrew, allruns, runidx, [], true, false, cboss, true, arena_variance, fbb_variance);
+                        let runres = runBattles(current_id, rate, mship, ccrew, allruns, runidx, [], [], true, false, cboss, true, arena_variance, fbb_variance);
 
                         runidx = runres.runidx;
                         current_id = runres.current_id;
