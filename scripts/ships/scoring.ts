@@ -787,15 +787,8 @@ export function normalizeScores(scores: Score[]) {
     });
 
     scores.forEach((score) => {
-        if (score.type === 'defense') {
-            score.overall_final = 0;
-        }
-        else {
-            score.overall_final = 0;
-        }
-        let fpc = 0;
+        score.overall_final = (score.arena_final + score.fbb_final) / 2;
         [score.arena_data, score.fbb_data].forEach((data, idx) => {
-            const m = score.type === 'defense' && !idx ? 1.75 : 1;
             data.forEach((unit) => {
                 if (idx === 0) {
                     unit.final = Number(((unit.final / arena_max[unit.group]) * 100).toFixed(4));
@@ -803,11 +796,8 @@ export function normalizeScores(scores: Score[]) {
                 else {
                     unit.final = Number(((unit.final / fbb_max[unit.group]) * 100).toFixed(4));
                 }
-                score.overall_final += (unit.final * m);
-                fpc++;
             });
         });
-        if (fpc) score.overall_final /= fpc;
     });
 
     // Normalize overall score
