@@ -269,6 +269,17 @@ export const runBattles = (
                             ) &&
                             (!ff.action.ability?.condition || shipCompatibility(ship, ff).trigger)
                         );
+                        let compatdmg = dmgpool.filter(
+                            ff => getBosses(undefined, ff)?.some(b => b.id === boss.id) &&
+                            (
+                                ff.action.bonus_type !== c.action.bonus_type ||
+                                ff.action.bonus_amount < c.action.bonus_amount ||
+                                ff.action.duration < c.action.duration ||
+                                ff.action.initial_cooldown !== c.action.initial_cooldown ||
+                                ff.action.cycle_time !== c.action.cycle_time
+                            ) &&
+                            (!ff.action.ability?.condition || shipCompatibility(ship, ff).trigger)
+                        );
                         if (compatdef.some(cr => cr.action.bonus_type === 1) && isborg) {
                             compatdef = compatdef.filter(cr => cr.action.bonus_type === 1)
                         }
@@ -277,11 +288,17 @@ export const runBattles = (
                         }
                         // Petra et al
                         if (isborg && c.action.bonus_type === 1 && CONFIG.OFFENSE_ABILITIES.some(atype => c.action.ability?.type === atype)) {
-                            compatdef = dmgpool.filter(cr => !!cr.action.ability?.amount && cr.action.bonus_type === 0).sort((a, b) => b.action.bonus_amount - a.action.bonus_amount || b.action.duration - a.action.duration);
-                            if (compatdef.some(cr => cr.action.initial_cooldown <= c.action.initial_cooldown)) {
-                                compatdef = compatdef.filter(cr => cr.action.initial_cooldown <= c.action.initial_cooldown);
+                            compatdmg = compatdmg.filter(cr => !!cr.action.ability?.amount && cr.action.bonus_type === 0).sort((a, b) => b.action.bonus_amount - a.action.bonus_amount || b.action.duration - a.action.duration);
+                            if (compatdmg.some(cr => cr.action.initial_cooldown <= c.action.initial_cooldown)) {
+                                compatdmg = compatdmg.filter(cr => cr.action.initial_cooldown <= c.action.initial_cooldown);
                             }
-                            compatdef = compatdef.slice(0, 1);
+                            compatdmg = compatdmg.slice(0, 1);
+                            if (compatdmg?.length) {
+                                let olen = newstaff.length;
+                                for (let i = olen; i < ship.battle_stations!.length && i < olen + 2 && i < compatdmg.length; i++) {
+                                    newstaff.push(compatdmg[i-1]);
+                                }
+                            }
                         }
                         if (compatdef?.length) {
                             let olen = newstaff.length;
