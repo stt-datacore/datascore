@@ -310,6 +310,7 @@ export const runBattles = (
                             }
                         }
                     }
+                    newstaff.sort((a, b) => a.action.bonus_type - b.action.bonus_type);
                 }
 
                 let maxtime = 180;
