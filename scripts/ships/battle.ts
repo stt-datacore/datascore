@@ -289,10 +289,13 @@ export const runBattles = (
                         // Petra et al
                         if (isborg && c.action.bonus_type === 1 && CONFIG.OFFENSE_ABILITIES.some(atype => c.action.ability?.type === atype)) {
                             compatdmg = compatdmg.filter(cr => !!cr.action.ability?.amount && cr.action.bonus_type === 0).sort((a, b) => b.action.bonus_amount - a.action.bonus_amount || b.action.duration - a.action.duration);
-                            if (compatdmg.some(cr => cr.action.initial_cooldown <= c.action.initial_cooldown)) {
+                            if (compatdmg.some(cr => cr.action.initial_cooldown <= c.action.initial_cooldown && cr.action.cycle_time <= c.action.cycle_time)) {
+                                compatdmg = compatdmg.filter(cr => cr.action.initial_cooldown <= c.action.initial_cooldown && cr.action.cycle_time <= c.action.cycle_time);
+                            }
+                            else if (compatdmg.some(cr => cr.action.initial_cooldown <= c.action.initial_cooldown)) {
                                 compatdmg = compatdmg.filter(cr => cr.action.initial_cooldown <= c.action.initial_cooldown);
                             }
-                            compatdmg = compatdmg.slice(0, 1);
+                            compatdmg = compatdmg.sort((a, b) => b.action.bonus_amount - a.action.bonus_amount || b.action.initial_cooldown - a.action.initial_cooldown || a.action.cycle_time - b.action.cycle_time).slice(0, 1);
                             if (compatdmg?.length) {
                                 let olen = newstaff.length;
                                 for (let i = olen; i < ship.battle_stations!.length && i < olen + 2 && i < compatdmg.length - olen; i++) {
