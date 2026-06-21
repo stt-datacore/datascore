@@ -683,7 +683,7 @@ function main() {
 		csvOutput += `${crewLine}\r\n`;
 	}
 
-	fs.writeFileSync(STATIC_PATH + 'crew.csv', csvOutput);
+	fs.writeFileSync(STATIC_PATH + 'crew.csv', csvOutput, { encoding: 'utf-8' });
 
 	// Calculate equipment matrix
 
