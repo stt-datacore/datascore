@@ -344,7 +344,7 @@ export function score() {
     const buffcap = JSON.parse(fs.readFileSync(STATIC_PATH + 'all_buffs.json', 'utf-8'));
     const maxbuffs = calculateMaxBuffs(buffcap);
     const crew = (JSON.parse(fs.readFileSync(STATIC_PATH + 'crew.json', 'utf-8')) as CrewMember[]);
-    const crewCSV = fs.readFileSync(STATIC_PATH + 'crew.csv', 'utf-8').split('\r\n');
+    const crewCSV = fs.readFileSync(STATIC_PATH + 'crew.csv', 'utf-8').replace(/^\uFEFF/, '').split('\r\n');
     const origCrew = JSON.parse(JSON.stringify(crew)) as CrewMember[];
     const pcols = computePotentialColScores(crew, collections, TRAIT_NAMES);
 
@@ -1406,7 +1406,7 @@ export function score() {
     if (!QUIET) console.log("Updating crew CSV...");
     updateCrewCsv(crewCSV, origCrew, collections);
 
-    fs.writeFileSync(STATIC_PATH + 'crew.csv', crewCSV.join("\r\n"), { encoding: 'utf-8' });
+    fs.writeFileSync(STATIC_PATH + 'crew.csv', '\uFEFF' + crewCSV.join("\r\n"), { encoding: 'utf-8' });
 
     if (!QUIET) console.log("Writing current_weighting.json...");
     fs.writeFileSync(STATIC_PATH + 'current_weighting.json', JSON.stringify(Weights));
