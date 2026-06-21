@@ -1406,7 +1406,7 @@ export function score() {
     if (!QUIET) console.log("Updating crew CSV...");
     updateCrewCsv(crewCSV, origCrew, collections);
 
-    fs.writeFileSync(STATIC_PATH + 'crew.csv', crewCSV.join("\r\n"));
+    fs.writeFileSync(STATIC_PATH + 'crew.csv', crewCSV.join("\r\n"), { encoding: 'utf-8' });
 
     if (!QUIET) console.log("Writing current_weighting.json...");
     fs.writeFileSync(STATIC_PATH + 'current_weighting.json', JSON.stringify(Weights));
