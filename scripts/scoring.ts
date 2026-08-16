@@ -402,8 +402,8 @@ export function score() {
             voyage_plus_weights: {
                 voyage: 1,
                 am_seating: 0.75,
-                quipment: 0.5,
-                tertiary_rarity: 0.3
+                quipment: 0.3,
+                tertiary_rarity: 0.55
             },
             gauntlet_plus_weights: {
                 gauntlet: 1,
