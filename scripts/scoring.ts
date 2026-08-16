@@ -377,7 +377,7 @@ export function score() {
         Weights[c.max_rarity] ??= {
             voyage: 1.5                 + ((c.max_rarity) * (c.max_rarity / 5)),
             gauntlet: 1.35              + (0.2 * (5 - c.max_rarity)),
-            ship: 1.25                  + (0.65 * (5 - c.max_rarity)),
+            ship: 1.25                  + (0.75 * (5 - c.max_rarity)),
             skill_rarity: 1.1           - (0.2 * (5 - c.max_rarity)),
             shuttle: 1                  - (0.1 * (5 - c.max_rarity)),
             collections: 0.60           + (1.5 * (5 - c.max_rarity)),
@@ -386,6 +386,7 @@ export function score() {
             am_seating: 0.25            - (0.07 * (5 - c.max_rarity)),
             greatness: 0.2325,
             trait: 0.2                  + (0.5 * (5 - c.max_rarity)),
+            tertiary_rarity: 0.10       + (((c.max_rarity) * (c.max_rarity / 5)) / 15),
             voyage_plus: 0.15,
             gauntlet_plus: 0.14,
             shuttle_plus: 0.13,
@@ -397,7 +398,6 @@ export function score() {
             skill_positions: 0.05       - (0.2 * (5 - c.max_rarity)),
             sko_ambivalent: 0.05        - (0.005 * (5 - c.max_rarity)),
             sko_absolute: 0.025         - (0.005 * (5 - c.max_rarity)),
-            tertiary_rarity: 0.01,
             primary_rarity: 0.01,
             voyage_plus_weights: {
                 voyage: 1,
