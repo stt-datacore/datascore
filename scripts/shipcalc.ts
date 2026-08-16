@@ -14,7 +14,7 @@ import { runBattles } from './ships/battle';
 import { battleRunsToCache, cacheToBattleRuns, readBattleCache, readMetaCache, writeMetaCache } from './ships/cache';
 import { CalcRes, MetaCache, MetaCacheEntry, ShipCalcConfig, ShipCalcMeta } from './ships/paracalc';
 import { processShips } from './ships/processing';
-import { BattleRunBase, BestCrewShip, Score, ScoreDataConfig, actualPower, characterizeCrew, createBlankShipScore, createScoreData, getBestCrewShip, getStaffedShip, processScores, rankBosses, scoreToShipScore, shipnum } from './ships/scoring';
+import { BattleRunBase, BestCrewShip, Score, ScoreDataConfig, actualPower, characterizeCrew, createBlankShipScore, createScoreData, getBestCrewShip, getStaffedShip, processScores, rankBosses, scoreToShipScore, shipCompatibility, shipnum } from './ships/scoring';
 import { createMulitpleShips } from './ships/seating';
 import { makeBuckets } from './ships/util';
 import { LineUpMeta, BuiltInMetas } from '../../website/src/model/worker';
@@ -976,9 +976,24 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
 
     const ship_3 = shipscores.filter(ss => ss.arena_data.some(ad => ad.total_damage) && ss.fbb_data.some(fd => fd.total_damage));
 
+    console.log("Weighing ship and crew grades against each other...");
+
     processScores(crew, ships, ship_3, 'ship', arenaruns.length, fbbruns.length);
 
-    console.log("Factoring ship grades into final crew grades.");
+    const shipcrew = {} as {[key:string]: CrewMember[]};
+    for (let ship of ship_3) {
+        let record = ships.find(f => f.symbol === ship.symbol);
+        if (record) {
+            let valid = [] as CrewMember[];
+            for (let c of crew) {
+                let compat = shipCompatibility(record, c);
+                if (compat.score >= 1) {
+                    valid.push(c);
+                }
+            }
+            shipcrew[record.symbol] = valid;
+        }
+    }
 
     const shipidx = 2;
 
@@ -1085,6 +1100,16 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
             });
         }
     });
+
+    for (let ship of ship_3) {
+        let compat = shipcrew[ship.symbol];
+        let h = 0;
+        for (let c of compat) {
+            h += crewRanksOut[c.symbol].overall;
+        }
+        h /= compat.length;
+        shipRanksOut[ship.symbol].avg_compat = h;
+    }
 
     console.log("Writing report and scores...");
 
