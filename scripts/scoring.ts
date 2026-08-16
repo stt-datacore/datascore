@@ -402,7 +402,8 @@ export function score() {
             voyage_plus_weights: {
                 voyage: 1,
                 am_seating: 0.75,
-                quipment: 0.5
+                quipment: 0.5,
+                tertiary_rarity: 0.3
             },
             gauntlet_plus_weights: {
                 gauntlet: 1,
@@ -974,20 +975,25 @@ export function score() {
 
     for (let c of crew) {
         let voyage_n = voyage.find(f => f.symbol === c.symbol)!.score;
+
         let i_amseat_n = amseats.findIndex(f => f.symbol === c.symbol);
         let amseat_n = amseats[i_amseat_n].score;
 
         let i_quip_n = quips.findIndex(f => f.symbol === c.symbol);
+        let quip_n = quips[i_quip_n].score;
+
+        let i_tert_n = tertrare.findIndex(f => f.symbol === c.symbol);
+        let tert_n = tertrare[i_tert_n].score;
+
         let qobj = quips[i_quip_n];
         let qp = qobj.data as QPowers | undefined;
-        let quip_n = quips[i_quip_n].score;
 
         let vplus = Weights[c.max_rarity].voyage_plus_weights;
 
         results.push({
             symbol: c.symbol,
             rarity: c.max_rarity,
-            score: ((voyage_n * vplus.voyage) + (amseat_n * vplus.am_seating) + ((qp?.vpower ?? quip_n) * vplus.quipment)) / 3
+            score: ((voyage_n * vplus.voyage) + (amseat_n * vplus.am_seating) + ((qp?.vpower ?? quip_n) * vplus.quipment) + (tert_n * vplus.tertiary_rarity)) / 4
         });
     }
 
