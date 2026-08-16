@@ -1101,14 +1101,37 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         }
     });
 
+    let highcompat = {} as {[key:string]: number};
+
     for (let ship of ship_3) {
         let compat = shipcrew[ship.symbol];
+        let obj = ships.find(f => f.symbol === ship.symbol)
+        let cl = compat.length;
         let h = 0;
         for (let c of compat) {
             h += crewRanksOut[c.symbol].overall;
         }
-        h /= compat.length;
+        h /= cl;
         shipRanksOut[ship.symbol].avg_compat = h;
+        shipRanksOut[ship.symbol].extra = {
+            compat_length: cl
+        }
+        if (obj) {
+            let r = obj.rarity;
+            let mo = h * h * cl;
+            shipRanksOut[ship.symbol].extra.mo = mo;
+            highcompat[r] ??= 0;
+            if (highcompat[r] < mo) {
+                highcompat[r] = mo;
+            }
+        }
+    }
+
+    for (let ship of ship_3) {
+        let obj = ships.find(f => f.symbol === ship.symbol);
+        if (!obj) continue;
+        let r = obj.rarity;
+        shipRanksOut[ship.symbol].extra.compat_score = (shipRanksOut[ship.symbol].extra.mo! / highcompat[r]) * 100;
     }
 
     console.log("Writing report and scores...");
