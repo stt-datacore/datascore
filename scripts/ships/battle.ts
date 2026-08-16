@@ -261,7 +261,8 @@ export const runBattles = (
                         let compatdef = hrpool.filter(
                             ff => getBosses(undefined, ff)?.some(b => b.id === boss.id) &&
                             (
-                                ff.action.bonus_type !== c.action.bonus_type ||
+                                (isborg && ff.action.bonus_type === 1) ||
+                                (!isborg && ff.action.bonus_type !== c.action.bonus_type) ||
                                 ff.action.bonus_amount < c.action.bonus_amount ||
                                 ff.action.duration < c.action.duration ||
                                 ff.action.initial_cooldown !== c.action.initial_cooldown ||
@@ -272,11 +273,11 @@ export const runBattles = (
                         let compatdmg = dmgpool.filter(
                             ff => getBosses(undefined, ff)?.some(b => b.id === boss.id) &&
                             (
-                                ff.action.bonus_type !== c.action.bonus_type ||
-                                ff.action.bonus_amount < c.action.bonus_amount ||
+                                ff.action.bonus_type === 0 &&
+                                (
                                 ff.action.duration < c.action.duration ||
                                 ff.action.initial_cooldown !== c.action.initial_cooldown ||
-                                ff.action.cycle_time !== c.action.cycle_time
+                                ff.action.cycle_time !== c.action.cycle_time)
                             ) &&
                             (!ff.action.ability?.condition || shipCompatibility(ship, ff).trigger)
                         );
@@ -296,17 +297,14 @@ export const runBattles = (
                                 compatdmg = compatdmg.filter(cr => cr.action.initial_cooldown <= c.action.initial_cooldown);
                             }
                             compatdmg = compatdmg.sort((a, b) => b.action.bonus_amount - a.action.bonus_amount || b.action.initial_cooldown - a.action.initial_cooldown || a.action.cycle_time - b.action.cycle_time).slice(0, 1);
-                            if (compatdmg?.length) {
-                                let olen = newstaff.length;
-                                for (let i = olen; i < ship.battle_stations!.length && i < olen + 2 && i < compatdmg.length - olen; i++) {
-                                    newstaff.push(compatdmg[i-olen]);
-                                }
+                            if (compatdmg?.length && newstaff.length < ship.battle_stations!.length) {
+                                newstaff.unshift(compatdmg[0]);
                             }
                         }
                         if (compatdef?.length) {
                             let olen = newstaff.length;
                             for (let i = olen; i < ship.battle_stations!.length && i < olen + 2 && i < compatdef.length - olen; i++) {
-                                newstaff.push(compatdef[i-olen]);
+                                newstaff.unshift(compatdef[i-olen]);
                             }
                         }
                     }
