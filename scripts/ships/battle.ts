@@ -230,7 +230,7 @@ export const runBattles = (
             bosses.forEach((boss) => {
                 let newstaff = [...staff];
                 const ignore_defeat_fbb = false; //crewtype === 'offense';
-
+                let debuff = false;
                 battle_mode = `fbb_${boss.id - 1}` as BattleMode;
                 let isborg = boss.symbol.includes('borg');
                 if (newstaff.length === 1 && c) {
@@ -296,6 +296,7 @@ export const runBattles = (
                             }
                             compatdmg = compatdmg.sort((a, b) => b.action.bonus_amount - a.action.bonus_amount || b.action.initial_cooldown - a.action.initial_cooldown || a.action.cycle_time - b.action.cycle_time).slice(0, 1);
                             if (compatdmg?.length && newstaff.length < ship.battle_stations!.length) {
+                                debuff = true;
                                 newstaff.unshift(compatdmg[0]);
                             }
                         }
@@ -323,12 +324,11 @@ export const runBattles = (
                     if (attack) {
                         let time = attack.battle_time;
                         let dmg = attack.attack;
+                        if (debuff) {
+                            // remove 25% for not owning the attack level
+                            dmg *= 0.75;
+                        }
                         let incoming = attack.opponent_attack;
-                        // if (c?.action.limit) {
-                        //     let exp = getMaxTime(c);
-                        //     dmg *= (exp / 180);
-                        // }
-
                         allruns[runidx++] = {
                             crew: c,
                             ship,

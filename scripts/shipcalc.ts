@@ -646,10 +646,10 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                     let bcidx = 0;
                     let arena_division = getShipDivision(ship.rarity);
                     let bosses = getBosses(ship).map(b => b.id);
-                    let bsc = getBestCrewShip(arenaruns.filter(f => f.division === arena_division), metaCrew, ship.symbol, 'arena', arena_division);
+                    let bsc = getBestCrewShip(arenaruns, metaCrew, ship.symbol, 'arena', arena_division);
                     if (bsc) crewship[bcidx++] = bsc;
                     for (let div of bosses) {
-                        let bsc = getBestCrewShip(fbbruns.filter(f => f.division === div), metaCrew, ship.symbol, 'fbb', div);
+                        let bsc = getBestCrewShip(fbbruns, metaCrew, ship.symbol, 'fbb', div);
                         if (bsc) crewship[bcidx++] = bsc;
                     }
                     crewship.length = bcidx;
