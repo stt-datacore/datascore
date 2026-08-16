@@ -8,7 +8,7 @@ import { BossShip } from '../../website/src/model/boss';
 import { CrewMember, RankScoring, ShipScores } from "../../website/src/model/crew";
 import { AllBuffsCapHash } from '../../website/src/model/player';
 import { Schematics, Ship } from "../../website/src/model/ship";
-import { AllBosses, getBosses, getShipDivision } from "../../website/src/utils/shiputils";
+import { AllBosses, getBosses, getCrewDivisions, getShipDivision } from "../../website/src/utils/shiputils";
 import ship_buff_ref from './ship_buff_ref.json';
 import { runBattles } from './ships/battle';
 import { battleRunsToCache, cacheToBattleRuns, readBattleCache, readMetaCache, writeMetaCache } from './ships/cache';
@@ -987,7 +987,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
             let valid = [] as CrewMember[];
             for (let c of crew) {
                 let compat = shipCompatibility(record, c);
-                if (compat.score >= 1) {
+                if (compat.score >= 1 && getCrewDivisions(c.max_rarity).includes(getShipDivision(record.rarity)) && getBosses(record, c)?.length) {
                     valid.push(c);
                 }
             }
@@ -1111,14 +1111,14 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         for (let c of compat) {
             h += crewRanksOut[c.symbol].overall;
         }
-        h /= cl;
-        shipRanksOut[ship.symbol].avg_compat = h;
+        shipRanksOut[ship.symbol].avg_compat = h / cl;
         shipRanksOut[ship.symbol].extra = {
-            compat_length: cl
+            compat_length: cl,
+            mo: 0
         }
         if (obj) {
             let r = obj.rarity;
-            let mo = h * h * cl;
+            let mo = h;
             shipRanksOut[ship.symbol].extra.mo = mo;
             highcompat[r] ??= 0;
             if (highcompat[r] < mo) {
@@ -1131,7 +1131,8 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         let obj = ships.find(f => f.symbol === ship.symbol);
         if (!obj) continue;
         let r = obj.rarity;
-        shipRanksOut[ship.symbol].extra.compat_score = (shipRanksOut[ship.symbol].extra.mo! / highcompat[r]) * 100;
+        if (!highcompat[r]) highcompat[r] = 1;
+        shipRanksOut[ship.symbol].extra.compat_score = shipRanksOut[ship.symbol].extra.mo / highcompat[r];
     }
 
     console.log("Writing report and scores...");
