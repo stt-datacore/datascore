@@ -22,6 +22,14 @@ import { LineUpMeta, BuiltInMetas } from '../../website/src/model/worker';
 const STATIC_PATH = `${__dirname}/../../../../website/static/structured/`;
 const LEVEL_PATH = `${__dirname}/../../../../scripts/data/`;
 
+type CrewShipXRef = {
+    [key:string]: {
+        crew: BestCrewShip;
+        type: 'arena' | 'fbb';
+        division: number;
+    }[]
+}
+
 async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance = 0) {
     const Triggers = {
         0: 'None',
@@ -610,7 +618,40 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         }
 
         if (!metaCache?.length || newcrew.length || newships.length) {
+
+            const bigxref = {} as CrewShipXRef;
             //const workcrew = newcrew.length ? newcrew : crew;
+
+            // get all crew for all ships ahead of time.
+            let nsh = 1;
+            let csh = all_ships.length;
+            for (let ship of all_ships) {
+                const refs = bigxref[ship.symbol] ??= [];
+                let arena_division = getShipDivision(ship.rarity);
+                let bosses = getBosses(ship).map(b => b.id);
+                console.log(`(Meta Cache) Gathering best arena crew for ${ship.name} (${nsh} / ${csh}) ...`);
+                let bsc = getBestCrewShip(arenaruns, metaCrew, ship.symbol, 'arena', arena_division);
+                if (bsc) {
+                    refs.push({
+                        crew: bsc,
+                        division: arena_division,
+                        type: 'arena'
+                    });
+                }
+                for (let div of bosses) {
+                    console.log(`(Meta Cache) Gathering best boss #${div} crew for ${ship.name} (${nsh} / ${csh}) ...`);
+                    let bsc = getBestCrewShip(fbbruns, metaCrew, ship.symbol, 'fbb', div);
+                    if (bsc) {
+                        refs.push({
+                            crew: bsc,
+                            division: div,
+                            type: 'fbb'
+                        });
+                    }
+                }
+                nsh++;
+            }
+
             if (cached.length) {
                 metaidx = metaCache.length;
             }
@@ -641,20 +682,15 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                         resolve(undefined);
                         return;
                     }
-                    crewship.length = metaCrew.length * (AllBosses.length + 3);
                     console.log(`Computing best meta-eligible crew for ${ship.name}...`);
                     let bcidx = 0;
-                    let arena_division = getShipDivision(ship.rarity);
-                    let bosses = getBosses(ship).map(b => b.id);
-                    let bsc = getBestCrewShip(arenaruns, metaCrew, ship.symbol, 'arena', arena_division);
-                    if (bsc) crewship[bcidx++] = bsc;
-                    for (let div of bosses) {
-                        let bsc = getBestCrewShip(fbbruns, metaCrew, ship.symbol, 'fbb', div);
-                        if (bsc) crewship[bcidx++] = bsc;
+                    let xref = bigxref[ship.symbol];
+                    crewship.length = xref.length;
+                    for (let shipref of xref) {
+                        crewship[bcidx++] = shipref.crew;
                     }
                     crewship.length = bcidx;
                     let cacheFind = metaCache.filter(f => f.ship === ship.symbol);
-                    //const shipcrew = ws ? crew : workcrew;
                     let ship_bcc = crewship.find(f => f.ship === ship.symbol);
                     let mcrew = ship_bcc?.crew_battles.sort((a, b) => a.score - b.score).map(mc => metaCrew.find(fc => fc.symbol === mc.crew)!);
                     const config: ShipCalcMeta = {
