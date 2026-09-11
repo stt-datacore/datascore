@@ -624,8 +624,8 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
 
             // get all crew for all ships ahead of time.
             let nsh = 1;
-            let csh = all_ships.length;
-            for (let ship of all_ships) {
+            let csh = ships.length;
+            for (let ship of ships) {
                 const refs = bigxref[ship.symbol] ??= [];
                 let arena_division = getShipDivision(ship.rarity);
                 let bosses = getBosses(ship).map(b => b.id);
@@ -706,16 +706,16 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                         workerData: config,
                     });
                     worker.on('message', (data) => {
-                        // setTimeout(() => {
-                        //     worker.terminate();
-                        // });
+                        setTimeout(() => {
+                            worker.terminate();
+                        });
                         resolve(data);
                     });
                     worker.on('error', reject);
-                    worker.on('exit', (code) => {
-                    if (code !== 0)
-                        reject(new Error(`(Meta Cache) Worker stopped with exit code ${code}`));
-                    });
+                    // worker.on('exit', (code) => {
+                    // if (code !== 0)
+                    //     reject(new Error(`(Meta Cache) Worker stopped with exit code ${code}`));
+                    // });
                 }));
 
                 startidx += buckets.length;
