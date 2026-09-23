@@ -10,7 +10,7 @@ import { getAllCrewRewards, getAllStatBuffs } from '../../website/src/utils/coll
 import { applyCrewBuffs, getSkillOrderScore, getSkillOrderStats, getVariantTraits, numberToGrade, SkillRarityReport, skillSum } from '../../website/src/utils/crewutils';
 import { getElevatedBuckets } from '../../website/src/utils/gauntlet';
 import { getItemWithBonus } from '../../website/src/utils/itemutils';
-import { calculateMaxBuffs, lookupAMSeatsByTrait } from '../../website/src/utils/voyageutils';
+import { BuffStatTable, calculateMaxBuffs, lookupAMSeatsByTrait } from '../../website/src/utils/voyageutils';
 import { computePotentialColScores, scoreCollections, splitCollections } from './cols';
 import { normalize as norm, RarityScore } from './normscores';
 import { QPowers, scoreQuipment, sortingQuipmentScoring } from './quipment';
@@ -62,11 +62,28 @@ function normalizeQPowers(qpowers: QPowers[]) {
     });
 }
 
-function elacrit(gauntlets: Gauntlet[], crew: CrewMember) {
+function elacrit(gauntlets: Gauntlet[], crew: CrewMember, pcts?: {[key:string]: number}) {
     let buckets = getElevatedBuckets(crew as PlayerCrew, gauntlets);
     return buckets.map(bucket => {
+        if (pcts) {
+            return bucket.count * bucket.crit * pcts[crew.symbol]
+        }
         return bucket.count * bucket.crit;
     }).reduce((p, n) => p + n, 0);
+}
+
+function realCritPcts(roster: CrewMember[], maxbuffs: BuffStatTable) {
+    const output = {} as {[key:string]: number}
+    roster.sort((a, b) => b.ranks.gauntletRank - a.ranks.gauntletRank);
+    let skills = applyCrewBuffs(roster[0], maxbuffs)!;
+    let big = Object.values(skills).map((s: Skill) => s.range_min).reduce((p, n) => p + n, 0);
+    for (let c of roster) {
+        skills = applyCrewBuffs(c, maxbuffs)!;
+        let cur = Object.values(skills).map((s: Skill) => s.range_min).reduce((p, n) => p + n, 0);
+        let pct = cur / big;
+        output[c.symbol] = pct;
+    }
+    return output;
 }
 
 function velocity(crew: CrewMember, roster: CrewMember[]) {
@@ -390,6 +407,7 @@ export function score() {
             voyage_plus: 0.15,
             gauntlet_plus: 0.14,
             shuttle_plus: 0.13,
+            adv_crit: 0.12,
             donut: 0.10,
             velocity: 0.09              - (0.02 * (5 - c.max_rarity)),
             potential_cols: 0.1         + (0.17 * (5 - c.max_rarity)),
@@ -408,7 +426,8 @@ export function score() {
             gauntlet_plus_weights: {
                 gauntlet: 1,
                 crit: 0.5,
-                quipment: 0.5
+                quipment: 0.5,
+                adv_crit: 0.25,
             },
             base_plus_weights: {
                 shuttleRank: 1,
@@ -816,6 +835,24 @@ export function score() {
     if (DEBUG) console.log("Potential Collection Score")
     if (DEBUG) console.log(pcolscores.slice(0, 20));
 
+    if (!QUIET) console.log("Scoring gauntlets weighted crit...");
+
+    results = [].slice();
+    const realcrits = realCritPcts(crew, maxbuffs);
+    for (let c of crew) {
+        results.push({
+            symbol: c.symbol,
+            rarity: c.max_rarity,
+            score: elacrit(gauntlets, c, realcrits)
+        });
+    }
+
+    let advcrits = normalize(results);
+    measureGreatness(advcrits, 'adv_crit');
+
+    if (DEBUG) console.log("Weighted Elevated Crit Gauntlet Score")
+    if (DEBUG) console.log(advcrits.slice(0, 20));
+
     if (!QUIET) console.log("Scoring elevated-crit gauntlets...");
 
     results = [].slice();
@@ -824,7 +861,7 @@ export function score() {
         results.push({
             symbol: c.symbol,
             rarity: c.max_rarity,
-            score: elacrit(gauntlets,c)
+            score: elacrit(gauntlets, c)
         });
     }
 
@@ -949,11 +986,13 @@ export function score() {
         let i_crit_n = elacrits.findIndex(f => f.symbol === c.symbol);
         let crit_n = elacrits[i_crit_n].score;
 
+        let i_advcrit_n = advcrits.findIndex(f => f.symbol === c.symbol);
+        let advcrit_n = advcrits[i_advcrit_n].score;
+
         let i_quip_n = quips.findIndex(f => f.symbol === c.symbol);
         let qobj = quips[i_quip_n];
         let qp = qobj.data as QPowers | undefined;
         let quip_n = quips[i_quip_n].score;
-
         let gplus = Weights[c.max_rarity].gauntlet_plus_weights;
 
         results.push({
@@ -1153,6 +1192,9 @@ export function score() {
         let i_crit_n = elacrits.findIndex(f => f.symbol === c.symbol);
         let elacrit_n = elacrits[i_crit_n].score;
 
+        let i_advcrit_n = advcrits.findIndex(f => f.symbol === c.symbol);
+        let advcrit_n = advcrits[i_advcrit_n].score;
+
         let i_gplus_n = gauntlet_plus.findIndex(f => f.symbol === c.symbol);
         let gplus_n = gauntlet_plus[i_gplus_n].score;
 
@@ -1203,6 +1245,9 @@ export function score() {
 
         c.ranks.scores.crit = elacrit_n;
         c.ranks.crit_rank = i_crit_n + 1;
+
+        c.ranks.scores.adv_crit = advcrit_n;
+        c.ranks.scores.adv_crit_rank = i_advcrit_n + 1;
 
         c.ranks.scores.gauntlet_plus = gplus_n;
         c.ranks.scores.gauntlet_plus_rank = i_gplus_n + 1;
