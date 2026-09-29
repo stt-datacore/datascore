@@ -699,7 +699,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                         meta_cache: true,
                         current_scores: cacheFind,
                         ships: [ship],
-                        crew: mcrew?.length ? mcrew : metaCrew,
+                        crew: metaCrew,
                         no_sort: false, //!!mcrew,
                         meta_list: goodmetas,
                         new_crew: newcrew?.length && !ws ? newcrew.map(c => c.symbol) : undefined
