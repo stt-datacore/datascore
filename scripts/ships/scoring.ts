@@ -1282,29 +1282,58 @@ export function rankBosses(data: {[key:string]: ShipScores }, fullData: CrewMemb
     }
 }
 
-export function getBestCrewShip(runs: BattleRunBase[], crew: CrewMember[], ship: string, battle: 'arena' | 'fbb', division?: number): BestCrewShip | undefined {
+type RunIndex = { crew: any, index: number, type: 'offense' | 'defense', division: number };
+
+export function getBestCrewShip(runs: BattleRunBase[], crew: CrewMember[], ship: string, battle: 'arena' | 'fbb', divisions: number[]): BestCrewShip[] | undefined {
     sortRuns(runs, battle === 'fbb', 'crew');
-    let rundata = runs
-        .filter(r => r.battle === battle && r.ship.symbol === ship && (!division || r.division === division))
-        .map((r, i) => ({ crew: r.crew, index: i, type: r.type }));
-    let crew_battles = crew.map(c => {
-        let cfilt = rundata.filter(f => f.crew === c.symbol);
-        if (!cfilt.length) return undefined;
-        let avgidx = cfilt.map(f => f.index).reduce((p, n) => p + n, 0) / cfilt.length;
-        return {
-            crew: c.symbol,
-            battle,
-            division: division || 0,
-            score: avgidx,
-            rank: 0,
-            type: cfilt[0].type
+    let buckets = {} as {[key: string]: RunIndex[]}
+    for (let r of runs) {
+        if (r.battle !== battle || r.ship.symbol !== ship || r.division === undefined || !divisions.includes(r.division)) continue;
+        let d = r.division;
+        buckets[d] ??= [];
+        let col = buckets[d];
+        let idx = col.length;
+        col.push({
+            crew: typeof r.crew === 'string' ? r.crew : r.crew.symbol,
+            index: idx,
+            type: r.type,
+            division: d
+        });
+    }
+    let results = [] as CrewBattle[][];
+    for (let [key, rundata] of Object.entries(buckets)) {
+        let division = Number(key);
+        let crew_idx = {} as {[key:string]: number}
+        let crew_count = {} as {[key:string]: number}
+        let crew_type = {} as {[key:string]: 'defense' | 'offense'}
+        for (let run of rundata) {
+            crew_idx[run.crew] ??= 0;
+            crew_idx[run.crew] += run.index;
+            crew_count[run.crew] ??= 0;
+            crew_count[run.crew]++;
+            crew_type[run.crew] = run.type;
         }
-    }).filter(f => f !== undefined);
-    if (!crew_battles.length) return undefined;
-    crew_battles.sort((a, b) => a.score - b.score);
-    crew_battles.forEach((cb, i) => cb.rank = i + 1);
-    return {
+        let divres = [] as CrewBattle[];
+        for (let c of crew) {
+            if (crew_idx[c.symbol] === undefined || !crew_count[c.symbol]) continue;
+            let avgidx = crew_idx[c.symbol] / crew_count[c.symbol];
+            divres.push({
+                crew: c.symbol,
+                battle,
+                division: division || 0,
+                score: avgidx,
+                rank: 0,
+                type: crew_type[c.symbol]
+            });
+        }
+        if (divres.length) {
+            divres.sort((a, b) => a.score - b.score);
+            divres.forEach((cb, i) => cb.rank = i + 1);
+            results.push(divres);
+        }
+    }
+    return results.map(crew_battles => ({
         ship,
         crew_battles
-    }
+    }))
 }

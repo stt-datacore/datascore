@@ -630,21 +630,23 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                 let arena_division = getShipDivision(ship.rarity);
                 let bosses = getBosses(ship).map(b => b.id);
                 console.log(`(Meta Cache) Gathering best arena crew for ${ship.name} (${nsh} / ${csh}) ...`);
-                let bsc = getBestCrewShip(arenaruns, metaCrew, ship.symbol, 'arena', arena_division);
+                let bsc = getBestCrewShip(arenaruns, metaCrew, ship.symbol, 'arena', [arena_division]);
                 if (bsc) {
-                    refs.push({
-                        crew: bsc,
-                        division: arena_division,
-                        type: 'arena'
-                    });
-                }
-                for (let div of bosses) {
-                    console.log(`(Meta Cache) Gathering best boss #${div} crew for ${ship.name} (${nsh} / ${csh}) ...`);
-                    let bsc = getBestCrewShip(fbbruns, metaCrew, ship.symbol, 'fbb', div);
-                    if (bsc) {
+                    for (let crewset of bsc) {
                         refs.push({
-                            crew: bsc,
-                            division: div,
+                            crew: crewset,
+                            division: crewset.crew_battles[0].division,
+                            type: 'arena'
+                        });
+                    }
+                }
+                console.log(`(Meta Cache) Gathering best boss crew for ${ship.name} (${nsh} / ${csh}) ...`);
+                bsc = getBestCrewShip(fbbruns, metaCrew, ship.symbol, 'fbb', bosses);
+                if (bsc) {
+                    for (let crewset of bsc) {
+                        refs.push({
+                            crew: crewset,
+                            division: crewset.crew_battles[0].division,
                             type: 'fbb'
                         });
                     }
@@ -691,14 +693,14 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                     }
                     crewship.length = bcidx;
                     let cacheFind = metaCache.filter(f => f.ship === ship.symbol);
-                    let ship_bcc = crewship.find(f => f.ship === ship.symbol);
-                    let mcrew = ship_bcc?.crew_battles.sort((a, b) => a.score - b.score).map(mc => metaCrew.find(fc => fc.symbol === mc.crew)!);
+                    let ship_bcc = crewship.filter(f => f.ship === ship.symbol).map(m => m.crew_battles).flat();
+                    let mcrew = ship_bcc.sort((a, b) => a.score - b.score).map(mc => metaCrew.find(fc => fc.symbol === mc.crew)!);
                     const config: ShipCalcMeta = {
                         meta_cache: true,
                         current_scores: cacheFind,
                         ships: [ship],
-                        crew: mcrew || metaCrew,
-                        no_sort: !!mcrew,
+                        crew: mcrew?.length ? mcrew : metaCrew,
+                        no_sort: false, //!!mcrew,
                         meta_list: goodmetas,
                         new_crew: newcrew?.length && !ws ? newcrew.map(c => c.symbol) : undefined
                     }
