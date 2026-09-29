@@ -728,7 +728,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                             let entries = Object.values(d).flat();
                             entries = entries.sort((a, b) => b.score - a.score)
                             entries = entries.filter((e, i) => entries.findIndex(e2 => e.crew.join() === e2.crew.join() && e.ship === e2.ship && e.division === e2.division && e.meta === e2.meta) === i);
-                            entries = entries.slice(0, 10);
+                            //entries = entries.slice(0, 10);
 
                             for (let e of entries) {
                                 metaruns[metaidx] = e;
@@ -852,68 +852,14 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         }
     }
 
-    // count = 1;
-    // let xcount = 1;
-    // for (let fbb_num = 4; fbb_num > 0; fbb_num--) {
-    //     if (fbb_num === 2) console.log(`Testing ships in Fleet Boss battles (${xcount++}/4) - 2 Hull-Repair ...`);
-    //     else if (fbb_num === 1) console.log(`Testing ships in Fleet Boss battles (${xcount++}/4) - 1 Hull-Repair ...`);
-    //     else if (fbb_num === 4) console.log(`Testing ships in Fleet Boss battles (${xcount++}/4) - 2 Evasion ...`);
-    //     else if (fbb_num === 3) console.log(`Testing ships in Fleet Boss battles (${xcount++}/4) - 1 Evasion ...`);
-
-    //     for (let cship of ships) {
-    //         if (VERBOSE) console.log(`Scoring FBB on ${cship.name} (${count++} / ${ships.length})...`);
-    //         let bosses = getBosses(cship);
-    //         // if (cship.name === 'Borg Tactical Cube') {
-    //         //     let n = 'break';
-    //         // }
-    //         bosses.sort((a, b) => b.rarity - a.rarity);
-    //         let c = bosses.length;
-    //         let cboss: BossShip | undefined = undefined;
-    //         for (let i = 0; i < c; i++) {
-    //             let ship: Ship | undefined = cship;
-    //             cboss = bosses[i];
-    //             ship = getStaffedShip(origShips, crew, cship, fbb_num as 1 | 2 | 3 | 4, offs_2, defs_2, undefined, undefined, cboss)!;
-    //             if (!ship) continue;
-    //             let multi = createMulitpleShips(ship);
-    //             if (!multi) {
-    //                 if (VERBOSE) {
-    //                     console.log(`${ship.name}, SKIPPING BOSS: ${cboss?.ship_name} ${cboss?.rarity}`);
-    //                     console.log('Cannot generate lineup');
-    //                 }
-    //                 continue;
-    //             }
-    //             for (let mship of multi) {
-    //                 let ccrew = mship.battle_stations!.map(m => m.crew!);
-    //                 if (!ccrew.every(c => c)) {
-    //                     console.log(`Something is wrong here`);
-    //                     console.log(`${mship.name}, ${cboss?.ship_name} ${cboss?.rarity}`);
-    //                     console.log(ccrew);
-    //                     process.exit(-1);
-    //                 }
-    //                 let runres = runBattles(current_id, rate, mship, ccrew, allruns, runidx, [], true, false, cboss, true, arena_variance, fbb_variance);
-
-    //                 runidx = runres.runidx;
-    //                 current_id = runres.current_id;
-    //             }
-    //         }
-    //     }
-    // }
-
     count = 1;
-    let xcount = 1;
     let symbols = [ ...new Set(AllBosses.map(b => b.symbol)) ];
+
     for (let boss_sym of symbols) {
         console.log(`Test Boss: ${boss_sym}`);
         for (let cship of ships) {
             if (VERBOSE) console.log(`Scoring FBB on ${cship.name} (${count++} / ${ships.length})...`);
             let bosses = getBosses(cship).filter(f => f.symbol === boss_sym);
-            // if (cship.name === 'Borg Tactical Cube') {
-            //     let n = 'break';
-            // }
-
-            // if (cship.name?.includes('Discovery')) {
-            //     let p = 0;
-            // }
             bosses.sort((a, b) => b.rarity - a.rarity);
             let c = bosses.length;
             let cboss: BossShip | undefined = undefined;
@@ -978,7 +924,6 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
             }
         }
     }
-
 
     console.log("Score Ships, Pass 2...");
     allruns.splice(runidx);
