@@ -607,7 +607,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
     let metaruns = [] as MetaCacheEntry[];
     let metaidx = 0;
     let metaship = ships.length;
-    let goodmetas: LineUpMeta[] = ['arena_boom', 'arena_boom_each', 'arena_boom_all', 'arena_boom_all_each', 'fbb_1_healer', 'fbb_2_healer', 'fbb_1_healer_evasion', 'fbb_2_healer_evasion', 'fbb_0_healer_evasion'];
+    let goodmetas: LineUpMeta[] = ['arena_boom', 'arena_boom_each', 'arena_boom_all', 'arena_boom_all_each', 'arena_crit_each', 'arena_crit_wildcard_each', 'fbb_1_healer', 'fbb_2_healer', 'fbb_1_healer_evasion', 'fbb_2_healer_evasion', 'fbb_0_healer_evasion'];
 
     for (let trypass = 0; trypass < 2; trypass++) {
         if (trypass) {
