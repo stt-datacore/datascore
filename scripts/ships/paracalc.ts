@@ -170,11 +170,20 @@ export async function calculateMeta(config: ShipCalcMeta) {
         let division = getShipDivision(ship.rarity);
         let divcrew = crew.filter(cf => cf.ranks.scores.ship.kind === 'offense' && cf.max_rarity >= ship.rarity && getCrewDivisions(cf.max_rarity).includes(division) && (!cf.action?.ability?.condition || ship.actions!.some(act => act.status === cf.action.ability?.condition)));
         if (!no_sort) {
-            divcrew = divcrew.sort((a, b) => (b.ranks.scores.ship.divisions.arena[division] || 0) - (a.ranks.scores.ship.divisions.arena[division] || 0)).slice(0, META_MAX);
+            divcrew = divcrew.sort((a, b) => (b.ranks.scores.ship.divisions.arena[division] || 0) - (a.ranks.scores.ship.divisions.arena[division] || 0))
         }
-        else {
-            divcrew = divcrew.slice(0, META_MAX);
+
+        let chcrew = divcrew;
+        divcrew = divcrew.slice(0, META_MAX);
+
+        for (let t = 0; t <= 2; t++) {
+            if (!divcrew.some(c => c.action.bonus_type === t)) {
+                let third = Math.floor(META_MAX / 3);
+                let missing = chcrew.filter(f => f.action.bonus_type === t).slice(0, third);
+                divcrew = divcrew.concat(missing);
+            }
         }
+
         for (let meta of BuiltInMetas) {
             if (boss) continue;
             if (meta_list?.length && !meta_list.includes(meta)) continue;
