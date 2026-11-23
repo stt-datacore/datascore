@@ -141,7 +141,7 @@ export type MetaCacheEntry = {
 }
 
 export type MetaCache = {[key:string]: MetaCacheEntry[]};
-export const META_MAX = 30;
+export const META_MAX = 50;
 
 export async function calculateMeta(config: ShipCalcMeta) {
     let { ships, crew, meta_list, boss, new_crew, current_scores: prev_scores, no_sort } = config;
