@@ -141,7 +141,7 @@ export type MetaCacheEntry = {
 }
 
 export type MetaCache = {[key:string]: MetaCacheEntry[]};
-export const META_MAX = 50;
+export const META_MAX = 40;
 
 export async function calculateMeta(config: ShipCalcMeta) {
     let { ships, crew, meta_list, boss, new_crew, current_scores: prev_scores, no_sort } = config;
@@ -339,5 +339,6 @@ if (!isMainThread) {
         const config = workerData as ShipCalcBase;
         const response = config.meta_cache ? await calculateMeta(config as ShipCalcMeta) : await calculateShip(config as ShipCalcConfig);
         parentPort?.postMessage(response);
+        process.exit(0);
     })();
 }
