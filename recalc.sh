@@ -2,10 +2,7 @@
 cd ../website
 git checkout master
 git pull --no-rebase
-git checkout beta
-git pull --no-rebase
-git merge master
-git push
+mv ./package.json ./package.no
 
 cd ../datascore
 npm run precalculate
@@ -33,7 +30,7 @@ git add .
 git commit . -m "battle run cache regeneration"
 git push
 cd ../website
-git checkout master
+mv ./package.no ./package.json
 git add .
 git commit . -m "battle run cache regeneration"
 git push

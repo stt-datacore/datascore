@@ -2,10 +2,7 @@
 cd ../website
 git checkout master
 git pull --no-rebase
-git checkout beta
-git pull --no-rebase
-git merge master
-git push
+mv ./package.json ./package.no
 
 cd ../datascore
 rm ./battle_run_cache.json
@@ -25,7 +22,7 @@ if [ "$1" == "--sync" ]; then
     git commit . -m "Re-Calculation"
     git push
     cd ../website
-    git checkout master
+    mv ./package.no ./package.json
     git add .
     git commit . -m "Re-Calculation"
     git push
