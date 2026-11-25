@@ -2,6 +2,11 @@
 cd ../website
 git checkout master
 git pull --no-rebase
+git checkout beta
+git pull --no-rebase
+git merge master
+git push
+
 cd ../datascore
 npm run precalculate
 if [[ "$1" == "--only-meta" || "$2" == "--only-meta" || "$3" == "--only-meta" ]]; then
@@ -28,6 +33,7 @@ git add .
 git commit . -m "battle run cache regeneration"
 git push
 cd ../website
+git checkout master
 git add .
 git commit . -m "battle run cache regeneration"
 git push

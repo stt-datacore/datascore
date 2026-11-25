@@ -1096,7 +1096,7 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
         }
         shipRanksOut[ship.symbol].avg_compat = h / cl;
         shipRanksOut[ship.symbol].extra = {
-            compat_length: cl,
+            compat_score: cl,
             mo: 0
         }
         if (obj) {

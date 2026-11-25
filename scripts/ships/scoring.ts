@@ -697,7 +697,9 @@ export function scoreToShipScore(score: Score, kind: 'offense' | 'defense' | 'sh
         bosses: [],
         overall_rank: score.overall_rank ?? 0,
         arena_rank: score.arena_rank ?? 0,
-        fbb_rank: score.fbb_rank ?? 0
+        fbb_rank: score.fbb_rank ?? 0,
+        avg_compat: 0,
+        extra: { mo: 0, compat_score: 0 }
     }
 
     score.arena_data.forEach((obj, idx) => {
