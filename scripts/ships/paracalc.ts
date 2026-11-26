@@ -235,7 +235,7 @@ export async function calculateMeta(config: ShipCalcMeta) {
             }
         }
         for (let testboss of bosses) {
-            if ((boss && testboss.id !== boss) || !boss) continue;
+            if (boss && testboss.id !== boss) continue;
             for (let meta of BuiltInMetas) {
                 if (meta_list?.length && !meta_list.includes(meta)) continue;
                 let mm = Math.floor(META_MAX / 2);
