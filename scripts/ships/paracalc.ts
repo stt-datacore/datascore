@@ -235,12 +235,12 @@ export async function calculateMeta(config: ShipCalcMeta) {
             }
         }
         for (let testboss of bosses) {
-            if (boss && testboss.id !== boss) continue;
+            if ((boss && testboss.id !== boss) || !boss) continue;
             for (let meta of BuiltInMetas) {
                 if (meta_list?.length && !meta_list.includes(meta)) continue;
                 let mm = Math.floor(META_MAX / 2);
-                let ocrew = crew.filter(cf => !cf.action.limit && cf.ranks.scores.ship.kind === 'offense' && cf.max_rarity >= ship.rarity && getBosses(undefined, cf).includes(testboss) && (!cf.action?.ability?.condition || ship.actions!.some(act => act.status === cf.action.ability?.condition)));
-                let dcrew = crew.filter(cf => !cf.action.limit && cf.ranks.scores.ship.kind === 'defense' && cf.max_rarity >= ship.rarity && getBosses(undefined, cf).includes(testboss) && (!cf.action?.ability?.condition || ship.actions!.some(act => act.status === cf.action.ability?.condition)));
+                let ocrew = crew.filter(cf => !cf.action.limit && cf.ranks.scores.ship.kind === 'offense' && getBosses(undefined, cf).includes(testboss) && (!cf.action?.ability?.condition || ship.actions!.some(act => act.status === cf.action.ability?.condition)));
+                let dcrew = crew.filter(cf => !cf.action.limit && cf.ranks.scores.ship.kind === 'defense' && getBosses(undefined, cf).includes(testboss) && (!cf.action?.ability?.condition || ship.actions!.some(act => act.status === cf.action.ability?.condition)));
                 if (!no_sort) {
                     ocrew = ocrew.sort((a, b) => {
                         if (meta.includes('evasion')) {
