@@ -325,8 +325,8 @@ export const runBattles = (
                         let time = attack.battle_time;
                         let dmg = attack.attack;
                         if (debuff) {
-                            // remove 35% for not owning the attack level
-                            dmg *= 0.65;
+                            // remove 30% for not owning the attack level
+                            dmg *= 0.70;
                         }
                         let incoming = attack.opponent_attack;
                         allruns[runidx++] = {
