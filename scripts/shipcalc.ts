@@ -694,13 +694,13 @@ async function processCrewShipStats(rate = 10, arena_variance = 0, fbb_variance 
                     crewship.length = bcidx;
                     let cacheFind = metaCache.filter(f => f.ship === ship.symbol);
                     let ship_bcc = crewship.filter(f => f.ship === ship.symbol).map(m => m.crew_battles).flat();
-                    let mcrew = ship_bcc.sort((a, b) => a.score - b.score).map(mc => metaCrew.find(fc => fc.symbol === mc.crew)!);
+                    let mcrew = ship_bcc.sort((a, b) => a.score - b.score).map(mc => metaCrew.find(fc => fc.symbol === mc.crew)).filter(f => f !== undefined);
                     const config: ShipCalcMeta = {
                         meta_cache: true,
                         current_scores: cacheFind,
                         ships: [ship],
-                        crew: mcrew,
-                        no_sort: false, //!!mcrew,
+                        crew: mcrew?.length ? mcrew : metaCrew,
+                        no_sort: !!mcrew?.length,
                         meta_list: goodmetas,
                         new_crew: newcrew?.length && !ws ? newcrew.map(c => c.symbol) : undefined
                     }
