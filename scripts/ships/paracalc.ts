@@ -322,7 +322,7 @@ export async function calculateMeta(config: ShipCalcMeta) {
                         }
                         if (count) break;
                     }
-                    console.log(`${count} metas created for '${meta}' on ${ship.name}`);
+                    console.log(`${count} metas created for '${meta}' on ${ship.name} for ${testboss.symbol} ${testboss.rarity}*`);
                 }
             }
         }
